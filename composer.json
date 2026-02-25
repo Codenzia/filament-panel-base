@@ -1,0 +1,70 @@
+{
+    "name": "codenzia/filament-panel-base",
+    "description": "Multi-panel architecture support with shared branding, dynamic colors, localization middleware, user moderation, and country/currency components for Filament v4.",
+    "keywords": [
+        "codenzia",
+        "laravel",
+        "filament",
+        "panel",
+        "multi-panel",
+        "branding",
+        "middleware",
+        "localization"
+    ],
+    "homepage": "https://github.com/codenzia/filament-panel-base",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Codenzia",
+            "email": "dev@codenzia.com",
+            "role": "Developer"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "filament/filament": "^4.0",
+        "spatie/laravel-package-tools": "^1.15.0"
+    },
+    "require-dev": {
+        "laravel/pint": "^1.0",
+        "nunomaduro/collision": "^8.0",
+        "orchestra/testbench": "^9.0",
+        "pestphp/pest": "^3.0",
+        "pestphp/pest-plugin-arch": "^3.0",
+        "pestphp/pest-plugin-laravel": "^3.0"
+    },
+    "suggest": {
+        "spatie/laravel-permission": "Required for NotifiesAdmins role-based queries"
+    },
+    "autoload": {
+        "psr-4": {
+            "Codenzia\\FilamentPanelBase\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Codenzia\\FilamentPanelBase\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Codenzia\\FilamentPanelBase\\FilamentPanelBaseServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "post-autoload-dump": "@php ./vendor/bin/testbench package:discover --ansi",
+        "test": "vendor/bin/pest",
+        "test-coverage": "vendor/bin/pest --coverage",
+        "format": "vendor/bin/pint"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
