@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase;
 
+use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
+use Codenzia\FilamentPanelBase\Support\ThemePresets;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
@@ -58,6 +60,35 @@ class FilamentPanelBasePlugin implements Plugin
         }
 
         return null;
+    }
+
+    /**
+     * Get the resolved theme colors for frontend CSS variable injection.
+     *
+     * Resolution order:
+     * 1. Settings class implementing ProvidesThemeColors
+     * 2. Config preset + color overrides
+     * 3. Ocean Blue defaults
+     *
+     * @return array<string, string>
+     */
+    public function getThemeColors(): array
+    {
+        $settings = $this->resolveSettings();
+
+        if ($settings instanceof ProvidesThemeColors) {
+            return $settings->getThemeColors();
+        }
+
+        // Fall back to config-based preset
+        $preset = config('filament-panel-base.theme.preset', 'ocean_blue');
+        $colors = ThemePresets::get($preset) ?? ThemePresets::defaults();
+        unset($colors['label']);
+
+        // Merge any config color overrides
+        $overrides = config('filament-panel-base.theme.colors', []);
+
+        return array_merge($colors, array_filter($overrides));
     }
 
     public function register(Panel $panel): void {}

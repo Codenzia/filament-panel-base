@@ -51,6 +51,12 @@
                 $this->publishes([
                     __DIR__ . '/../resources/dist/flags' => public_path('css/codenzia/filament-panel-base/flags'),
                 ], 'filament-panel-base-assets');
+
+                // Publish the theme CSS for Tailwind v4 @theme integration.
+                // Projects @import this in their resources/css/app.css.
+                $this->publishes([
+                    __DIR__ . '/../resources/css/theme.css' => resource_path('css/vendor/filament-panel-base/theme.css'),
+                ], 'filament-panel-base-theme');
             }
         }
     }

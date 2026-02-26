@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Providers;
 
+use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 use Filament\Actions\Action;
 use Filament\Panel;
@@ -93,9 +94,38 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Build color array from a settings instance that has color properties.
+     *
+     * When the settings class implements ProvidesThemeColors, the full theme
+     * palette is used. Otherwise, falls back to reading individual color properties.
      */
     protected function getColorsFromSettingsInstance(object $settings): array
     {
+        // When settings implements ProvidesThemeColors, use the full theme palette
+        if ($settings instanceof ProvidesThemeColors) {
+            $themeColors = $settings->getThemeColors();
+            $colors = [];
+
+            $filamentMap = [
+                'primary' => 'primary_color',
+                'secondary' => 'secondary_color',
+                'danger' => 'danger_color',
+                'warning' => 'warning_color',
+                'success' => 'success_color',
+                'info' => 'info_color',
+            ];
+
+            foreach ($filamentMap as $filamentName => $themeKey) {
+                if (! empty($themeColors[$themeKey])) {
+                    $colors[$filamentName] = Color::hex($themeColors[$themeKey]);
+                }
+            }
+
+            $colors['gray'] = Color::Slate;
+
+            return $colors;
+        }
+
+        // Legacy: settings with individual color properties
         $colors = [];
         $colorNames = ['primary', 'secondary', 'danger', 'warning', 'success', 'info'];
 

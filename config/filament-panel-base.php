@@ -125,4 +125,23 @@ return [
         'success' => '#10b981',
         'info' => '#06b6d4',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Theme System
+    |--------------------------------------------------------------------------
+    |
+    | Configure the frontend theme for CSS custom property injection.
+    | 'preset' selects a predefined color palette from ThemePresets.
+    | 'colors' allows overriding individual color keys
+    | (see ThemePresets::colorKeys()).
+    |
+    | When a settings class implements ProvidesThemeColors, these config
+    | values are ignored in favor of the database-driven settings.
+    |
+    */
+    'theme' => [
+        'preset' => 'ocean_blue',
+        'colors' => [],
+    ],
 ];

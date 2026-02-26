@@ -1,6 +1,6 @@
 # Filament Panel Base
 
-Multi-panel architecture support for [Filament v4](https://filamentphp.com) with shared branding, dynamic colors, localization middleware, user moderation, and country/currency components.
+Multi-panel architecture support for [Filament v4](https://filamentphp.com) with shared branding, dynamic theme colors, CSS custom property injection, localization middleware, user moderation, and country/currency components.
 
 ## Installation
 
@@ -79,6 +79,67 @@ If your panel uses a custom Filament theme with `->viteTheme()`, you must add `@
 
 Then rebuild your assets with `npm run build`.
 
+### 5. Frontend Theme (Optional)
+
+The package includes a built-in theme system with 17 color presets and runtime CSS variable injection. This enables Tailwind utility classes like `bg-brand-500` that update dynamically when the theme changes — no rebuild required.
+
+**Step 1: Add components to your layout `<head>`:**
+
+```blade
+<x-panel-base::dark-mode-script />
+<x-panel-base::theme-styles />
+@vite(['resources/css/app.css', 'resources/js/app.js'])
+```
+
+`<x-panel-base::dark-mode-script />` prevents a flash of unstyled content by applying the dark class before first paint. `<x-panel-base::theme-styles />` injects CSS custom properties (`--site-brand-*`, `--site-primary`, etc.) into `:root`.
+
+**Step 2: Import the theme CSS in your `resources/css/app.css`:**
+
+```css
+@import "../../vendor/codenzia/filament-panel-base/resources/css/theme.css";
+@import "tailwindcss";
+```
+
+This maps `--color-brand-*` to the runtime CSS variables via Tailwind v4's `@theme` directive, giving you utility classes like `bg-brand-500`, `text-brand-600`, etc.
+
+Or publish the theme CSS for customization:
+
+```bash
+php artisan vendor:publish --tag=filament-panel-base-theme
+```
+
+**Step 3: Implement `ProvidesThemeColors` on your settings class (optional):**
+
+```php
+use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
+use Codenzia\FilamentPanelBase\Support\ThemePresets;
+
+class GeneralSettings extends Settings implements ProvidesThemeColors
+{
+    public string $theme_preset = 'ocean_blue';
+    public string $primary_color = '#3b82f6';
+    // ... other color properties
+
+    public function getThemeColors(): array
+    {
+        if ($this->theme_preset !== 'custom') {
+            $preset = ThemePresets::get($this->theme_preset);
+            if ($preset) {
+                unset($preset['label']);
+                return $preset;
+            }
+        }
+
+        return [
+            'primary_color' => $this->primary_color,
+            // ... map all 15 color keys
+        ];
+    }
+}
+```
+
+When no settings class implements `ProvidesThemeColors`, the package falls back to `config('filament-panel-base.theme.preset')` (default: `ocean_blue`).
+
 ## Features
 
 ### BasePanelProvider
@@ -87,11 +148,56 @@ Abstract panel provider that applies shared configuration to all panels:
 
 - **Brand name** — resolved from settings class or `config('app.name')`
 - **Logo & favicon** — resolved from settings via `getAppLogoUrl()` / `getAppFaviconUrl()`
-- **Dynamic colors** — reads hex colors from settings and converts via `ColorUtils`
+- **Dynamic colors** — reads hex colors from settings (or `ProvidesThemeColors` contract) and converts via `Color::hex()`
 - **User menu** — profile link, role display, phone, email, cross-panel navigation
 - **Panel badge** — "Administration" / "My Account" badge after the logo
 - **Visit Website** button in the topbar
 - **Shared middleware stack** — session, CSRF, Filament essentials
+
+### Theme System
+
+The package ships 17 predefined color presets plus a `custom` option. Each preset defines 15 color keys covering primary, secondary, background, surface, text, status, border, and shadow colors.
+
+**Available presets:** Ocean Blue, Forest Green, Sunset Orange, Royal Purple, Rose Garden, Modern Dark, Teal Breeze, Amber Gold, Slate Steel, Crimson Fire, Sky Light, Emerald Fresh, Indigo Classic, Pink Blossom, Warm Earth, Midnight Blue, Charcoal Noir.
+
+**ThemePresets API:**
+
+```php
+use Codenzia\FilamentPanelBase\Support\ThemePresets;
+
+ThemePresets::all();         // All 18 presets (17 + custom)
+ThemePresets::labels();      // ['ocean_blue' => 'Ocean Blue', ...] — for Select dropdowns
+ThemePresets::get('ocean_blue'); // Single preset array or null
+ThemePresets::defaults();    // Ocean Blue colors (the default)
+ThemePresets::colorKeys();   // ['primary_color', 'danger_color', ...] — all 15 keys
+```
+
+**Blade components:**
+
+| Component | Purpose |
+|---|---|
+| `<x-panel-base::theme-styles />` | Injects CSS custom properties into `:root` using `color-mix()` for brand scale generation |
+| `<x-panel-base::dark-mode-script />` | FOUC prevention — applies `dark` class before first paint |
+
+The `theme-styles` component accepts an optional `:colors` prop. When omitted, it resolves colors automatically via `FilamentPanelBasePlugin::make()->getThemeColors()`.
+
+**Color resolution order:**
+
+1. Settings class implementing `ProvidesThemeColors` interface
+2. Config preset (`filament-panel-base.theme.preset`) + color overrides
+3. Ocean Blue defaults
+
+**CSS variables injected by `<x-panel-base::theme-styles />`:**
+
+| Variable | Source |
+|---|---|
+| `--site-primary` | Primary brand color |
+| `--site-primary-hover` | Primary hover state |
+| `--site-brand-50` to `--site-brand-900` | Generated via `color-mix()` from primary |
+| `--site-secondary`, `--site-background`, `--site-surface` | Semantic colors |
+| `--site-text-primary`, `--site-text-secondary`, `--site-text-on-primary` | Text colors |
+| `--site-success`, `--site-warning`, `--site-danger`, `--site-info` | Status colors |
+| `--site-border`, `--site-shadow` | UI element colors |
 
 ### Middleware
 
@@ -104,7 +210,19 @@ Abstract panel provider that applies shared configuration to all panels:
 
 ### Contracts
 
-Implement these interfaces on your models to integrate with the middleware:
+Implement these interfaces on your models/settings to integrate with the package:
+
+```php
+use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
+
+class GeneralSettings extends Settings implements ProvidesThemeColors
+{
+    public function getThemeColors(): array
+    {
+        // Return array with keys like 'primary_color', 'danger_color', etc.
+    }
+}
+```
 
 ```php
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
@@ -245,6 +363,11 @@ return [
         'success'   => '#10b981',
         'info'      => '#06b6d4',
     ],
+
+    'theme' => [
+        'preset' => 'ocean_blue',  // any ThemePresets key
+        'colors' => [],            // override individual color keys
+    ],
 ];
 ```
 
@@ -256,6 +379,10 @@ FilamentPanelBasePlugin::make()
     ->settingsUsing(fn () => app(GeneralSettings::class))
     // Or by class name
     ->settingsClass(GeneralSettings::class)
+
+// Get resolved theme colors (used internally by <x-panel-base::theme-styles />)
+FilamentPanelBasePlugin::make()->getThemeColors();
+// Returns: ['primary_color' => '#3b82f6', 'danger_color' => '#ef4444', ...]
 ```
 
 ## Requirements
