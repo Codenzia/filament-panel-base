@@ -1,8 +1,9 @@
-@props(['countries', 'wireModel' => 'country_id', 'placeholder' => null])
+@props(['countries', 'wireModel' => 'country_id', 'placeholder' => null, 'live' => false, 'disabled' => false])
 
 <div x-data="{
     open: false,
-    selected: @entangle($wireModel),
+    disabled: @js($disabled),
+    selected: @entangle($wireModel){{ $live ? '.live' : '' }},
     countries: @js($countries->map(fn ($c) => ['id' => $c->id, 'code' => strtolower($c->code), 'name' => $c->name])),
     get selectedCountry() {
         return this.countries.find(c => c.id == this.selected) || null;
@@ -17,8 +18,10 @@
     }
 }" x-on:click.outside="open = false" class="relative w-full">
     {{-- Trigger button --}}
-    <button type="button" x-on:click="open = !open"
-        class="flex items-center gap-2 w-full h-9.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
+    <button type="button" x-on:click="if (!disabled) open = !open"
+        :disabled="disabled"
+        class="flex items-center gap-2 w-full h-9.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm px-3 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+        :class="{ 'opacity-60 cursor-not-allowed': disabled }">
         <template x-if="selectedCountry">
             <span class="flag shrink-0" :class="'flag-' + selectedCountry.code"></span>
         </template>

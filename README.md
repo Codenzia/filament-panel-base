@@ -290,6 +290,103 @@ class Currency extends Model implements ProvidesCurrencies
 
 The switchers read view-shared data from middleware (`$availableCountries`, `$currentCountry`, `$availableCurrencies`, `$currentCurrency`, `$currentCurrencyMode`) and require routes named `country.switch`, `currency.switch`, and `locale.switch` in the consuming app.
 
+### Filament Form Components
+
+Reusable form fields for Filament v4 panels. Both use Filament's native CSS classes (`fi-input-wrp`, `fi-input`) for full theme compatibility — any custom panel styling automatically applies.
+
+#### CountrySelect
+
+A Select field with flag icons beside each country name. Extends `Filament\Forms\Components\Select` with `allowHtml()`, `searchable()`, and `preload()` pre-configured.
+
+**From relationship** (stores the country ID):
+
+```php
+use Codenzia\FilamentPanelBase\Forms\Components\CountrySelect;
+
+CountrySelect::make('country_id')
+    ->relationship('country', 'name')
+    ->required()
+    ->live()
+```
+
+The related model must have a `code` column with the ISO country code (e.g. `jo`, `sa`). To use a different column:
+
+```php
+CountrySelect::make('country_id')
+    ->codeAttribute('iso_code')
+    ->relationship('country', 'name')
+```
+
+**From array** (keys are ISO codes, stored as value):
+
+```php
+CountrySelect::make('country')
+    ->countries(['jo' => 'Jordan', 'sa' => 'Saudi Arabia'])
+```
+
+**From array** (keys are IDs, with explicit code):
+
+```php
+CountrySelect::make('country_id')
+    ->countries([
+        1 => ['name' => 'Jordan', 'code' => 'jo'],
+        2 => ['name' => 'Saudi Arabia', 'code' => 'sa'],
+    ])
+```
+
+**From closure** (lazy-loaded):
+
+```php
+CountrySelect::make('country_id')
+    ->countries(fn () => Country::published()
+        ->get()
+        ->mapWithKeys(fn ($c) => [$c->id => ['name' => $c->name, 'code' => strtolower($c->code)]])
+        ->toArray())
+```
+
+#### PhoneInput
+
+A compound field with a country code dropdown (flags + dial code) and a phone number input. Stores the combined value as a single string (e.g. `+962501234567`). Uses Filament's `fi-input-wrp` wrapper with a non-inline prefix for the country code section.
+
+```php
+use Codenzia\FilamentPanelBase\Forms\Components\PhoneInput;
+
+PhoneInput::make('phone')
+    ->label(__('Phone'))
+    ->countries(fn (): array => Country::published()
+        ->whereNotNull('phone_code')
+        ->orderBy('order')
+        ->get()
+        ->map(fn (Country $c): array => [
+            'code' => strtolower($c->code),
+            'phone_code' => $c->phone_code,
+            'name' => $c->name,
+        ])
+        ->toArray())
+```
+
+Each country in the array must have `code` (ISO, lowercase), `phone_code` (e.g. `+962`), and `name`.
+
+**Default country code:**
+
+```php
+PhoneInput::make('phone')
+    ->countries($countries)
+    ->defaultCountryCode('+962')
+```
+
+**Placeholder & validation:**
+
+```php
+PhoneInput::make('phone')
+    ->countries($countries)
+    ->placeholder('7XXXXXXXX')
+    ->required()
+    ->unique(ignoreRecord: true)
+```
+
+The field supports `disabled()`, `readOnly()`, `live()`, and standard Filament validation rules.
+
 ### Flag Icons
 
 This package bundles [flag-icons](https://github.com/lipis/flag-icons) CSS and SVGs for country flag display. On Filament panels, the CSS is auto-injected via `@filamentStyles`. For frontend layouts, add a `<link>` tag:
