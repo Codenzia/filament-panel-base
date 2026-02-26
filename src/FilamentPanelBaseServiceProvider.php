@@ -1,40 +1,56 @@
 <?php
 
-namespace Codenzia\FilamentPanelBase;
+    declare(strict_types=1);
 
-use Illuminate\Support\Facades\Blade;
-use Spatie\LaravelPackageTools\Commands\InstallCommand;
-use Spatie\LaravelPackageTools\Package;
-use Spatie\LaravelPackageTools\PackageServiceProvider;
+    namespace Codenzia\FilamentPanelBase;
 
-class FilamentPanelBaseServiceProvider extends PackageServiceProvider
-{
-    public static string $name = 'filament-panel-base';
+    use Filament\Support\Assets\Css;
+    use Filament\Support\Facades\FilamentAsset;
+    use Illuminate\Support\Facades\Blade;
+    use Spatie\LaravelPackageTools\Commands\InstallCommand;
+    use Spatie\LaravelPackageTools\Package;
+    use Spatie\LaravelPackageTools\PackageServiceProvider;
 
-    public static string $viewNamespace = 'panel-base';
-
-    public function configurePackage(Package $package): void
+    class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     {
-        $package->name(static::$name)
-            ->hasConfigFile()
-            ->hasInstallCommand(function (InstallCommand $command) {
-                $command
-                    ->publishConfigFile()
-                    ->askToStarRepoOnGitHub('codenzia/filament-panel-base');
-            });
+        public static string $name = 'filament-panel-base';
 
-        if (file_exists($package->basePath('/../resources/views'))) {
-            $package->hasViews(static::$viewNamespace);
+        public static string $viewNamespace = 'panel-base';
+
+        public function configurePackage(Package $package): void
+        {
+            $package->name(static::$name)
+                ->hasConfigFile()
+                ->hasInstallCommand(function (InstallCommand $command) {
+                    $command
+                        ->publishConfigFile()
+                        ->askToStarRepoOnGitHub('codenzia/filament-panel-base');
+                });
+
+            if (file_exists($package->basePath('/../resources/views'))) {
+                $package->hasViews(static::$viewNamespace);
+            }
+        }
+
+        public function packageRegistered(): void {}
+
+        public function packageBooted(): void
+        {
+            // Register Blade component namespace
+            Blade::componentNamespace('Codenzia\\FilamentPanelBase\\View\\Components', static::$viewNamespace);
+
+            // Register flag-icons CSS with Filament's asset system.
+            // Auto-injected on Filament panels via @filamentStyles.
+            FilamentAsset::register([
+                Css::make('flag-icons', __DIR__ . '/../resources/dist/flag-icons.css'),
+            ], 'codenzia/filament-panel-base');
+
+            // Publish the SVG flags directory alongside the CSS.
+            // The patched CSS uses url(./flags/...) so SVGs must land as siblings.
+            if ($this->app->runningInConsole()) {
+                $this->publishes([
+                    __DIR__ . '/../resources/dist/flags' => public_path('css/codenzia/filament-panel-base/flags'),
+                ], 'filament-panel-base-assets');
+            }
         }
     }
-
-    public function packageRegistered(): void {}
-
-    public function packageBooted(): void
-    {
-        $this->loadViewsFrom(__DIR__ . '/../resources/views', static::$viewNamespace);
-
-        // Register Blade component namespace
-        Blade::componentNamespace('Codenzia\\FilamentPanelBase\\View\\Components', static::$viewNamespace);
-    }
-}

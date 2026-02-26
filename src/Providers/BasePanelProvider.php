@@ -1,9 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Codenzia\FilamentPanelBase\Providers;
 
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
-use Codenzia\FilamentPanelBase\Support\ColorUtils;
 use Filament\Actions\Action;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -101,8 +102,7 @@ abstract class BasePanelProvider extends PanelProvider
         foreach ($colorNames as $name) {
             $property = "{$name}_color";
             if (property_exists($settings, $property) && $settings->{$property}) {
-                $rgb = ColorUtils::hexToRgb($settings->{$property});
-                $colors[$name] = Color::rgb("rgb({$rgb[0]}, {$rgb[1]}, {$rgb[2]})");
+                $colors[$name] = Color::hex($settings->{$property});
             }
         }
 
@@ -120,8 +120,7 @@ abstract class BasePanelProvider extends PanelProvider
         $colors = [];
 
         foreach ($configColors as $name => $hex) {
-            $rgb = ColorUtils::hexToRgb($hex);
-            $colors[$name] = Color::rgb("rgb({$rgb[0]}, {$rgb[1]}, {$rgb[2]})");
+            $colors[$name] = Color::hex($hex);
         }
 
         $colors['gray'] = Color::Slate;
@@ -153,7 +152,9 @@ abstract class BasePanelProvider extends PanelProvider
             Action::make('um_role')
                 ->disabled()
                 ->icon('heroicon-c-book-open')
-                ->label(fn () => filament()->auth()->user()?->roles->pluck('name')->join(', ') ?? __('User')),
+                ->label(fn () => method_exists(filament()->auth()->user(), 'roles')
+                    ? filament()->auth()->user()?->roles->pluck('name')->join(', ') ?? __('User')
+                    : __('User')),
             Action::make('um_phone')
                 ->disabled()
                 ->icon('heroicon-o-phone')
@@ -218,7 +219,7 @@ abstract class BasePanelProvider extends PanelProvider
         $label = __('Visit Website');
 
         return new HtmlString('
-            <a href="/" target="_blank" class="fi-btn fi-btn-color-gray fi-btn-size-md fi-color-gray gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-white/5 dark:text-gray-200 dark:ring-white/20 dark:hover:bg-white/10" title="' . $label . '">
+            <a href="/" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-white/5 dark:text-gray-200 dark:ring-white/20 dark:hover:bg-white/10" title="' . $label . '">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
                 </svg>

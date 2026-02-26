@@ -1,8 +1,11 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Codenzia\FilamentPanelBase\Contracts;
 
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * Contract for Country models used by the SetCountry middleware.
@@ -19,5 +22,5 @@ interface ProvidesCountries
     /**
      * Get the country's currency relationship.
      */
-    public function currency();
+    public function currency(): BelongsTo;
 }

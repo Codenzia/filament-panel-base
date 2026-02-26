@@ -154,9 +154,37 @@ class Currency extends Model implements ProvidesCurrencies
 
 ### Blade Components
 
+**Form fields** (Livewire-bound via `@entangle`):
+
 ```blade
-<x-panel-base::country-select />
-<x-panel-base::country-code-select />
+<x-panel-base::country-select :countries="$countries" wire-model="country_id" />
+<x-panel-base::country-code-select :countries="$countries" wire-model="country_code" />
+```
+
+**Navbar switchers** (pair with `SetCountry`/`SetCurrency`/`SetLocale` middleware):
+
+```blade
+<x-panel-base::country-switcher :mode="$countryDropdownMode" />
+<x-panel-base::currency-switcher />
+<x-panel-base::locale-switcher :locales="$locales" :currentLocale="$currentLocale" />
+<x-panel-base::dark-mode-toggle />
+```
+
+The switchers read view-shared data from middleware (`$availableCountries`, `$currentCountry`, `$availableCurrencies`, `$currentCurrency`, `$currentCurrencyMode`) and require routes named `country.switch`, `currency.switch`, and `locale.switch` in the consuming app.
+
+### Flag Icons
+
+This package bundles [flag-icons](https://github.com/lipis/flag-icons) CSS and SVGs for country flag display. On Filament panels, the CSS is auto-injected via `@filamentStyles`. For frontend layouts, add a `<link>` tag:
+
+```blade
+<link rel="stylesheet" href="{{ asset('css/codenzia/filament-panel-base/flag-icons.css') }}">
+```
+
+Publish the SVG assets:
+
+```bash
+php artisan filament:assets
+php artisan vendor:publish --tag=filament-panel-base-assets
 ```
 
 ### ColorUtils

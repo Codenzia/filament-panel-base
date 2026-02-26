@@ -14,7 +14,7 @@
 }" x-on:click.outside="open = false" class="relative w-32 shrink-0">
     {{-- Trigger button --}}
     <button type="button" x-on:click="open = !open"
-        class="flex items-center gap-1.5 w-full h-9.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm px-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none">
+        class="flex items-center gap-1.5 w-full h-9.5 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm px-2.5 text-sm focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none">
         <span x-show="selectedCountry.code" class="fi shrink-0" :class="'fi-' + selectedCountry.code"></span>
         <span x-text="selectedCountry.phone_code" class="truncate"></span>
         <svg class="w-4 h-4 ms-auto shrink-0 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -31,7 +31,7 @@
         <template x-for="country in countries" :key="country.phone_code">
             <button type="button" x-on:click="select(country)"
                 class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
-                :class="{ 'bg-brand-50 dark:bg-brand-900/20': selected === country.phone_code }">
+                :class="{ 'bg-primary-50 dark:bg-primary-900/20': selected === country.phone_code }">
                 <span class="fi shrink-0" :class="'fi-' + country.code"></span>
                 <span x-text="country.phone_code"></span>
                 <span x-text="country.label" class="text-xs text-gray-400"></span>

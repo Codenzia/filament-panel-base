@@ -1,11 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Codenzia\FilamentPanelBase\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetCountry
@@ -106,7 +109,7 @@ class SetCountry
                 }
             }
         } catch (\Exception $e) {
-            \Log::warning('Country detection failed: ' . $e->getMessage());
+            Log::warning('Country detection failed: ' . $e->getMessage());
         }
 
         return null;

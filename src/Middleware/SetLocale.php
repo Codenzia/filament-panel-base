@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Codenzia\FilamentPanelBase\Middleware;
 
 use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
