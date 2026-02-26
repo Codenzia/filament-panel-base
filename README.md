@@ -149,7 +149,7 @@ Abstract panel provider that applies shared configuration to all panels:
 - **Brand name** — resolved from settings class or `config('app.name')`
 - **Logo & favicon** — resolved from settings via `getAppLogoUrl()` / `getAppFaviconUrl()`
 - **Dynamic colors** — reads hex colors from settings (or `ProvidesThemeColors` contract) and converts via `Color::hex()`
-- **User menu** — profile link, role display, phone, email, cross-panel navigation
+- **User menu** — profile slideOver, role display, phone, email, cross-panel navigation
 - **Panel badge** — "Administration" / "My Account" badge after the logo
 - **Visit Website** button in the topbar
 - **Shared middleware stack** — session, CSRF, Filament essentials
@@ -267,8 +267,60 @@ class Currency extends Model implements ProvidesCurrencies
 
 | Trait | Description |
 |---|---|
+| `HasProfileSlideOver` | Profile-editing slideOver action in the user menu with vertical tabs (Personal Info + Change Password) |
 | `NotifiesAdmins` | Sends notifications to admin-role users and optionally the content author |
 | `HasContactValidation` | Shared validation rules for lead capture forms (name, phone, email, WhatsApp) |
+
+#### HasProfileSlideOver
+
+Used by `BasePanelProvider` to add a profile-editing slideOver to the Filament user menu. Includes name, email, and password fields out of the box. Override methods in your panel provider to add project-specific fields:
+
+| Method | Purpose |
+|---|---|
+| `getProfilePersonalInfoComponents()` | Form fields for the "Personal Information" tab |
+| `getProfilePasswordComponents()` | Form fields for the "Change Password" tab |
+| `getProfileFormTabs()` | Customise tabs (add new ones, reorder, etc.) |
+| `getProfileFormData()` | Data to fill the form (override to include relationships) |
+| `saveProfileData(array $data)` | Persist form data (override to handle media sync, etc.) |
+
+**Example — adding an avatar and phone field:**
+
+```php
+use Codenzia\FilamentMedia\Forms\MediaPickerField;
+use Codenzia\FilamentPanelBase\Forms\Components\PhoneInput;
+
+class UserPanelProvider extends BasePanelProvider
+{
+    protected function getProfileFormData(): array
+    {
+        $data = parent::getProfileFormData();
+        $data['media_avatar'] = filament()->auth()->user()->images()->first()?->getKey();
+
+        return $data;
+    }
+
+    protected function getProfilePersonalInfoComponents(): array
+    {
+        return [
+            ...parent::getProfilePersonalInfoComponents(),
+            PhoneInput::make('phone')->label(__('Phone'))->countries(/* ... */),
+            MediaPickerField::make('media_avatar')->label(__('Avatar'))->imageOnly(),
+        ];
+    }
+
+    protected function saveProfileData(array $data): void
+    {
+        $user = filament()->auth()->user();
+
+        if (array_key_exists('media_avatar', $data)) {
+            $user->syncMediaByIds($data['media_avatar'] ? [$data['media_avatar']] : []);
+            unset($data['media_avatar']);
+        }
+
+        parent::saveProfileData($data);
+    }
+}
+```
 
 ### Blade Components
 

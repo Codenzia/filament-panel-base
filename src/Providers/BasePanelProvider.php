@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Providers;
 
+use Codenzia\FilamentPanelBase\Concerns\HasProfileSlideOver;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 use Filament\Actions\Action;
@@ -16,6 +17,8 @@ use Illuminate\Support\HtmlString;
 
 abstract class BasePanelProvider extends PanelProvider
 {
+    use HasProfileSlideOver;
+
     /**
      * Apply shared configuration (branding, colors, user menu, render hooks) to a panel.
      */
@@ -160,7 +163,7 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Build the user menu items shared across all panels.
-     * Includes: user name label, profile link, cross-panel navigation links.
+     * Includes: user name label, profile slideOver, cross-panel navigation links.
      */
     protected function getUserMenuItems(Panel $panel): array
     {
@@ -173,12 +176,8 @@ abstract class BasePanelProvider extends PanelProvider
                 ->url(null)
                 ->label(fn (): string => filament()->getUserName(filament()->auth()->user())),
 
-            // Profile edit link
-            Action::make('edit-profile')
-                ->label(__('Edit Profile'))
-                ->icon('heroicon-o-user')
-                ->url(fn (): string => filament()->getProfileUrl())
-                ->sort(-1),
+            // Profile edit slideOver
+            $this->getProfileSlideOverAction(),
             Action::make('um_role')
                 ->disabled()
                 ->icon('heroicon-c-book-open')
