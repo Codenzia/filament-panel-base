@@ -544,6 +544,154 @@ return [
 ];
 ```
 
+## Translatable Content (Optional)
+
+The package provides automatic integration with [spatie/laravel-translatable](https://github.com/spatie/laravel-translatable) and [lara-zeus/spatie-translatable](https://github.com/lara-zeus/spatie-translatable) for Filament v4. When both packages are installed, `BasePanelProvider` auto-registers the `SpatieTranslatablePlugin` on every panel — no manual plugin registration needed.
+
+### When to use this
+
+Use this integration when your project has **translatable database content** (e.g. product names, category descriptions, page content stored in multiple languages). This is different from Laravel's built-in `__()` / `trans()` localization which translates static UI strings.
+
+**Good fit:** A real estate site where property names, descriptions, and locations are stored in both English and Arabic.
+
+**Not needed:** A single-language app, or an app that only translates UI labels via language files.
+
+### Step 1: Install the packages
+
+```bash
+composer require spatie/laravel-translatable lara-zeus/spatie-translatable
+```
+
+### Step 2: Configure available locales
+
+In your `config/filament-panel-base.php`, set the locales your content supports:
+
+```php
+'locale' => [
+    'provider' => \App\Models\Language::class,
+    'available' => ['en', 'ar'],  // ← used by the translatable plugin
+    'detection_order' => ['session', 'cookie', 'config'],
+],
+```
+
+The `locale.available` array is passed to `SpatieTranslatablePlugin::defaultLocales()` automatically. That's all the panel-level setup required — no need to register the plugin yourself.
+
+### Step 3: Make your models translatable
+
+Add the `HasTranslations` trait and declare which columns are translatable:
+
+```php
+use Spatie\Translatable\HasTranslations;
+
+class Category extends Model
+{
+    use HasTranslations;
+
+    public array $translatable = ['name', 'description'];
+}
+```
+
+Translatable columns must be `json` type in the database. Create a migration if converting existing columns:
+
+```php
+Schema::table('categories', function (Blueprint $table) {
+    $table->json('name')->change();
+    $table->json('description')->nullable()->change();
+});
+```
+
+### Step 4: Make your Filament resources translatable
+
+Add the `Translatable` concern to each resource class:
+
+```php
+use LaraZeus\SpatieTranslatable\Resources\Concerns\Translatable;
+
+class CategoryResource extends Resource
+{
+    use Translatable;
+
+    protected static ?string $model = Category::class;
+    // ...
+}
+```
+
+### Step 5: Add the locale switcher to resource pages
+
+Add the `Translatable` concern and `LocaleSwitcher` action to each resource page:
+
+**For ManageRecords pages:**
+
+```php
+use LaraZeus\SpatieTranslatable\Resources\Pages\ManageRecords\Concerns\Translatable;
+use LaraZeus\SpatieTranslatable\Actions\LocaleSwitcher;
+
+class ManageCategories extends ManageRecords
+{
+    use Translatable;
+
+    protected static string $resource = CategoryResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            LocaleSwitcher::make(),
+            Actions\CreateAction::make()->slideOver(),
+        ];
+    }
+}
+```
+
+**For ListRecords pages:**
+
+```php
+use LaraZeus\SpatieTranslatable\Resources\Pages\ListRecords\Concerns\Translatable;
+use LaraZeus\SpatieTranslatable\Actions\LocaleSwitcher;
+
+class ListCategories extends ListRecords
+{
+    use Translatable;
+
+    protected static string $resource = CategoryResource::class;
+
+    protected function getHeaderActions(): array
+    {
+        return [
+            LocaleSwitcher::make(),
+            Actions\CreateAction::make(),
+        ];
+    }
+}
+```
+
+### Customising the integration
+
+Override `registerTranslatablePlugin()` in your panel provider to customise the behaviour:
+
+```php
+class AdminPanelProvider extends BasePanelProvider
+{
+    protected function registerTranslatablePlugin(Panel $panel): void
+    {
+        // Custom locales per panel
+        $panel->plugin(
+            \LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::make()
+                ->defaultLocales(['en', 'ar', 'fr'])
+                ->persist()
+        );
+    }
+}
+```
+
+To disable the integration for a specific panel, override with an empty method:
+
+```php
+protected function registerTranslatablePlugin(Panel $panel): void
+{
+    // This panel does not need translatable content
+}
+```
+
 ## Plugin API
 
 ```php
@@ -564,6 +712,7 @@ FilamentPanelBasePlugin::make()->getThemeColors();
 - Laravel 12+
 - Filament v4
 - `spatie/laravel-permission` (optional, for `NotifiesAdmins` trait)
+- `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable content)
 
 ## License
 

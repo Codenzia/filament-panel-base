@@ -24,7 +24,7 @@ abstract class BasePanelProvider extends PanelProvider
      */
     protected function configureSharedSettings(Panel $panel): Panel
     {
-        return $panel
+        $panel
             ->brandName(fn (): string => $this->resolveBrandName())
             ->brandLogo(fn (): ?string => $this->resolveBrandLogo())
             ->brandLogoHeight('2.5rem')
@@ -40,6 +40,31 @@ abstract class BasePanelProvider extends PanelProvider
                 fn (): HtmlString => $this->getPanelBadge($panel),
             )
             ->sidebarCollapsibleOnDesktop();
+
+        $this->registerTranslatablePlugin($panel);
+
+        return $panel;
+    }
+
+    /**
+     * Auto-register the SpatieTranslatablePlugin when `lara-zeus/spatie-translatable` is installed.
+     *
+     * Uses locales from `config('filament-panel-base.locale.available')`.
+     * Override this method to customise or disable the integration.
+     */
+    protected function registerTranslatablePlugin(Panel $panel): void
+    {
+        if (! class_exists(\LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::class)) {
+            return;
+        }
+
+        $locales = config('filament-panel-base.locale.available', ['en']);
+
+        $panel->plugin(
+            \LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::make()
+                ->defaultLocales($locales)
+                ->persist()
+        );
     }
 
     /**

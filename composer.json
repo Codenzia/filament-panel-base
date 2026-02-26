@@ -34,7 +34,9 @@
         "pestphp/pest-plugin-laravel": "^3.0"
     },
     "suggest": {
-        "spatie/laravel-permission": "Required for NotifiesAdmins role-based queries"
+        "spatie/laravel-permission": "Required for NotifiesAdmins role-based queries",
+        "spatie/laravel-translatable": "Required for translatable content support in Filament resources",
+        "lara-zeus/spatie-translatable": "Required for Filament v4 translatable plugin integration (locale switcher, resource concerns)"
     },
     "autoload": {
         "psr-4": {
