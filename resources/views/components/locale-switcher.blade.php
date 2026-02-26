@@ -20,7 +20,7 @@
     <div class="relative" x-data="{ open: false }">
         <button @click="open = !open"
             class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded-md">
-            <span class="fi fi-{{ $langToFlag[$currentLocale] ?? $currentLocale }} shrink-0"></span>
+            <span class="flag flag-{{ $langToFlag[$currentLocale] ?? $currentLocale }} shrink-0"></span>
             <span class="font-semibold">{{ strtoupper($currentLocale) }}</span>
         </button>
         <div x-show="open" x-cloak @click.away="open = false" x-transition
@@ -28,7 +28,7 @@
             @foreach ($locales as $code => $locale)
                 <a href="{{ route($switchRoute, $code) }}"
                     class="flex items-center gap-2 px-4 py-2 text-sm {{ $code === $currentLocale ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400' : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600' }}">
-                    <span class="fi fi-{{ $langToFlag[$code] ?? $code }} shrink-0"></span>
+                    <span class="flag flag-{{ $langToFlag[$code] ?? $code }} shrink-0"></span>
                     <span class="font-semibold">{{ strtoupper($code) }}</span>
                     <span class="text-xs text-gray-400">{{ $locale['native'] }}</span>
                 </a>

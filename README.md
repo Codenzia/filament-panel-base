@@ -305,6 +305,13 @@ php artisan filament:assets
 php artisan vendor:publish --tag=filament-panel-base-assets
 ```
 
+**Important:** The CSS class prefix is `flag` (not the upstream `fi`) to avoid collision with Filament's own `.fi-*` class namespace. Usage:
+
+```html
+<span class="flag flag-sa"></span>   <!-- Saudi Arabia (4:3) -->
+<span class="flag flags flag-gb"></span> <!-- UK (1:1 square) -->
+```
+
 ### ColorUtils
 
 Static utility class for color manipulation:
