@@ -402,6 +402,12 @@ php artisan filament:assets
 php artisan vendor:publish --tag=filament-panel-base-assets
 ```
 
+**Note:** The bundled `flag-icons.css` is minified with very long lines. If your IDE's spell checker warns about it (e.g. cSpell's "line length greater than 20000"), add it to your ignore list in `.vscode/settings.json`:
+
+```json
+{ "cSpell.ignorePaths": ["**/flag-icons.css"] }
+```
+
 **Important:** The CSS class prefix is `flag` (not the upstream `fi`) to avoid collision with Filament's own `.fi-*` class namespace. Usage:
 
 ```html
