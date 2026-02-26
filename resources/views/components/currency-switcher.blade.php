@@ -14,7 +14,7 @@
             <span class="hidden sm:inline">{{ $currentCurrency?->code ?? 'USD' }}</span>
         </button>
         <div x-show="open" x-cloak @click.away="open = false" x-transition
-            class="absolute end-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 z-50 max-h-64 overflow-y-auto py-1">
+            class="absolute end-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 z-50 max-h-64 overflow-y-auto py-1">
             @foreach ($availableCurrencies as $currency)
                 @if ($currency->is_auto ?? false)
                     {{-- Auto/Default for country option --}}

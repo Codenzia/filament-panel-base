@@ -39,7 +39,7 @@
             <span class="font-semibold">{{ strtoupper($currentLocale) }}</span>
         </button>
         <div x-show="open" x-cloak @click.away="open = false" x-transition
-            class="absolute end-0 mt-2 w-44 bg-white dark:bg-gray-700 rounded-md shadow-lg border dark:border-gray-600 z-50 py-1">
+            class="absolute end-0 mt-2 w-44 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 z-50 py-1">
             @foreach ($locales as $code => $locale)
                 <a href="{{ route($switchRoute, $code) }}"
                     class="flex items-center gap-2 px-4 py-2 text-sm {{ $code === $currentLocale ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-white font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600' }}">
