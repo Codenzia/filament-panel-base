@@ -74,39 +74,6 @@
         x-on:click.outside="open = false; search = ''"
         class="flex items-stretch"
     >
-        {{-- Scoped dropdown styles using CSS custom properties for dark mode --}}
-        <style>
-            [data-fi-phone] {
-                --pi-panel-bg: #ffffff;
-                --pi-panel-border: rgba(0, 0, 0, 0.05);
-                --pi-panel-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-                --pi-search-bg: #f9fafb;
-                --pi-search-color: #111827;
-                --pi-search-border: #e5e7eb;
-                --pi-item-color: #374151;
-                --pi-item-hover-bg: #f3f4f6;
-                --pi-item-selected-bg: #eff6ff;
-                --pi-muted-color: #6b7280;
-                --pi-divider: #e5e7eb;
-                --pi-no-results: #9ca3af;
-            }
-            :is(.dark) [data-fi-phone],
-            :is(.dark) [data-fi-phone] * {
-                --pi-panel-bg: #1e293b;
-                --pi-panel-border: rgba(255, 255, 255, 0.1);
-                --pi-panel-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
-                --pi-search-bg: #334155;
-                --pi-search-color: #f1f5f9;
-                --pi-search-border: rgba(255, 255, 255, 0.1);
-                --pi-item-color: #e2e8f0;
-                --pi-item-hover-bg: #334155;
-                --pi-item-selected-bg: #1e3a5f;
-                --pi-muted-color: #94a3b8;
-                --pi-divider: rgba(255, 255, 255, 0.1);
-                --pi-no-results: #94a3b8;
-            }
-        </style>
-
         {{-- Input wrapper — uses Filament's own fi-input-wrp for full theme compatibility --}}
         <div @class([
             'fi-input-wrp',
@@ -150,7 +117,6 @@
 
         {{-- Country dropdown panel --}}
         <div
-            data-fi-phone
             x-show="open"
             x-transition:enter="transition ease-out duration-100"
             x-transition:enter-start="opacity-0 scale-95"
@@ -158,19 +124,17 @@
             x-transition:leave="transition ease-in duration-75"
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
-            class="absolute z-50 mt-10 w-64 rounded-lg"
-            style="background: var(--pi-panel-bg); border: 1px solid var(--pi-panel-border); box-shadow: var(--pi-panel-shadow);"
+            class="absolute z-50 mt-10 w-64 rounded-md bg-white dark:bg-gray-700 shadow-lg ring-1 ring-black/5 dark:ring-white/10"
             x-cloak
         >
             {{-- Search --}}
-            <div class="border-b p-2" style="border-color: var(--pi-divider);">
+            <div class="border-b border-gray-200 dark:border-white/10 p-2">
                 <input
                     type="text"
                     x-model="search"
                     x-ref="countrySearch"
                     placeholder="{{ __('Search...') }}"
-                    class="w-full rounded-md px-2.5 py-1.5 text-sm focus:border-primary-500 focus:ring-primary-500"
-                    style="background: var(--pi-search-bg); color: var(--pi-search-color); border: 1px solid var(--pi-search-border);"
+                    class="w-full rounded-md border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-600 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
                 />
             </div>
             <div class="max-h-48 overflow-y-auto py-1">
@@ -178,20 +142,15 @@
                     <button
                         type="button"
                         x-on:click="selectCountry(country)"
-                        class="flex w-full items-center gap-2 px-3 py-1.5 text-sm"
-                        style="color: var(--pi-item-color);"
-                        x-bind:style="countryCode === country.phone_code
-                            ? 'color: var(--pi-item-color); background: var(--pi-item-selected-bg);'
-                            : 'color: var(--pi-item-color);'"
-                        x-on:mouseenter="$el.style.background = 'var(--pi-item-hover-bg)'"
-                        x-on:mouseleave="$el.style.background = countryCode === country.phone_code ? 'var(--pi-item-selected-bg)' : 'transparent'"
+                        class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-600"
+                        :class="{ 'bg-primary-50 dark:bg-primary-900/20': countryCode === country.phone_code }"
                     >
                         <span class="flag shrink-0" :class="'flag-' + country.code"></span>
                         <span x-text="country.phone_code" class="font-mono"></span>
-                        <span x-text="country.name" class="truncate" style="color: var(--pi-muted-color);"></span>
+                        <span x-text="country.name" class="truncate text-gray-400"></span>
                     </button>
                 </template>
-                <div x-show="filteredCountries.length === 0" class="px-3 py-2 text-sm" style="color: var(--pi-no-results);">
+                <div x-show="filteredCountries.length === 0" class="px-3 py-2 text-sm text-gray-400">
                     {{ __('No results') }}
                 </div>
             </div>

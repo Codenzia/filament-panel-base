@@ -43,7 +43,6 @@
             // Auto-injected on Filament panels via @filamentStyles.
             FilamentAsset::register([
                 Css::make('flag-icons', __DIR__ . '/../resources/dist/flag-icons.css'),
-                Css::make('phone-input', __DIR__ . '/../resources/css/phone-input.css'),
             ], 'codenzia/filament-panel-base');
 
             // Publish the SVG flags directory alongside the CSS.

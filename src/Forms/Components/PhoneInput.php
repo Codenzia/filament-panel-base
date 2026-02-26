@@ -32,7 +32,7 @@ class PhoneInput extends Field
     use CanBeReadOnly;
     use HasPlaceholder;
 
-    protected string $view = 'panel-base::forms.components.phone-input';
+    protected string $view = 'panel-base::forms.components.filament-phone-input';
 
     /** @var array|Closure */
     protected array | Closure $countries = [];

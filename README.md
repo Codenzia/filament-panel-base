@@ -329,7 +329,18 @@ class UserPanelProvider extends BasePanelProvider
 ```blade
 <x-panel-base::country-select :countries="$countries" wire-model="country_id" />
 <x-panel-base::country-code-select :countries="$countries" wire-model="country_code" />
+<x-panel-base::phone-input :countries="$countries" country-code-model="country_code" phone-model="whatsapp" />
 ```
+
+`phone-input` combines a country code dropdown and phone number input into a single bordered group with a searchable dropdown. It accepts the same country collection as the other components and binds to two separate Livewire properties.
+
+| Prop | Default | Description |
+|---|---|---|
+| `:countries` | *(required)* | Eloquent collection of Country models (must have `code`, `phone_code`, `name`) |
+| `country-code-model` | `'country_code'` | Livewire property for the selected dial code |
+| `phone-model` | `'whatsapp'` | Livewire property for the phone number |
+| `:default` | `null` | Fallback country code (e.g. `'+962'`) |
+| `placeholder` | `'501234567'` | Input placeholder |
 
 **Navbar switchers** (pair with `SetCountry`/`SetCurrency`/`SetLocale` middleware):
 
