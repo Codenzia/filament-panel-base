@@ -37,6 +37,8 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected bool $sidebarSlideoverEnabled = true;
 
+    protected bool $sidebarCollapseToIcons = true;
+
     /**
      * Enable or disable the language dropdown in the topbar.
      */
@@ -105,6 +107,21 @@ abstract class BasePanelProvider extends PanelProvider
     public function sidebarSlideover(bool $enabled = true): static
     {
         $this->sidebarSlideoverEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * When sidebar slideover is enabled, collapse to an icon-only narrow bar
+     * instead of fully hiding the sidebar off-screen.
+     *
+     * Default behaviour (false): sidebar slides fully off-screen when closed.
+     * When enabled (true): the sidebar shrinks to Filament's icon-only width,
+     * letting users still see and click nav item icons without opening the drawer.
+     */
+    public function sidebarCollapseToIcons(bool $enabled = true): static
+    {
+        $this->sidebarCollapseToIcons = $enabled;
 
         return $this;
     }
@@ -498,9 +515,11 @@ abstract class BasePanelProvider extends PanelProvider
             fn(): HtmlString => new HtmlString(
                 '<style>' .
                     /* 1. Sidebar slide — desktop only. */
+                    /* translateX(-100%) is skipped when collapseToIcons is on,          */
+                    /* so Filament's built-in icon-only narrow state shows instead.      */
                     '@media(min-width:64rem){' .
                         '.fi-sidebar{transition:transform .3s cubic-bezier(.4,0,.2,1);}' .
-                        '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}' .
+                        ($this->sidebarCollapseToIcons ? '' : '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}') .
                     '}' .
                     /* 2. Sidebar open state. */
                     '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);}' .
@@ -530,7 +549,21 @@ abstract class BasePanelProvider extends PanelProvider
                     '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(6){animation-delay:.54s}' .
                     '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(7){animation-delay:.63s}' .
                     '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(8){animation-delay:.72s}' .
-                    '</style>'
+                    '</style>' .
+                    /* Mirror Filament's own mobile behavior (item.blade.php line 36):                    */
+                    /*   x-on:click="window.matchMedia('(max-width:1024px)').matches &&              */
+                    /*               $store.sidebar.close()"                                         */
+                    /* Filament only closes on mobile. We extend that to desktop in slideover mode.  */
+                    /* close() also sets isOpenDesktop=false via Alpine.$persist so the state        */
+                    /* survives wire:navigate without any livewire:navigated timing hacks.           */
+                    '<script>' .
+                        'document.addEventListener("click",function(e){' .
+                            'if(window.innerWidth<1024)return;' .
+                            'if(!e.target.closest(".fi-sidebar-nav a"))return;' .
+                            'var s=window.Alpine&&window.Alpine.store("sidebar");' .
+                            'if(s&&s.isOpen)s.close();' .
+                        '});' .
+                    '</script>'
             ),
         );
     }

@@ -195,6 +195,7 @@ class AdminPanelProvider extends BasePanelProvider
 | `sidebarCollapseButtonPosition(string $position)` | `'left'` | `'left'` keeps Filament's default topbar button. `'right'` replaces it with a pill button on the right edge of the sidebar. |
 | `sidebarIcon(string $icon)` | — | Replace the default chevron with any Filament icon string (e.g. `'heroicon-o-bars-3'`). Applies to both left and right button positions. |
 | `sidebarSlideover(bool $enabled = true)` | `true` | When enabled, the sidebar overlays the main content on desktop instead of pushing it. A dim backdrop is shown, matching Filament's mobile drawer behaviour. Call `->sidebarSlideover(false)` to restore the default push layout. |
+| `sidebarCollapseToIcons(bool $enabled = true)` | `true` | When slideover is enabled, keep Filament's icon-only narrow bar when the sidebar is closed instead of sliding it fully off-screen. Users can still click nav icons without opening the full drawer. Call `->sidebarCollapseToIcons(false)` to slide the sidebar fully off-screen instead. |
 
 > **Note:** Slideover mode is **on by default**. When it is active and no custom icon is set, the left-position button automatically uses `heroicon-o-bars-3` (the mobile drawer icon) to signal drawer behaviour. The right-position pill button always uses the chevron SVG by default.
 
