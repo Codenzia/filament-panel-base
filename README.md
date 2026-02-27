@@ -208,6 +208,36 @@ The `theme-styles` component accepts an optional `:colors` prop. When omitted, i
 | `SetCurrency` | Sets active currency from country relationship or session |
 | `EnsureUserApproved` | Blocks suspended/pending users (requires `HasModerationStatus` contract) |
 
+### Registration Settings
+
+The package provides a shared `RegistrationSettings` class (`spatie/laravel-settings`) with two fields that complement the `EnsureUserApproved` middleware and `HasModerationStatus` contract:
+
+- `registration_mode` — `'open'` (default) or `'moderated'`
+- `require_email_verification` — `true` (default) or `false`
+
+The settings migration is auto-registered and idempotent. Run `php artisan migrate` to create the entries.
+
+**Using the settings in your registration flow:**
+
+```php
+use Codenzia\FilamentPanelBase\Settings\RegistrationSettings;
+
+$settings = app(RegistrationSettings::class);
+
+$user = User::create([
+    'name' => $name,
+    'email' => $email,
+    'password' => $password,
+    'status' => $settings->registration_mode === 'moderated' ? 'pending' : 'approved',
+]);
+
+if ($settings->require_email_verification) {
+    // redirect to email verification
+}
+```
+
+The package does **not** ship an admin page for these settings — consuming projects should build their own UI tailored to their needs.
+
 ### Contracts
 
 Implement these interfaces on your models/settings to integrate with the package:
@@ -711,6 +741,7 @@ FilamentPanelBasePlugin::make()->getThemeColors();
 - PHP 8.3+
 - Laravel 12+
 - Filament v4
+- `spatie/laravel-settings` ^3.0 (required, for `RegistrationSettings`)
 - `spatie/laravel-permission` (optional, for `NotifiesAdmins` trait)
 - `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable content)
 
