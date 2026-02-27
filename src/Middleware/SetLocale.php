@@ -20,6 +20,14 @@ class SetLocale
 
         if (array_key_exists($locale, $activeLanguages)) {
             App::setLocale($locale);
+
+            // Sync the translatable content locale whenever the UI locale changes,
+            // so the content editor defaults to the same language as the UI.
+            // A user's explicit choice within the same UI locale is preserved.
+            if (session('_ui_locale') !== $locale) {
+                session()->put('spatie_translatable_active_locale', $locale);
+                session()->put('_ui_locale', $locale);
+            }
         }
 
         return $next($request);
