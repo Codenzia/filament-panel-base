@@ -766,6 +766,97 @@ protected function registerTranslatablePlugin(Panel $panel): void
 }
 ```
 
+## Translation Manager UI (Optional)
+
+The package bundles [tomatophp/filament-translations](https://github.com/tomatophp/filament-translations) and exposes it as an opt-in feature. When enabled, it adds a **Translations** page to your admin panel where you can view, edit, import, and export all `__()` / `trans()` language strings — no file editing required.
+
+### When to use this
+
+Use this when you need a **non-developer-friendly UI** to manage static language files (e.g. `lang/en/messages.php`, `lang/ar.json`). This is different from `spatie/laravel-translatable` which handles database content.
+
+### Step 1: Publish migrations and config
+
+```bash
+php artisan panel-base:enable-translations
+```
+
+Expected output:
+
+```
+Running filament-translations:install...
+Publish Vendor Assets
+Scanning for translations
+Filament Translations Manager installed successfully.
+
+Done! Follow these steps to activate the translation manager:
+
+  1. Run your migrations:
+     php artisan migrate
+
+  2. Add ->withTranslations() to FilamentPanelBasePlugin in your panel provider:
+
+     ->plugins([
+         FilamentPanelBasePlugin::make()
+             ->withTranslations()
+             ->settingsUsing(...),
+     ])
+
+  3. (Optional) Review config/filament-translations.php to configure
+     scan paths, UI options, and queue settings.
+
+Translation manager is ready to activate.
+```
+
+This publishes TomatoPHP's migrations and `config/filament-translations.php`, and does an initial scan of your codebase for translation keys.
+
+### Step 2: Run migrations
+
+```bash
+php artisan migrate
+```
+
+### Step 3: Opt in per panel
+
+Add `->withTranslations()` to `FilamentPanelBasePlugin::make()` in the panel(s) where you want the translation UI:
+
+```php
+->plugins([
+    FilamentPanelBasePlugin::make()
+        ->withTranslations()
+        ->settingsUsing(fn () => app(\App\Settings\GeneralSettings::class)),
+])
+```
+
+The Translations resource will appear in that panel's navigation. Panels without `->withTranslations()` are unaffected.
+
+### Step 4: Scan your codebase for translation keys
+
+```bash
+php artisan filament-translations:import
+```
+
+This scans your project for all `__()`, `trans()`, `@lang()` calls and populates the database. Re-run whenever you add new translation keys.
+
+### Customising plugin options
+
+Override `registerTranslationsPlugin()` in your panel provider to pass custom options to the TomatoPHP plugin:
+
+```php
+class AdminPanelProvider extends BasePanelProvider
+{
+    protected function registerTranslationsPlugin(\Filament\Panel $panel): void
+    {
+        $panel->plugin(
+            \TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::make()
+                ->allowCreate()
+                ->allowClearTranslations()
+        );
+    }
+}
+```
+
+> **Note:** When you override `registerTranslationsPlugin()`, omit `->withTranslations()` from the plugin chain — the override method takes full control of plugin registration.
+
 ## Plugin API
 
 ```php
@@ -774,6 +865,8 @@ FilamentPanelBasePlugin::make()
     ->settingsUsing(fn () => app(GeneralSettings::class))
     // Or by class name
     ->settingsClass(GeneralSettings::class)
+    // Enable the translation manager UI for this panel (opt-in)
+    ->withTranslations()
 
 // Get resolved theme colors (used internally by <x-panel-base::theme-styles />)
 FilamentPanelBasePlugin::make()->getThemeColors();
@@ -787,7 +880,8 @@ FilamentPanelBasePlugin::make()->getThemeColors();
 - Filament v4
 - `spatie/laravel-settings` ^3.0 (required, for `RegistrationSettings`)
 - `spatie/laravel-permission` (optional, for `NotifiesAdmins` trait)
-- `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable content)
+- `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable database content)
+- `tomatophp/filament-translations` (bundled — activate with `->withTranslations()` for translation file UI)
 
 ## License
 

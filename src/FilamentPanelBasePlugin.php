@@ -18,6 +18,8 @@ class FilamentPanelBasePlugin implements Plugin
 
     protected ?\Closure $settingsResolver = null;
 
+    protected bool $translationsEnabled = false;
+
     public function getId(): string
     {
         return 'filament-panel-base';
@@ -42,6 +44,27 @@ class FilamentPanelBasePlugin implements Plugin
         $this->settingsResolver = $resolver;
 
         return $this;
+    }
+
+    /**
+     * Enable the TomatoPHP FilamentTranslations plugin for this panel.
+     *
+     * After enabling, run: php artisan panel-base:enable-translations
+     * to publish the required migrations and config.
+     */
+    public function withTranslations(bool $enabled = true): static
+    {
+        $this->translationsEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Whether the FilamentTranslations plugin has been activated for this panel.
+     */
+    public function isTranslationsEnabled(): bool
+    {
+        return $this->translationsEnabled;
     }
 
     /**
@@ -91,7 +114,20 @@ class FilamentPanelBasePlugin implements Plugin
         return array_merge($colors, array_filter($overrides));
     }
 
-    public function register(Panel $panel): void {}
+    public function register(Panel $panel): void
+    {
+        if (! $this->translationsEnabled) {
+            return;
+        }
+
+        if (! class_exists(\TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::class)) {
+            return;
+        }
+
+        $panel->plugin(
+            \TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::make()
+        );
+    }
 
     public function boot(Panel $panel): void {}
 
