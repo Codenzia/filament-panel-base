@@ -7,6 +7,7 @@ namespace Codenzia\FilamentPanelBase\Providers;
 use Codenzia\FilamentPanelBase\Concerns\HasProfileSlideOver;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
+use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Filament\Actions\Action;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -19,27 +20,84 @@ abstract class BasePanelProvider extends PanelProvider
 {
     use HasProfileSlideOver;
 
+    protected bool $languageDropdownEnabled = true;
+
+    /** @var array{label: string, icon: ?string, color: string}|null */
+    protected ?array $titleBadgeConfig = null;
+
+    protected bool $visitWebsiteEnabled = true;
+
+    protected ?string $visitWebsiteLabel = null;
+
+    /**
+     * Enable or disable the language dropdown in the topbar.
+     */
+    public function showLanguageDropdown(bool $show = true): static
+    {
+        $this->languageDropdownEnabled = $show;
+
+        return $this;
+    }
+
+    /**
+     * Add a title badge next to the logo in the topbar.
+     */
+    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary'): static
+    {
+        $this->titleBadgeConfig = [
+            'label' => $label,
+            'icon' => $icon,
+            'color' => $color,
+        ];
+
+        return $this;
+    }
+
+    /**
+     * Enable or disable the "Visit Website" button in the topbar.
+     */
+    public function showVisitWebsite(bool $show = true, ?string $label = null): static
+    {
+        $this->visitWebsiteEnabled = $show;
+        $this->visitWebsiteLabel = $label;
+
+        return $this;
+    }
+
     /**
      * Apply shared configuration (branding, colors, user menu, render hooks) to a panel.
      */
     protected function configureSharedSettings(Panel $panel): Panel
     {
         $panel
-            ->brandName(fn (): string => $this->resolveBrandName())
-            ->brandLogo(fn (): ?string => $this->resolveBrandLogo())
+            ->brandName(fn(): string => $this->resolveBrandName())
+            ->brandLogo(fn(): ?string => $this->resolveBrandLogo())
             ->brandLogoHeight('2.5rem')
-            ->favicon(fn (): ?string => $this->resolveFavicon())
-            ->colors(fn (): array => $this->getColorsFromSettings())
+            ->favicon(fn(): ?string => $this->resolveFavicon())
+            ->colors(fn(): array => $this->getColorsFromSettings())
             ->userMenuItems($this->getUserMenuItems($panel))
-            ->renderHook(
-                PanelsRenderHook::USER_MENU_BEFORE,
-                fn (): HtmlString => $this->getVisitWebsiteButton(),
-            )
-            ->renderHook(
-                PanelsRenderHook::TOPBAR_LOGO_AFTER,
-                fn (): HtmlString => $this->getPanelBadge($panel),
-            )
             ->sidebarCollapsibleOnDesktop();
+
+        if ($this->titleBadgeConfig) {
+            $panel->renderHook(
+                PanelsRenderHook::TOPBAR_LOGO_AFTER,
+                fn(): HtmlString => $this->getPanelBadge(),
+            );
+        }
+
+        if ($this->visitWebsiteEnabled) {
+            $panel->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
+                fn(): HtmlString => $this->getVisitWebsiteButton(),
+            );
+        }
+
+        if ($this->languageDropdownEnabled) {
+            $panel->renderHook(
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn(): string => $this->getLocaleToggle(),
+            );
+        }
 
         $this->registerTranslatablePlugin($panel);
 
@@ -197,26 +255,26 @@ abstract class BasePanelProvider extends PanelProvider
 
         $items = [
             // Show user name as the top item (non-clickable label)
-            'profile' => fn (Action $action) => $action
+            'profile' => fn(Action $action) => $action
                 ->url(null)
-                ->label(fn (): string => filament()->getUserName(filament()->auth()->user())),
+                ->label(fn(): string => filament()->getUserName(filament()->auth()->user())),
 
             // Profile edit slideOver
             $this->getProfileSlideOverAction(),
             Action::make('um_role')
                 ->disabled()
                 ->icon('heroicon-c-book-open')
-                ->label(fn () => method_exists(filament()->auth()->user(), 'roles')
+                ->label(fn() => method_exists(filament()->auth()->user(), 'roles')
                     ? filament()->auth()->user()?->roles->pluck('name')->join(', ') ?? __('User')
                     : __('User')),
             Action::make('um_phone')
                 ->disabled()
                 ->icon('heroicon-o-phone')
-                ->label(fn () => filament()->auth()->user()?->phone ?? __('No phone')),
+                ->label(fn() => filament()->auth()->user()?->phone ?? __('No phone')),
             Action::make('um_email')
                 ->disabled()
                 ->icon('heroicon-o-envelope')
-                ->label(fn () => filament()->auth()->user()?->email ?? __('No Email')),
+                ->label(fn() => filament()->auth()->user()?->email ?? __('No Email')),
         ];
 
         // Cross-panel navigation
@@ -230,7 +288,7 @@ abstract class BasePanelProvider extends PanelProvider
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url('/' . $adminPanel)
                     ->color('info')
-                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($adminPanel)) ?? false)
+                    ->visible(fn(): bool => Auth::user()?->canAccessPanel(filament()->getPanel($adminPanel)) ?? false)
                     ->sort(50);
             } elseif ($panelId === $adminPanel) {
                 $items[] = Action::make('user-dashboard')
@@ -238,7 +296,7 @@ abstract class BasePanelProvider extends PanelProvider
                     ->icon('heroicon-o-squares-2x2')
                     ->url('/' . $dashboardPanel)
                     ->color('primary')
-                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($dashboardPanel)) ?? false)
+                    ->visible(fn(): bool => Auth::user()?->canAccessPanel(filament()->getPanel($dashboardPanel)) ?? false)
                     ->sort(50);
             }
         }
@@ -249,28 +307,21 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Get a small badge identifying the current panel.
      */
-    protected function getPanelBadge(Panel $panel): HtmlString
+    protected function getPanelBadge(): HtmlString
     {
-        $panelId = $panel->getId();
-        $panels = config('filament-panel-base.panels', ['admin', 'dashboard']);
-        $adminPanel = $panels[0] ?? 'admin';
+        $label = e($this->titleBadgeConfig['label']);
+        $color = $this->titleBadgeConfig['color'];
 
-        if ($panelId === $adminPanel) {
-            $label = __('Administration');
-            $classes = 'bg-indigo-100 text-indigo-700 ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/30';
-        } else {
-            $label = __('My Account');
-            $classes = 'bg-primary-100 text-primary-700 ring-primary-600/20 dark:bg-primary-500/10 dark:text-primary-400 dark:ring-primary-400/30';
-        }
+        $classes = "bg-{$color}-100 text-{$color}-700 ring-{$color}-600/20 dark:bg-{$color}-500/10 dark:text-{$color}-400 dark:ring-{$color}-400/30";
 
         return new HtmlString(
-            '<span style="margin-left: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $label . '</span>'
+            '<span style="margin-left: 1rem; margin-right: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $label . '</span>'
         );
     }
 
     protected function getVisitWebsiteButton(): HtmlString
     {
-        $label = __('Visit Website');
+        $label = $this->visitWebsiteLabel ?? __('Visit Website');
 
         return new HtmlString('
             <a href="/" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-white/5 dark:text-gray-200 dark:ring-white/20 dark:hover:bg-white/10" title="' . $label . '">
@@ -280,6 +331,17 @@ abstract class BasePanelProvider extends PanelProvider
                 <span class="hidden sm:inline">' . $label . '</span>
             </a>
         ');
+    }
+
+    /**
+     * Render the locale switcher dropdown for the topbar.
+     */
+    protected function getLocaleToggle(): string
+    {
+        return view('panel-base::components.locale-switcher', [
+            'locales' => SetLocale::getLocales(),
+            'currentLocale' => app()->getLocale(),
+        ])->render();
     }
 
     /**
@@ -297,6 +359,7 @@ abstract class BasePanelProvider extends PanelProvider
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
             \Filament\Http\Middleware\DisableBladeIconComponents::class,
             \Filament\Http\Middleware\DispatchServingFilamentEvent::class,
+            SetLocale::class,
         ];
     }
 }
