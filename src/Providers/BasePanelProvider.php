@@ -309,7 +309,7 @@ abstract class BasePanelProvider extends PanelProvider
      */
     protected function getPanelBadge(): HtmlString
     {
-        $label = e($this->titleBadgeConfig['label']);
+        $label = e(__($this->titleBadgeConfig['label']));
         $color = $this->titleBadgeConfig['color'];
 
         $classes = "bg-{$color}-100 text-{$color}-700 ring-{$color}-600/20 dark:bg-{$color}-500/10 dark:text-{$color}-400 dark:ring-{$color}-400/30";
