@@ -50,12 +50,13 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Add a title badge next to the logo in the topbar.
      */
-    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary'): static
+    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary',  bool $showOnAuthForm = true): static
     {
         $this->titleBadgeConfig = [
             'label' => $label,
             'icon' => $icon,
             'color' => $color,
+            'auth_visible' => $showOnAuthForm
         ];
 
         return $this;
@@ -123,10 +124,21 @@ abstract class BasePanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop();
 
         if ($this->titleBadgeConfig) {
+            $showOnAuthForms = $this->titleBadgeConfig['auth_visible'] ?? false;
             $panel->renderHook(
                 PanelsRenderHook::TOPBAR_LOGO_AFTER,
                 fn(): HtmlString => $this->getPanelBadge(),
             );
+            if ($showOnAuthForms) {
+                $panel->renderHook(
+                    PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
+                    fn(): HtmlString => $this->getPanelBadge(centered: true),
+                );
+                $panel->renderHook(
+                    PanelsRenderHook::AUTH_REGISTER_FORM_BEFORE,
+                    fn(): HtmlString => $this->getPanelBadge(centered: true),
+                );
+            }
         }
 
         if ($this->visitWebsiteEnabled) {
@@ -370,7 +382,7 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Get a small badge identifying the current panel.
      */
-    protected function getPanelBadge(): HtmlString
+    protected function getPanelBadge(bool $centered = false): HtmlString
     {
         $label = e(__($this->titleBadgeConfig['label']));
         $color = $this->titleBadgeConfig['color'] ?? 'primary';
@@ -387,6 +399,11 @@ abstract class BasePanelProvider extends PanelProvider
 
         $classes = $colorClasses[$color] ?? $colorClasses['primary'];
         $iconHtml = $icon ? svg($icon, 'w-5 h-5 mx-1.5')->toHtml() : '';
+        $badge = '<span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $iconHtml . $label . '</span>';
+
+        if ($centered) {
+            return new HtmlString('<div class="flex justify-center mb-4">' . $badge . '</div>');
+        }
 
         return new HtmlString(
             '<span style="margin-left: 1rem; margin-right: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $iconHtml . $label . '</span>'
@@ -463,12 +480,16 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Override Filament's desktop sidebar layout so the sidebar overlays content
-     * (slide-over) instead of pushing it.
+     * (slide-over) instead of pushing it, with a suite of polish animations.
      *
-     * Two targeted CSS rules injected into <head>:
-     *  1. Keep the sidebar fixed (not sticky) when open — removes it from flex flow.
-     *  2. Show the existing fi-sidebar-close-overlay backdrop on desktop (Filament
-     *     hides it above the lg breakpoint by default).
+     * CSS rules injected into <head>:
+     *  1. Sidebar slide — desktop-only transform transition + translateX(-100%) when
+     *     closed. Scoped to lg to avoid conflicting with Filament's mobile transitions.
+     *  2. Sidebar open state — fixed position, z-index, background, box-shadow.
+     *  3. Topbar raised to z-35 so its buttons stay above the backdrop (z-30).
+     *  4. Frosted glass overlay — backdrop-filter: blur on the dim backdrop.
+     *  5. Content scale-down — main content shrinks + blurs when the drawer opens.
+     *  6. Nav items stagger — each top-level nav item cascades in with a slight delay.
      */
     protected function registerSidebarSlideover(Panel $panel): void
     {
@@ -476,18 +497,39 @@ abstract class BasePanelProvider extends PanelProvider
             PanelsRenderHook::HEAD_END,
             fn(): HtmlString => new HtmlString(
                 '<style>' .
-                    /* Keep sidebar fixed (not sticky) so it overlays instead of pushing content. */
-                    /* z-index:40 lifts it above the backdrop (z-30) and topbar (z-35). */
-                    /* background-color restores the sidebar bg that lg:bg-transparent removes. */
-                    '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;}' .
-                    'html.dark .fi-sidebar.fi-sidebar-open{background-color:#111827;}' .
-                    /* Topbar (z-30, sticky) is rendered before fi-layout in the DOM, so the */
-                    /* fixed backdrop (z-30, inside fi-layout) covers it via DOM order.       */
-                    /* Raise topbar to z-35 so buttons stay accessible above the backdrop.   */
+                    /* 1. Sidebar slide — desktop only. */
+                    '@media(min-width:64rem){' .
+                        '.fi-sidebar{transition:transform .3s cubic-bezier(.4,0,.2,1);}' .
+                        '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}' .
+                    '}' .
+                    /* 2. Sidebar open state. */
+                    '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);}' .
+                    'html.dark .fi-sidebar.fi-sidebar-open{background-color:#111827;box-shadow:4px 0 24px rgba(0,0,0,.4);}' .
+                    /* 3. Topbar raised above the backdrop. */
                     '.fi-topbar-ctn{z-index:35;}' .
-                    /* Show Filament\'s existing dim backdrop on desktop (normally lg:hidden). */
-                    /* No !important — Alpine x-show still controls display via inline style. */
+                    /* 4. Frosted glass overlay — reduce Filament's opaque dark bg so the blur is visible. */
+                    /* No !important on display — Alpine x-show still controls it via inline style.    */
+                    '.fi-sidebar-close-overlay{transition:opacity .3s ease;background-color:rgba(0,0,0,.35)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}' .
                     '@media(min-width:64rem){.fi-sidebar-close-overlay{display:block;}}' .
+                    /* 5. Content scale-down — desktop only to avoid affecting mobile layout.           */
+                    /* scale(.95) and blur(2px) are perceptible; .98/1px were too subtle.              */
+                    '@media(min-width:64rem){' .
+                        '.fi-main-ctn{transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease;}' .
+                        '.fi-sidebar.fi-sidebar-open~.fi-main-ctn{transform:scale(.95);filter:blur(2px);}' .
+                    '}' .
+                    /* 6. Nav items stagger — each fi-sidebar-group cascades in with a slight delay.   */
+                    /* Target fi-sidebar-nav-groups>li (the groups), NOT fi-sidebar-nav>* (the ul).    */
+                    /* animation-fill-mode:both keeps items hidden during delay, holds final state.    */
+                    '@keyframes fi-nav-in{from{opacity:0;transform:translateX(-.75rem)}to{opacity:1;transform:translateX(0)}}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li{animation:fi-nav-in .35s ease both;}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(1){animation-delay:.09s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(2){animation-delay:.18s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(3){animation-delay:.27s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(4){animation-delay:.36s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(5){animation-delay:.45s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(6){animation-delay:.54s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(7){animation-delay:.63s}' .
+                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(8){animation-delay:.72s}' .
                     '</style>'
             ),
         );

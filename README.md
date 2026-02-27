@@ -164,7 +164,7 @@ class AdminPanelProvider extends BasePanelProvider
     public function panel(Panel $panel): Panel
     {
         $this
-            ->addTitleBadge('Administration', 'heroicon-o-shield-check', 'primary')
+            ->addTitleBadge('Administration', 'heroicon-o-shield-check', 'primary', showOnAuthForm: true)
             ->showVisitWebsite(label: 'Back to site')
             ->showLanguageDropdown()
             ->sidebarCollapseButtonPosition('right')
@@ -186,7 +186,7 @@ class AdminPanelProvider extends BasePanelProvider
 |---|---|---|
 | `showLanguageDropdown(bool $show = true)` | `true` | Show or hide the locale switcher dropdown in the topbar. |
 | `showVisitWebsite(bool $show = true, ?string $label = null)` | `true` | Show or hide the "Visit Website" link button. Pass `$label` to override the translated default. |
-| `addTitleBadge(string $label, ?string $icon = null, string $color = 'primary')` | — | Render a small colour-coded badge next to the logo. Accepts `'primary'`, `'success'`, `'warning'`, `'danger'`, `'info'`, or `'gray'`. |
+| `addTitleBadge(string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true)` | — | Render a small colour-coded badge next to the logo. Accepts `'primary'`, `'success'`, `'warning'`, `'danger'`, `'info'`, or `'gray'`. When `$showOnAuthForm` is `true` (default), the badge is also shown centred above the login and register forms. |
 
 **Sidebar**
 
