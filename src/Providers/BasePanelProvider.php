@@ -29,6 +29,8 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected ?string $visitWebsiteLabel = null;
 
+    protected string $sidebarCollapseButtonPosition = 'right';
+
     /**
      * Enable or disable the language dropdown in the topbar.
      */
@@ -60,6 +62,16 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $this->visitWebsiteEnabled = $show;
         $this->visitWebsiteLabel = $label;
+
+        return $this;
+    }
+
+    /**
+     * Set the sidebar collapse button position ('left' or 'right').
+     */
+    public function sidebarCollapseButtonPosition(string $position): static
+    {
+        $this->sidebarCollapseButtonPosition = $position;
 
         return $this;
     }
@@ -97,6 +109,10 @@ abstract class BasePanelProvider extends PanelProvider
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn(): string => $this->getLocaleToggle(),
             );
+        }
+
+        if ($this->sidebarCollapseButtonPosition === 'right') {
+            $this->registerRightSidebarCollapseButton($panel);
         }
 
         $this->registerTranslatablePlugin($panel);
@@ -372,5 +388,27 @@ abstract class BasePanelProvider extends PanelProvider
             \Filament\Http\Middleware\DispatchServingFilamentEvent::class,
             SetLocale::class,
         ];
+    }
+
+    /**
+     * Register a custom sidebar collapse button on the right side.
+     *
+     * Uses two render hooks:
+     *  - TOPBAR_LOGO_BEFORE: injects a sibling of .fi-topbar-collapse-sidebar-btn-ctn
+     *    that removes it via a MutationObserver scoped to .fi-topbar-start.
+     *  - SIDEBAR_NAV_START: injects the custom pill button at the top of the nav,
+     *    above all nav items, so it sits at the top edge of the visible sidebar.
+     */
+    protected function registerRightSidebarCollapseButton(Panel $panel): void
+    {
+        $panel->renderHook(
+            PanelsRenderHook::TOPBAR_LOGO_BEFORE,
+            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-remover'),
+        );
+
+        $panel->renderHook(
+            PanelsRenderHook::SIDEBAR_NAV_START,
+            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button'),
+        );
     }
 }
