@@ -310,12 +310,23 @@ abstract class BasePanelProvider extends PanelProvider
     protected function getPanelBadge(): HtmlString
     {
         $label = e(__($this->titleBadgeConfig['label']));
-        $color = $this->titleBadgeConfig['color'];
+        $color = $this->titleBadgeConfig['color'] ?? 'primary';
+        $icon = $this->titleBadgeConfig['icon'] ?? '';
 
-        $classes = "bg-{$color}-100 text-{$color}-700 ring-{$color}-600/20 dark:bg-{$color}-500/10 dark:text-{$color}-400 dark:ring-{$color}-400/30";
+        $colorClasses = [
+            'primary' => 'bg-primary-100 text-primary-700 ring-primary-600/20 dark:bg-primary-500/10 dark:text-primary-400 dark:ring-primary-400/30',
+            'success' => 'bg-success-100 text-success-700 ring-success-600/20 dark:bg-success-500/10 dark:text-success-400 dark:ring-success-400/30',
+            'warning' => 'bg-warning-100 text-warning-700 ring-warning-600/20 dark:bg-warning-500/10 dark:text-warning-400 dark:ring-warning-400/30',
+            'danger'  => 'bg-danger-100 text-danger-700 ring-danger-600/20 dark:bg-danger-500/10 dark:text-danger-400 dark:ring-danger-400/30',
+            'info'    => 'bg-info-100 text-info-700 ring-info-600/20 dark:bg-info-500/10 dark:text-info-400 dark:ring-info-400/30',
+            'gray'    => 'bg-gray-100 text-gray-700 ring-gray-600/20 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-400/30',
+        ];
+
+        $classes = $colorClasses[$color] ?? $colorClasses['primary'];
+        $iconHtml = $icon ? svg($icon, 'w-5 h-5 mx-1.5')->toHtml() : '';
 
         return new HtmlString(
-            '<span style="margin-left: 1rem; margin-right: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $label . '</span>'
+            '<span style="margin-left: 1rem; margin-right: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $iconHtml . $label . '</span>'
         );
     }
 
