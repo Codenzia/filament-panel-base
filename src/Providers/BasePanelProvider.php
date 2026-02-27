@@ -12,6 +12,8 @@ use Filament\Actions\Action;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Facades\FilamentIcon;
+use Filament\View\PanelsIconAlias;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\HtmlString;
@@ -29,7 +31,11 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected ?string $visitWebsiteLabel = null;
 
-    protected string $sidebarCollapseButtonPosition = 'right';
+    protected string $sidebarCollapseButtonPosition = 'left';
+
+    protected ?string $sidebarIcon = null;
+
+    protected bool $sidebarSlideoverEnabled = true;
 
     /**
      * Enable or disable the language dropdown in the topbar.
@@ -77,6 +83,32 @@ abstract class BasePanelProvider extends PanelProvider
     }
 
     /**
+     * Set a custom icon for the sidebar collapse/expand button.
+     * Accepts any Filament icon string (e.g. 'heroicon-o-bars-3').
+     * Defaults to the built-in chevron SVG when not set.
+     */
+    public function sidebarIcon(string $icon): static
+    {
+        $this->sidebarIcon = $icon;
+
+        return $this;
+    }
+
+    /**
+     * Make the sidebar act as a slide-over overlay on desktop.
+     *
+     * Normally, Filament's sidebar is sticky and pushes the main content to the right.
+     * Enabling this keeps the sidebar fixed (overlay) on all screen sizes and shows
+     * the dim backdrop on desktop, matching mobile behaviour.
+     */
+    public function sidebarSlideover(bool $enabled = true): static
+    {
+        $this->sidebarSlideoverEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
      * Apply shared configuration (branding, colors, user menu, render hooks) to a panel.
      */
     protected function configureSharedSettings(Panel $panel): Panel
@@ -113,6 +145,21 @@ abstract class BasePanelProvider extends PanelProvider
 
         if ($this->sidebarCollapseButtonPosition === 'right') {
             $this->registerRightSidebarCollapseButton($panel);
+        } elseif ($this->sidebarIcon !== null || $this->sidebarSlideoverEnabled) {
+            // For the default left-side Filament buttons, override their icon aliases.
+            // When slideover is on and no explicit icon is set, borrow bars-3 (the mobile drawer icon).
+            $leftIcon = $this->sidebarIcon ?? ($this->sidebarSlideoverEnabled ? 'heroicon-o-bars-3' : null);
+
+            if ($leftIcon !== null) {
+                FilamentIcon::register([
+                    PanelsIconAlias::SIDEBAR_EXPAND_BUTTON   => $leftIcon,
+                    PanelsIconAlias::SIDEBAR_COLLAPSE_BUTTON => $leftIcon,
+                ]);
+            }
+        }
+
+        if ($this->sidebarSlideoverEnabled) {
+            $this->registerSidebarSlideover($panel);
         }
 
         $this->registerTranslatablePlugin($panel);
@@ -408,7 +455,41 @@ abstract class BasePanelProvider extends PanelProvider
 
         $panel->renderHook(
             PanelsRenderHook::SIDEBAR_NAV_START,
-            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button'),
+            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button', [
+                'sidebarIcon' => $this->sidebarIcon,
+            ]),
+        );
+    }
+
+    /**
+     * Override Filament's desktop sidebar layout so the sidebar overlays content
+     * (slide-over) instead of pushing it.
+     *
+     * Two targeted CSS rules injected into <head>:
+     *  1. Keep the sidebar fixed (not sticky) when open — removes it from flex flow.
+     *  2. Show the existing fi-sidebar-close-overlay backdrop on desktop (Filament
+     *     hides it above the lg breakpoint by default).
+     */
+    protected function registerSidebarSlideover(Panel $panel): void
+    {
+        $panel->renderHook(
+            PanelsRenderHook::HEAD_END,
+            fn(): HtmlString => new HtmlString(
+                '<style>' .
+                    /* Keep sidebar fixed (not sticky) so it overlays instead of pushing content. */
+                    /* z-index:40 lifts it above the backdrop (z-30) and topbar (z-35). */
+                    /* background-color restores the sidebar bg that lg:bg-transparent removes. */
+                    '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;}' .
+                    'html.dark .fi-sidebar.fi-sidebar-open{background-color:#111827;}' .
+                    /* Topbar (z-30, sticky) is rendered before fi-layout in the DOM, so the */
+                    /* fixed backdrop (z-30, inside fi-layout) covers it via DOM order.       */
+                    /* Raise topbar to z-35 so buttons stay accessible above the backdrop.   */
+                    '.fi-topbar-ctn{z-index:35;}' .
+                    /* Show Filament\'s existing dim backdrop on desktop (normally lg:hidden). */
+                    /* No !important — Alpine x-show still controls display via inline style. */
+                    '@media(min-width:64rem){.fi-sidebar-close-overlay{display:block;}}' .
+                    '</style>'
+            ),
         );
     }
 }

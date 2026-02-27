@@ -154,6 +154,50 @@ Abstract panel provider that applies shared configuration to all panels:
 - **Visit Website** button in the topbar
 - **Shared middleware stack** — session, CSRF, Filament essentials
 
+#### Panel configuration API
+
+Call these methods on your `BasePanelProvider` subclass **before** `configureSharedSettings()`:
+
+```php
+class AdminPanelProvider extends BasePanelProvider
+{
+    public function panel(Panel $panel): Panel
+    {
+        $this
+            ->addTitleBadge('Administration', 'heroicon-o-shield-check', 'primary')
+            ->showVisitWebsite(label: 'Back to site')
+            ->showLanguageDropdown()
+            ->sidebarCollapseButtonPosition('right')
+            ->sidebarIcon('heroicon-o-bars-3')
+            ->sidebarSlideover();
+
+        $this->configureSharedSettings(
+            $panel->default()->id('admin')->path('admin')->login()
+        );
+
+        return $panel->authMiddleware([Authenticate::class]);
+    }
+}
+```
+
+**Topbar**
+
+| Method | Default | Description |
+|---|---|---|
+| `showLanguageDropdown(bool $show = true)` | `true` | Show or hide the locale switcher dropdown in the topbar. |
+| `showVisitWebsite(bool $show = true, ?string $label = null)` | `true` | Show or hide the "Visit Website" link button. Pass `$label` to override the translated default. |
+| `addTitleBadge(string $label, ?string $icon = null, string $color = 'primary')` | — | Render a small colour-coded badge next to the logo. Accepts `'primary'`, `'success'`, `'warning'`, `'danger'`, `'info'`, or `'gray'`. |
+
+**Sidebar**
+
+| Method | Default | Description |
+|---|---|---|
+| `sidebarCollapseButtonPosition(string $position)` | `'left'` | `'left'` keeps Filament's default topbar button. `'right'` replaces it with a pill button on the right edge of the sidebar. |
+| `sidebarIcon(string $icon)` | — | Replace the default chevron with any Filament icon string (e.g. `'heroicon-o-bars-3'`). Applies to both left and right button positions. |
+| `sidebarSlideover(bool $enabled = true)` | `true` | When enabled, the sidebar overlays the main content on desktop instead of pushing it. A dim backdrop is shown, matching Filament's mobile drawer behaviour. Call `->sidebarSlideover(false)` to restore the default push layout. |
+
+> **Note:** Slideover mode is **on by default**. When it is active and no custom icon is set, the left-position button automatically uses `heroicon-o-bars-3` (the mobile drawer icon) to signal drawer behaviour. The right-position pill button always uses the chevron SVG by default.
+
 ### Theme System
 
 The package ships 17 predefined color presets plus a `custom` option. Each preset defines 15 color keys covering primary, secondary, background, surface, text, status, border, and shadow colors.
