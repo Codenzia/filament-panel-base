@@ -39,6 +39,8 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected bool $sidebarCollapseToIcons = true;
 
+    protected bool $sidebarSearchEnabled = true;
+
     /**
      * Enable or disable the language dropdown in the topbar.
      */
@@ -127,6 +129,20 @@ abstract class BasePanelProvider extends PanelProvider
     }
 
     /**
+     * Show a search box at the top of the sidebar navigation.
+     *
+     * When enabled, a search input is injected via the SIDEBAR_NAV_START render hook.
+     * Typing filters navigation items client-side (Alpine.js) by matching the item label.
+     * Groups with no matching items are hidden automatically.
+     */
+    public function sidebarSearchable(bool $enabled = true): static
+    {
+        $this->sidebarSearchEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
      * Apply shared configuration (branding, colors, user menu, render hooks) to a panel.
      */
     protected function configureSharedSettings(Panel $panel): Panel
@@ -189,6 +205,13 @@ abstract class BasePanelProvider extends PanelProvider
 
         if ($this->sidebarSlideoverEnabled) {
             $this->registerSidebarSlideover($panel);
+        }
+
+        if ($this->sidebarSearchEnabled) {
+            $panel->renderHook(
+                PanelsRenderHook::SIDEBAR_NAV_START,
+                fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-search'),
+            );
         }
 
         $this->registerTranslatablePlugin($panel);
@@ -518,8 +541,8 @@ abstract class BasePanelProvider extends PanelProvider
                     /* translateX(-100%) is skipped when collapseToIcons is on,          */
                     /* so Filament's built-in icon-only narrow state shows instead.      */
                     '@media(min-width:64rem){' .
-                        '.fi-sidebar{transition:transform .3s cubic-bezier(.4,0,.2,1);}' .
-                        ($this->sidebarCollapseToIcons ? '' : '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}') .
+                    '.fi-sidebar{transition:transform .3s cubic-bezier(.4,0,.2,1);}' .
+                    ($this->sidebarCollapseToIcons ? '' : '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}') .
                     '}' .
                     /* 2. Sidebar open state. */
                     '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);}' .
@@ -533,8 +556,8 @@ abstract class BasePanelProvider extends PanelProvider
                     /* 5. Content scale-down — desktop only to avoid affecting mobile layout.           */
                     /* scale(.95) and blur(2px) are perceptible; .98/1px were too subtle.              */
                     '@media(min-width:64rem){' .
-                        '.fi-main-ctn{transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease;}' .
-                        '.fi-sidebar.fi-sidebar-open~.fi-main-ctn{transform:scale(.95);filter:blur(2px);}' .
+                    '.fi-main-ctn{transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease;}' .
+                    '.fi-sidebar.fi-sidebar-open~.fi-main-ctn{transform:scale(.95);filter:blur(2px);}' .
                     '}' .
                     /* 6. Nav items stagger — each fi-sidebar-group cascades in with a slight delay.   */
                     /* Target fi-sidebar-nav-groups>li (the groups), NOT fi-sidebar-nav>* (the ul).    */
@@ -557,12 +580,12 @@ abstract class BasePanelProvider extends PanelProvider
                     /* close() also sets isOpenDesktop=false via Alpine.$persist so the state        */
                     /* survives wire:navigate without any livewire:navigated timing hacks.           */
                     '<script>' .
-                        'document.addEventListener("click",function(e){' .
-                            'if(window.innerWidth<1024)return;' .
-                            'if(!e.target.closest(".fi-sidebar-nav a"))return;' .
-                            'var s=window.Alpine&&window.Alpine.store("sidebar");' .
-                            'if(s&&s.isOpen)s.close();' .
-                        '});' .
+                    'document.addEventListener("click",function(e){' .
+                    'if(window.innerWidth<1024)return;' .
+                    'if(!e.target.closest(".fi-sidebar-nav a"))return;' .
+                    'var s=window.Alpine&&window.Alpine.store("sidebar");' .
+                    'if(s&&s.isOpen)s.close();' .
+                    '});' .
                     '</script>'
             ),
         );

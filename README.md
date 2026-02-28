@@ -169,7 +169,8 @@ class AdminPanelProvider extends BasePanelProvider
             ->showLanguageDropdown()
             ->sidebarCollapseButtonPosition('right')
             ->sidebarIcon('heroicon-o-bars-3')
-            ->sidebarSlideover();
+            ->sidebarSlideover()
+            ->sidebarSearchable();
 
         $this->configureSharedSettings(
             $panel->default()->id('admin')->path('admin')->login()
@@ -196,6 +197,7 @@ class AdminPanelProvider extends BasePanelProvider
 | `sidebarIcon(string $icon)` | — | Replace the default chevron with any Filament icon string (e.g. `'heroicon-o-bars-3'`). Applies to both left and right button positions. |
 | `sidebarSlideover(bool $enabled = true)` | `true` | When enabled, the sidebar overlays the main content on desktop instead of pushing it. A dim backdrop is shown, matching Filament's mobile drawer behaviour. Call `->sidebarSlideover(false)` to restore the default push layout. |
 | `sidebarCollapseToIcons(bool $enabled = true)` | `true` | When slideover is enabled, keep Filament's icon-only narrow bar when the sidebar is closed instead of sliding it fully off-screen. Users can still click nav icons without opening the full drawer. Call `->sidebarCollapseToIcons(false)` to slide the sidebar fully off-screen instead. |
+| `sidebarSearchable(bool $enabled = true)` | `true` | Show a search input at the top of the sidebar navigation. Typing filters items client-side by matching labels; groups with no visible items are hidden automatically. The input is hidden when the sidebar is collapsed to icon-only mode. |
 
 > **Note:** Slideover mode is **on by default**. When it is active and no custom icon is set, the left-position button automatically uses `heroicon-o-bars-3` (the mobile drawer icon) to signal drawer behaviour. The right-position pill button always uses the chevron SVG by default.
 
