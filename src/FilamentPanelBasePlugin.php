@@ -47,7 +47,7 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
-     * Enable the TomatoPHP FilamentTranslations plugin for this panel.
+     * Enable the built-in Translation Manager resource for this panel.
      *
      * After enabling, run: php artisan panel-base:enable-translations
      * to publish the required migrations and config.
@@ -60,7 +60,7 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
-     * Whether the FilamentTranslations plugin has been activated for this panel.
+     * Whether the Translation Manager has been activated for this panel.
      */
     public function isTranslationsEnabled(): bool
     {
@@ -120,13 +120,9 @@ class FilamentPanelBasePlugin implements Plugin
             return;
         }
 
-        if (! class_exists(\TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::class)) {
-            return;
-        }
-
-        $panel->plugin(
-            \TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::make()
-        );
+        $panel->resources([
+            \Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource::class,
+        ]);
     }
 
     public function boot(Panel $panel): void {}

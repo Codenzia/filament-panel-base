@@ -23,6 +23,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             ->hasConfigFile()
             ->hasCommands([
                 \Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand::class,
+                \Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand::class,
             ])
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command

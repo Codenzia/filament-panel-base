@@ -7,28 +7,30 @@ namespace Codenzia\FilamentPanelBase\Commands;
 use Illuminate\Console\Command;
 
 /**
- * Artisan command that bootstraps the TomatoPHP filament-translations package.
+ * Artisan command that bootstraps the built-in translation manager.
  *
- * Runs the upstream install command (publishes migrations and config),
- * then prints step-by-step instructions to the developer.
+ * Publishes the spatie/laravel-translation-loader migration and config,
+ * then prints step-by-step activation instructions.
  */
 class EnableTranslationsCommand extends Command
 {
     protected $signature = 'panel-base:enable-translations';
 
-    protected $description = 'Publish TomatoPHP filament-translations migrations & config, then print activation instructions.';
+    protected $description = 'Publish translation-loader migration & config, then print activation instructions.';
 
     public function handle(): int
     {
-        $this->info('Running filament-translations:install...');
+        $this->info('Publishing spatie/laravel-translation-loader assets...');
 
-        $exitCode = $this->call('filament-translations:install');
+        $this->call('vendor:publish', [
+            '--provider' => 'Spatie\TranslationLoader\TranslationServiceProvider',
+            '--tag' => 'config',
+        ]);
 
-        if ($exitCode !== Command::SUCCESS) {
-            $this->error('filament-translations:install failed. Check the output above.');
-
-            return Command::FAILURE;
-        }
+        $this->call('vendor:publish', [
+            '--provider' => 'Spatie\TranslationLoader\TranslationServiceProvider',
+            '--tag' => 'migrations',
+        ]);
 
         $this->newLine();
         $this->info('Done! Follow these steps to activate the translation manager:');
@@ -38,7 +40,12 @@ class EnableTranslationsCommand extends Command
         $this->line('     <fg=cyan>php artisan migrate</>');
         $this->newLine();
 
-        $this->line('  <fg=yellow>2.</> Add <fg=cyan>->withTranslations()</> to FilamentPanelBasePlugin in your panel provider:');
+        $this->line('  <fg=yellow>2.</> Update <fg=cyan>config/translation-loader.php</> to use the panel-base model:');
+        $this->newLine();
+        $this->line("     <fg=gray>'model' => </><fg=cyan>Codenzia\\FilamentPanelBase\\Models\\Translation::class</><fg=gray>,</>");
+        $this->newLine();
+
+        $this->line('  <fg=yellow>3.</> Add <fg=cyan>->withTranslations()</> to FilamentPanelBasePlugin in your panel provider:');
         $this->newLine();
         $this->line('     <fg=gray>->plugins([</>');
         $this->line('         <fg=white>FilamentPanelBasePlugin::make()</>');
@@ -47,8 +54,8 @@ class EnableTranslationsCommand extends Command
         $this->line('     <fg=gray>])</>');
         $this->newLine();
 
-        $this->line('  <fg=yellow>3.</> (Optional) Review <fg=cyan>config/filament-translations.php</> to configure');
-        $this->line('     scan paths, UI options, and queue settings.');
+        $this->line('  <fg=yellow>4.</> Scan your codebase for translation keys:');
+        $this->line('     <fg=cyan>php artisan translations:scan</>');
         $this->newLine();
 
         $this->info('Translation manager is ready to activate.');

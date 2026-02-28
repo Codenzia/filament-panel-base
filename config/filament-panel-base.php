@@ -144,4 +144,32 @@ return [
         'preset' => 'ocean_blue',
         'colors' => [],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Translation Manager
+    |--------------------------------------------------------------------------
+    |
+    | Configuration for the built-in Translation Manager UI.
+    | Enable per-panel with ->withTranslations() on the plugin.
+    |
+    | 'scan_paths' defaults to [app_path(), resource_path('views')].
+    | Set to an array of paths to override.
+    |
+    | 'scan_extensions' controls which file types the scanner reads.
+    | Default: ['php']. Add 'js', 'ts', 'vue' for frontend files.
+    |
+    | 'scan_functions' adds extra function names the scanner looks for
+    | as JSON translation calls (in addition to the built-in __()).
+    | Common JS examples: '$t' (vue-i18n), 'i18n.t' (i18next).
+    |
+    */
+    'translations' => [
+        'navigation_group' => 'Settings',
+        'navigation_sort' => 11,
+        'navigation_icon' => 'heroicon-o-language',
+        'scan_paths' => null,
+        'scan_extensions' => ['php'],
+        'scan_functions' => [],
+    ],
 ];

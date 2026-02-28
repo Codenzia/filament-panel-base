@@ -769,11 +769,18 @@ protected function registerTranslatablePlugin(Panel $panel): void
 
 ## Translation Manager UI (Optional)
 
-The package bundles [tomatophp/filament-translations](https://github.com/tomatophp/filament-translations) and exposes it as an opt-in feature. When enabled, it adds a **Translations** page to your admin panel where you can view, edit, import, and export all `__()` / `trans()` language strings — no file editing required.
+The package includes a built-in Translation Manager that lets you view, edit, and scan all `__()` / `trans()` language strings from the admin panel — no file editing required. Translations are stored in the database via [spatie/laravel-translation-loader](https://github.com/spatie/laravel-translation-loader) and override file-based translations at runtime.
 
 ### When to use this
 
 Use this when you need a **non-developer-friendly UI** to manage static language files (e.g. `lang/en/messages.php`, `lang/ar.json`). This is different from `spatie/laravel-translatable` which handles database content.
+
+**Key features:**
+- **Codebase scanner** — automatically finds all `__()`, `trans()`, `@lang()`, `Lang::get()` calls
+- **Dynamic locales** — reads available languages from your `ProvidesLocales` provider (no hardcoded config)
+- **Per-language workflow** — access translations from your Language resource's action group, scoped to a single locale
+- **Configurable scanner** — scan extra file types (`js`, `ts`, `vue`) and functions (`$t`, `i18n.t`)
+- **DB overrides** — database translations take precedence over file translations, with caching
 
 ### Step 1: Publish migrations and config
 
@@ -781,34 +788,7 @@ Use this when you need a **non-developer-friendly UI** to manage static language
 php artisan panel-base:enable-translations
 ```
 
-Expected output:
-
-```
-Running filament-translations:install...
-Publish Vendor Assets
-Scanning for translations
-Filament Translations Manager installed successfully.
-
-Done! Follow these steps to activate the translation manager:
-
-  1. Run your migrations:
-     php artisan migrate
-
-  2. Add ->withTranslations() to FilamentPanelBasePlugin in your panel provider:
-
-     ->plugins([
-         FilamentPanelBasePlugin::make()
-             ->withTranslations()
-             ->settingsUsing(...),
-     ])
-
-  3. (Optional) Review config/filament-translations.php to configure
-     scan paths, UI options, and queue settings.
-
-Translation manager is ready to activate.
-```
-
-This publishes TomatoPHP's migrations and `config/filament-translations.php`, and does an initial scan of your codebase for translation keys.
+This publishes the `spatie/laravel-translation-loader` migration and config.
 
 ### Step 2: Run migrations
 
@@ -816,9 +796,17 @@ This publishes TomatoPHP's migrations and `config/filament-translations.php`, an
 php artisan migrate
 ```
 
-### Step 3: Opt in per panel
+### Step 3: Configure the translation model
 
-Add `->withTranslations()` to `FilamentPanelBasePlugin::make()` in the panel(s) where you want the translation UI:
+In `config/translation-loader.php`, point the model to the panel-base Translation model:
+
+```php
+'model' => Codenzia\FilamentPanelBase\Models\Translation::class,
+```
+
+### Step 4: Opt in per panel
+
+Add `->withTranslations()` to `FilamentPanelBasePlugin::make()` in the panel(s) where you want the translation routes registered:
 
 ```php
 ->plugins([
@@ -828,35 +816,57 @@ Add `->withTranslations()` to `FilamentPanelBasePlugin::make()` in the panel(s) 
 ])
 ```
 
-The Translations resource will appear in that panel's navigation. Panels without `->withTranslations()` are unaffected.
+The Translations resource is hidden from sidebar navigation by default. It is designed to be accessed from a Language resource (see Step 5). Panels without `->withTranslations()` are unaffected.
 
-### Step 4: Scan your codebase for translation keys
+### Step 5: Add to your Language resource
 
-```bash
-php artisan filament-translations:import
-```
-
-This scans your project for all `__()`, `trans()`, `@lang()` calls and populates the database. Re-run whenever you add new translation keys.
-
-### Customising plugin options
-
-Override `registerTranslationsPlugin()` in your panel provider to pass custom options to the TomatoPHP plugin:
+Add the **Manage Translations** action to your Language resource's record actions and optionally the **Scan** action to the page header:
 
 ```php
-class AdminPanelProvider extends BasePanelProvider
-{
-    protected function registerTranslationsPlugin(\Filament\Panel $panel): void
-    {
-        $panel->plugin(
-            \TomatoPHP\FilamentTranslations\FilamentTranslationsPlugin::make()
-                ->allowCreate()
-                ->allowClearTranslations()
-        );
-    }
-}
+use Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource;
+
+// In your LanguageResource table():
+->recordActions([
+    Actions\ActionGroup::make([
+        Actions\EditAction::make()->slideOver(),
+        TranslationResource::manageAction(), // opens translations scoped to this language
+        Actions\DeleteAction::make(),
+    ]),
+])
+
+// In your ManageLanguages page getHeaderActions() (optional):
+TranslationResource::scanHeaderAction(),
 ```
 
-> **Note:** When you override `registerTranslationsPlugin()`, omit `->withTranslations()` from the plugin chain — the override method takes full control of plugin registration.
+When the user clicks **Manage Translations** on a language, the translations page opens scoped to that locale — the table shows that language's text and the edit form only shows the relevant textarea.
+
+### Step 6: Scan your codebase for translation keys
+
+```bash
+php artisan translations:scan
+```
+
+This scans your project for all `__()`, `trans()`, `@lang()` calls and populates the database with initial values from your existing language files. Re-run whenever you add new translation keys.
+
+You can also scan from the admin UI using the **Scan** button in the Translations page header.
+
+### Customising the scanner
+
+Override scan paths, file extensions, and translation functions via config:
+
+```php
+// config/filament-panel-base.php
+'translations' => [
+    'navigation_group' => 'Settings',
+    'navigation_sort' => 11,
+    'navigation_icon' => 'heroicon-o-language',
+    'scan_paths' => null,           // null = [app_path(), resource_path('views')]
+    'scan_extensions' => ['php'],   // add 'js', 'ts', 'vue' for frontend files
+    'scan_functions' => [],         // extra function names, e.g. ['$t', 'i18n.t']
+],
+```
+
+The scanner always matches `__()` plus the PHP-specific grouped functions (`trans()`, `@lang()`, `Lang::get()`, etc.). The `scan_functions` config adds extra function names for JSON-style translation calls in other languages.
 
 ## Plugin API
 
@@ -882,7 +892,7 @@ FilamentPanelBasePlugin::make()->getThemeColors();
 - `spatie/laravel-settings` ^3.0 (required, for `RegistrationSettings`)
 - `spatie/laravel-permission` (optional, for `NotifiesAdmins` trait)
 - `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable database content)
-- `tomatophp/filament-translations` (bundled — activate with `->withTranslations()` for translation file UI)
+- `spatie/laravel-translation-loader` ^2.8 (bundled — activate with `->withTranslations()` for translation manager UI)
 
 ## License
 
