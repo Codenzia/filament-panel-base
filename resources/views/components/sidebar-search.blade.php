@@ -40,7 +40,7 @@
     x-transition:enter="fi-transition-enter"
     x-transition:enter-start="fi-transition-enter-start"
     x-transition:enter-end="fi-transition-enter-end"
-    class="px-3 pb-2"
+    class="-mx-2 pb-2"
 >
     <div class="relative">
         {{-- Search icon --}}

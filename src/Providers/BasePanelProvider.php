@@ -16,7 +16,6 @@ use Filament\Support\Facades\FilamentIcon;
 use Filament\View\PanelsIconAlias;
 use Filament\View\PanelsRenderHook;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\HtmlString;
 
 abstract class BasePanelProvider extends PanelProvider
 {
@@ -54,13 +53,13 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Add a title badge next to the logo in the topbar.
      */
-    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary',  bool $showOnAuthForm = true): static
+    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true): static
     {
         $this->titleBadgeConfig = [
             'label' => $label,
             'icon' => $icon,
             'color' => $color,
-            'auth_visible' => $showOnAuthForm
+            'auth_visible' => $showOnAuthForm,
         ];
 
         return $this;
@@ -148,11 +147,11 @@ abstract class BasePanelProvider extends PanelProvider
     protected function configureSharedSettings(Panel $panel): Panel
     {
         $panel
-            ->brandName(fn(): string => $this->resolveBrandName())
-            ->brandLogo(fn(): ?string => $this->resolveBrandLogo())
+            ->brandName(fn (): string => $this->resolveBrandName())
+            ->brandLogo(fn (): ?string => $this->resolveBrandLogo())
             ->brandLogoHeight('2.5rem')
-            ->favicon(fn(): ?string => $this->resolveFavicon())
-            ->colors(fn(): array => $this->getColorsFromSettings())
+            ->favicon(fn (): ?string => $this->resolveFavicon())
+            ->colors(fn (): array => $this->getColorsFromSettings())
             ->userMenuItems($this->getUserMenuItems($panel))
             ->sidebarCollapsibleOnDesktop();
 
@@ -160,16 +159,16 @@ abstract class BasePanelProvider extends PanelProvider
             $showOnAuthForms = $this->titleBadgeConfig['auth_visible'] ?? false;
             $panel->renderHook(
                 PanelsRenderHook::TOPBAR_LOGO_AFTER,
-                fn(): HtmlString => $this->getPanelBadge(),
+                fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(),
             );
             if ($showOnAuthForms) {
                 $panel->renderHook(
                     PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
-                    fn(): HtmlString => $this->getPanelBadge(centered: true),
+                    fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(centered: true),
                 );
                 $panel->renderHook(
                     PanelsRenderHook::AUTH_REGISTER_FORM_BEFORE,
-                    fn(): HtmlString => $this->getPanelBadge(centered: true),
+                    fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(centered: true),
                 );
             }
         }
@@ -177,14 +176,14 @@ abstract class BasePanelProvider extends PanelProvider
         if ($this->visitWebsiteEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
-                fn(): HtmlString => $this->getVisitWebsiteButton(),
+                fn (): \Illuminate\Contracts\View\View => $this->getVisitWebsiteButton(),
             );
         }
 
         if ($this->languageDropdownEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
-                fn(): string => $this->getLocaleToggle(),
+                fn (): string => $this->getLocaleToggle(),
             );
         }
 
@@ -197,7 +196,7 @@ abstract class BasePanelProvider extends PanelProvider
 
             if ($leftIcon !== null) {
                 FilamentIcon::register([
-                    PanelsIconAlias::SIDEBAR_EXPAND_BUTTON   => $leftIcon,
+                    PanelsIconAlias::SIDEBAR_EXPAND_BUTTON => $leftIcon,
                     PanelsIconAlias::SIDEBAR_COLLAPSE_BUTTON => $leftIcon,
                 ]);
             }
@@ -210,7 +209,7 @@ abstract class BasePanelProvider extends PanelProvider
         if ($this->sidebarSearchEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-search'),
+                fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-search'),
             );
         }
 
@@ -370,26 +369,26 @@ abstract class BasePanelProvider extends PanelProvider
 
         $items = [
             // Show user name as the top item (non-clickable label)
-            'profile' => fn(Action $action) => $action
+            'profile' => fn (Action $action) => $action
                 ->url(null)
-                ->label(fn(): string => filament()->getUserName(filament()->auth()->user())),
+                ->label(fn (): string => filament()->getUserName(filament()->auth()->user())),
 
             // Profile edit slideOver
             $this->getProfileSlideOverAction(),
             Action::make('um_role')
                 ->disabled()
                 ->icon('heroicon-c-book-open')
-                ->label(fn() => method_exists(filament()->auth()->user(), 'roles')
+                ->label(fn () => method_exists(filament()->auth()->user(), 'roles')
                     ? filament()->auth()->user()?->roles->pluck('name')->join(', ') ?? __('User')
                     : __('User')),
             Action::make('um_phone')
                 ->disabled()
                 ->icon('heroicon-o-phone')
-                ->label(fn() => filament()->auth()->user()?->phone ?? __('No phone')),
+                ->label(fn () => filament()->auth()->user()?->phone ?? __('No phone')),
             Action::make('um_email')
                 ->disabled()
                 ->icon('heroicon-o-envelope')
-                ->label(fn() => filament()->auth()->user()?->email ?? __('No Email')),
+                ->label(fn () => filament()->auth()->user()?->email ?? __('No Email')),
         ];
 
         // Cross-panel navigation
@@ -401,17 +400,17 @@ abstract class BasePanelProvider extends PanelProvider
                 $items[] = Action::make('admin-panel')
                     ->label(__('Admin Panel'))
                     ->icon('heroicon-o-cog-6-tooth')
-                    ->url('/' . $adminPanel)
+                    ->url('/'.$adminPanel)
                     ->color('info')
-                    ->visible(fn(): bool => Auth::user()?->canAccessPanel(filament()->getPanel($adminPanel)) ?? false)
+                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($adminPanel)) ?? false)
                     ->sort(50);
             } elseif ($panelId === $adminPanel) {
                 $items[] = Action::make('user-dashboard')
                     ->label(__('My Dashboard'))
                     ->icon('heroicon-o-squares-2x2')
-                    ->url('/' . $dashboardPanel)
+                    ->url('/'.$dashboardPanel)
                     ->color('primary')
-                    ->visible(fn(): bool => Auth::user()?->canAccessPanel(filament()->getPanel($dashboardPanel)) ?? false)
+                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($dashboardPanel)) ?? false)
                     ->sort(50);
             }
         }
@@ -422,46 +421,21 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Get a small badge identifying the current panel.
      */
-    protected function getPanelBadge(bool $centered = false): HtmlString
+    protected function getPanelBadge(bool $centered = false): \Illuminate\Contracts\View\View
     {
-        $label = e(__($this->titleBadgeConfig['label']));
-        $color = $this->titleBadgeConfig['color'] ?? 'primary';
-        $icon = $this->titleBadgeConfig['icon'] ?? '';
-
-        $colorClasses = [
-            'primary' => 'bg-primary-100 text-primary-700 ring-primary-600/20 dark:bg-primary-500/10 dark:text-primary-400 dark:ring-primary-400/30',
-            'success' => 'bg-success-100 text-success-700 ring-success-600/20 dark:bg-success-500/10 dark:text-success-400 dark:ring-success-400/30',
-            'warning' => 'bg-warning-100 text-warning-700 ring-warning-600/20 dark:bg-warning-500/10 dark:text-warning-400 dark:ring-warning-400/30',
-            'danger'  => 'bg-danger-100 text-danger-700 ring-danger-600/20 dark:bg-danger-500/10 dark:text-danger-400 dark:ring-danger-400/30',
-            'info'    => 'bg-info-100 text-info-700 ring-info-600/20 dark:bg-info-500/10 dark:text-info-400 dark:ring-info-400/30',
-            'gray'    => 'bg-gray-100 text-gray-700 ring-gray-600/20 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-400/30',
-        ];
-
-        $classes = $colorClasses[$color] ?? $colorClasses['primary'];
-        $iconHtml = $icon ? svg($icon, 'w-5 h-5 mx-1.5')->toHtml() : '';
-        $badge = '<span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $iconHtml . $label . '</span>';
-
-        if ($centered) {
-            return new HtmlString('<div class="flex justify-center mb-4">' . $badge . '</div>');
-        }
-
-        return new HtmlString(
-            '<span style="margin-left: 1rem; margin-right: 1rem;" class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset ' . $classes . '">' . $iconHtml . $label . '</span>'
-        );
+        return view('panel-base::components.panel-badge', [
+            'label' => __($this->titleBadgeConfig['label']),
+            'color' => $this->titleBadgeConfig['color'] ?? 'primary',
+            'icon' => $this->titleBadgeConfig['icon'] ?? null,
+            'centered' => $centered,
+        ]);
     }
 
-    protected function getVisitWebsiteButton(): HtmlString
+    protected function getVisitWebsiteButton(): \Illuminate\Contracts\View\View
     {
-        $label = $this->visitWebsiteLabel ?? __('Visit Website');
-
-        return new HtmlString('
-            <a href="/" target="_blank" class="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm ring-1 ring-gray-300 transition hover:bg-gray-50 dark:bg-white/5 dark:text-gray-200 dark:ring-white/20 dark:hover:bg-white/10" title="' . $label . '">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="h-5 w-5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 6H5.25A2.25 2.25 0 0 0 3 8.25v10.5A2.25 2.25 0 0 0 5.25 21h10.5A2.25 2.25 0 0 0 18 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
-                </svg>
-                <span class="hidden sm:inline">' . $label . '</span>
-            </a>
-        ');
+        return view('panel-base::components.visit-website-button', [
+            'label' => $this->visitWebsiteLabel ?? __('Visit Website'),
+        ]);
     }
 
     /**
@@ -507,12 +481,12 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::TOPBAR_LOGO_BEFORE,
-            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-remover'),
+            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-remover'),
         );
 
         $panel->renderHook(
             PanelsRenderHook::SIDEBAR_NAV_START,
-            fn(): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button', [
+            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button', [
                 'sidebarIcon' => $this->sidebarIcon,
             ]),
         );
@@ -535,59 +509,9 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::HEAD_END,
-            fn(): HtmlString => new HtmlString(
-                '<style>' .
-                    /* 1. Sidebar slide — desktop only. */
-                    /* translateX(-100%) is skipped when collapseToIcons is on,          */
-                    /* so Filament's built-in icon-only narrow state shows instead.      */
-                    '@media(min-width:64rem){' .
-                    '.fi-sidebar{transition:transform .3s cubic-bezier(.4,0,.2,1);}' .
-                    ($this->sidebarCollapseToIcons ? '' : '.fi-sidebar:not(.fi-sidebar-open){transform:translateX(-100%);}') .
-                    '}' .
-                    /* 2. Sidebar open state. */
-                    '.fi-sidebar.fi-sidebar-open{position:fixed!important;z-index:40;background-color:#fff;box-shadow:4px 0 24px rgba(0,0,0,.12);}' .
-                    'html.dark .fi-sidebar.fi-sidebar-open{background-color:#111827;box-shadow:4px 0 24px rgba(0,0,0,.4);}' .
-                    /* 3. Topbar raised above the backdrop. */
-                    '.fi-topbar-ctn{z-index:35;}' .
-                    /* 4. Frosted glass overlay — reduce Filament's opaque dark bg so the blur is visible. */
-                    /* No !important on display — Alpine x-show still controls it via inline style.    */
-                    '.fi-sidebar-close-overlay{transition:opacity .3s ease;background-color:rgba(0,0,0,.35)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);}' .
-                    '@media(min-width:64rem){.fi-sidebar-close-overlay{display:block;}}' .
-                    /* 5. Content scale-down — desktop only to avoid affecting mobile layout.           */
-                    /* scale(.95) and blur(2px) are perceptible; .98/1px were too subtle.              */
-                    '@media(min-width:64rem){' .
-                    '.fi-main-ctn{transition:transform .3s cubic-bezier(.4,0,.2,1),filter .3s ease;}' .
-                    '.fi-sidebar.fi-sidebar-open~.fi-main-ctn{transform:scale(.95);filter:blur(2px);}' .
-                    '}' .
-                    /* 6. Nav items stagger — each fi-sidebar-group cascades in with a slight delay.   */
-                    /* Target fi-sidebar-nav-groups>li (the groups), NOT fi-sidebar-nav>* (the ul).    */
-                    /* animation-fill-mode:both keeps items hidden during delay, holds final state.    */
-                    '@keyframes fi-nav-in{from{opacity:0;transform:translateX(-.75rem)}to{opacity:1;transform:translateX(0)}}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li{animation:fi-nav-in .35s ease both;}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(1){animation-delay:.09s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(2){animation-delay:.18s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(3){animation-delay:.27s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(4){animation-delay:.36s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(5){animation-delay:.45s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(6){animation-delay:.54s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(7){animation-delay:.63s}' .
-                    '.fi-sidebar.fi-sidebar-open .fi-sidebar-nav-groups>li:nth-child(8){animation-delay:.72s}' .
-                    '</style>' .
-                    /* Mirror Filament's own mobile behavior (item.blade.php line 36):                    */
-                    /*   x-on:click="window.matchMedia('(max-width:1024px)').matches &&              */
-                    /*               $store.sidebar.close()"                                         */
-                    /* Filament only closes on mobile. We extend that to desktop in slideover mode.  */
-                    /* close() also sets isOpenDesktop=false via Alpine.$persist so the state        */
-                    /* survives wire:navigate without any livewire:navigated timing hacks.           */
-                    '<script>' .
-                    'document.addEventListener("click",function(e){' .
-                    'if(window.innerWidth<1024)return;' .
-                    'if(!e.target.closest(".fi-sidebar-nav a"))return;' .
-                    'var s=window.Alpine&&window.Alpine.store("sidebar");' .
-                    'if(s&&s.isOpen)s.close();' .
-                    '});' .
-                    '</script>'
-            ),
+            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-slideover-styles', [
+                'collapseToIcons' => $this->sidebarCollapseToIcons,
+            ]),
         );
     }
 }
