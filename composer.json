@@ -12,7 +12,7 @@
         "localization"
     ],
     "homepage": "https://github.com/codenzia/filament-panel-base",
-    "license": "MIT",
+    "license": ["MIT", "proprietary"],
     "authors": [
         {
             "name": "Codenzia",
