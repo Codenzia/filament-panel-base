@@ -50,6 +50,7 @@
     /* 2b. Collapsed icon strip — pill container on nav-groups, circular buttons. */
     @if ($collapseToIcons)
         @media (min-width: 64rem) {
+
             /* Pill container around the nav group list */
             .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav-groups {
                 border-radius: 30px;
@@ -61,7 +62,8 @@
 
             html.dark .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav-groups {
                 background-color: var(--color-gray-900, #0f172a);
-                border-color: var(--color-gray-700, #334155);
+                /* border-color: color-mix(in oklch, white 10%, transparent); */
+                border-color: var(--color-gray-800, #334155);
             }
 
             /* All nav buttons circular when collapsed */
@@ -83,7 +85,7 @@
                 color: #fff;
             }
 
-            .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-active > * {
+            .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-active>* {
                 background-color: transparent !important;
             }
         }
