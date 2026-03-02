@@ -233,9 +233,16 @@ abstract class BasePanelProvider extends PanelProvider
 
         $providerClass = config('filament-panel-base.locale.provider');
 
-        if ($providerClass && class_exists($providerClass) && is_a($providerClass, \Codenzia\FilamentPanelBase\Contracts\ProvidesLocales::class, true)) {
-            $locales = array_keys($providerClass::getActive());
-        } else {
+        // Wrap in try-catch: on fresh deployments the database/cache tables
+        // may not exist yet. Fall back to config-based locales gracefully
+        // so the app can still boot (e.g. to run migrations via /console).
+        try {
+            if ($providerClass && class_exists($providerClass) && is_a($providerClass, \Codenzia\FilamentPanelBase\Contracts\ProvidesLocales::class, true)) {
+                $locales = array_keys($providerClass::getActive());
+            } else {
+                $locales = config('filament-panel-base.locale.available', ['en']);
+            }
+        } catch (\Illuminate\Database\QueryException) {
             $locales = config('filament-panel-base.locale.available', ['en']);
         }
 
@@ -405,7 +412,7 @@ abstract class BasePanelProvider extends PanelProvider
 
             if ($panelId === $dashboardPanel) {
                 $items[] = Action::make('admin-panel')
-                    ->label(__('Admin Panel'))
+                    ->label(fn (): string => __('Admin Panel'))
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url('/'.$adminPanel)
                     ->color('info')
@@ -413,7 +420,7 @@ abstract class BasePanelProvider extends PanelProvider
                     ->sort(50);
             } elseif ($panelId === $adminPanel) {
                 $items[] = Action::make('user-dashboard')
-                    ->label(__('My Dashboard'))
+                    ->label(fn (): string => __('My Dashboard'))
                     ->icon('heroicon-o-squares-2x2')
                     ->url('/'.$dashboardPanel)
                     ->color('primary')

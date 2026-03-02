@@ -27,7 +27,7 @@ trait HasProfileSlideOver
     protected function getProfileSlideOverAction(): Action
     {
         return Action::make('edit-profile')
-            ->label(__('Edit Profile'))
+            ->label(fn (): string => __('Edit Profile'))
             ->icon('heroicon-o-user')
             ->slideOver()
             ->modalWidth('2xl')
