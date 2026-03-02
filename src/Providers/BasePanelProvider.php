@@ -221,7 +221,8 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Auto-register the SpatieTranslatablePlugin when `lara-zeus/spatie-translatable` is installed.
      *
-     * Uses locales from `config('filament-panel-base.locale.available')`.
+     * Pulls locales dynamically from the ProvidesLocales provider (database),
+     * falling back to `config('filament-panel-base.locale.available')`.
      * Override this method to customise or disable the integration.
      */
     protected function registerTranslatablePlugin(Panel $panel): void
@@ -230,7 +231,13 @@ abstract class BasePanelProvider extends PanelProvider
             return;
         }
 
-        $locales = config('filament-panel-base.locale.available', ['en']);
+        $providerClass = config('filament-panel-base.locale.provider');
+
+        if ($providerClass && class_exists($providerClass) && is_a($providerClass, \Codenzia\FilamentPanelBase\Contracts\ProvidesLocales::class, true)) {
+            $locales = array_keys($providerClass::getActive());
+        } else {
+            $locales = config('filament-panel-base.locale.available', ['en']);
+        }
 
         $panel->plugin(
             \LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::make()

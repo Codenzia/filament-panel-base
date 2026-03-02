@@ -4,8 +4,13 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase;
 
+use Closure;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
@@ -40,6 +45,8 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 
     public function packageBooted(): void
     {
+        $this->configureTranslatablePlaceholders();
+
         // Register settings migration path so spatie/laravel-settings discovers them
         $settingsMigrationsPath = __DIR__.'/../database/settings';
         if (is_dir($settingsMigrationsPath)) {
@@ -70,5 +77,55 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 __DIR__.'/../resources/css/theme.css' => resource_path('css/vendor/filament-panel-base/theme.css'),
             ], 'filament-panel-base-theme');
         }
+    }
+
+    /**
+     * Show the default-locale value as a placeholder when editing translatable
+     * fields in a non-default locale. Applied globally via configureUsing so
+     * individual resources don't need any changes.
+     */
+    protected function configureTranslatablePlaceholders(): void
+    {
+        $placeholderFn = $this->makeTranslatablePlaceholder();
+
+        TextInput::configureUsing($placeholderFn);
+        Textarea::configureUsing($placeholderFn);
+        RichEditor::configureUsing($placeholderFn);
+    }
+
+    protected function makeTranslatablePlaceholder(): Closure
+    {
+        return function ($component): void {
+            $component->placeholder(function () use ($component): ?string {
+                $livewire = $component->getLivewire();
+
+                if (! method_exists($livewire, 'getActiveSchemaLocale')) {
+                    return null;
+                }
+
+                $activeLocale = $livewire->getActiveSchemaLocale();
+                $defaultLocale = config('app.locale', 'en');
+
+                if (! $activeLocale || $activeLocale === $defaultLocale) {
+                    return null;
+                }
+
+                $record = $component->getRecord();
+
+                if (! $record instanceof Model || ! method_exists($record, 'isTranslatableAttribute')) {
+                    return null;
+                }
+
+                $field = $component->getName();
+
+                if (! $record->isTranslatableAttribute($field)) {
+                    return null;
+                }
+
+                $value = $record->getTranslation($field, $defaultLocale, false);
+
+                return is_string($value) && $value !== '' ? $value : null;
+            });
+        };
     }
 }
