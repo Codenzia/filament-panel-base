@@ -1,14 +1,16 @@
 {{-- Country Switcher Navbar Dropdown
-     Props: $mode (show|disabled|hide), $switchRoute (route name)
+     Props: $mode (show|disabled|hide), $switchRoute (route name), $align (start|end), $relative (bool)
      Reads: $availableCountries, $currentCountry (view-shared by SetCountry middleware) --}}
 
 @props([
     'mode' => 'show',
     'switchRoute' => 'country.switch',
+    'align' => 'end',
+    'relative' => true,
 ])
 
 @if ($mode !== 'hide' && isset($availableCountries) && $availableCountries->count() > 0)
-    <div class="relative" x-data="{ open: false }">
+    <div class="{{ $relative ? 'relative' : '' }}" x-data="{ open: false }">
         <button @if ($mode !== 'disabled') @click="open = !open" @endif
             @disabled($mode === 'disabled')
             class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded-md {{ $mode === 'disabled' ? 'cursor-not-allowed opacity-60' : '' }}">
@@ -24,10 +26,17 @@
         </button>
         @if ($mode !== 'disabled')
             <div x-show="open" x-cloak @click.away="open = false" x-transition
-                class="absolute end-0 mt-2 w-48 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 z-50 max-h-64 overflow-y-auto py-1">
+                class="absolute {{ $align === 'start' ? 'start-0' : 'end-0' }} mt-2 w-48 z-50 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 max-h-64 overflow-y-auto py-1">
                 @foreach ($availableCountries as $country)
                     <a href="{{ route($switchRoute, $country) }}"
-                        class="flex items-center gap-2 px-4 py-2 text-sm {{ $currentCountry && $currentCountry->id === $country->id ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-white font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600' }}">
+                        class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600">
+                        @if ($currentCountry && $currentCountry->id === $country->id)
+                            <svg class="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                            </svg>
+                        @else
+                            <span class="w-3 shrink-0"></span>
+                        @endif
                         <span class="flag flag-{{ strtolower($country->code) }} shrink-0"></span>
                         {{ $country->name }}
                     </a>

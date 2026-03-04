@@ -1,10 +1,12 @@
 {{-- Language/Locale Switcher Navbar Dropdown
-     Props: $locales (array from Language::getActive()), $currentLocale (string), $switchRoute (route name) --}}
+     Props: $locales (array from Language::getActive()), $currentLocale (string), $switchRoute (route name), $align (start|end), $relative (bool) --}}
 
 @props([
     'locales' => [],
     'currentLocale' => app()->getLocale(),
     'switchRoute' => 'locale.switch',
+    'align' => 'end',
+    'relative' => true,
 ])
 
 @if (count($locales) > 1)
@@ -32,17 +34,24 @@
             'sw' => 'ke',
         ];
     @endphp
-    <div class="relative" x-data="{ open: false }">
+    <div class="{{ $relative ? 'relative' : '' }}" x-data="{ open: false }">
         <button @click="open = !open"
             class="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded-md">
             <span class="flag flag-{{ $langToFlag[$currentLocale] ?? $currentLocale }} shrink-0"></span>
             <span class="font-semibold">{{ strtoupper($currentLocale) }}</span>
         </button>
         <div x-show="open" x-cloak @click.away="open = false" x-transition
-            class="absolute end-0 mt-2 w-44 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 z-50 py-1">
+            class="absolute {{ $align === 'start' ? 'start-0' : 'end-0' }} mt-2 w-44 z-50 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 py-1">
             @foreach ($locales as $code => $locale)
                 <a href="{{ route($switchRoute, $code) }}"
-                    class="flex items-center gap-2 px-4 py-2 text-sm {{ $code === $currentLocale ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-white font-medium' : 'text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600' }}">
+                    class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600">
+                    @if ($code === $currentLocale)
+                        <svg class="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                        </svg>
+                    @else
+                        <span class="w-3 shrink-0"></span>
+                    @endif
                     <span class="flag flag-{{ $langToFlag[$code] ?? $code }} shrink-0"></span>
                     <span class="font-semibold">{{ strtoupper($code) }}</span>
                     <span class="text-xs text-gray-400">{{ $locale['native'] }}</span>

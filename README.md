@@ -430,6 +430,23 @@ class UserPanelProvider extends BasePanelProvider
 
 The switchers read view-shared data from middleware (`$availableCountries`, `$currentCountry`, `$availableCurrencies`, `$currentCurrency`, `$currentCurrencyMode`) and require routes named `country.switch`, `currency.switch`, and `locale.switch` in the consuming app.
 
+**Shared switcher props:**
+
+| Prop | Default | Description |
+|---|---|---|
+| `align` | `'end'` | Horizontal anchor of the dropdown: `'start'` (left in LTR) or `'end'` (right in LTR). |
+| `relative` | `true` | Whether the wrapper element is a CSS positioning context. Set to `false` to let the dropdown position relative to a parent `relative` container instead. |
+
+**Mobile menu example** — use `:relative="false"` with `align="start"` so all dropdowns anchor to a shared `relative` container, preventing overflow on narrow screens:
+
+```blade
+<div class="relative flex items-center gap-3">
+    <x-panel-base::country-switcher :relative="false" align="start" />
+    <x-panel-base::currency-switcher :relative="false" align="start" />
+    <x-panel-base::locale-switcher :relative="false" align="start" :locales="$locales" :currentLocale="$currentLocale" />
+</div>
+```
+
 ### Filament Form Components
 
 Reusable form fields for Filament v4 panels. Both use Filament's native CSS classes (`fi-input-wrp`, `fi-input`) for full theme compatibility — any custom panel styling automatically applies.
