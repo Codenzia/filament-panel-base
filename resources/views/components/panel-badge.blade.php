@@ -29,8 +29,8 @@
         </span>
     </div>
 @else
-    <span class="mx-4 inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
-        @if($icon) @svg($icon, 'w-5 h-5 mx-1.5') @endif
+    <span style="margin-inline-start: 1rem;" class="inline-flex items-center gap-x-1.5 rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
+        @if($icon) @svg($icon, 'h-4 w-4') @endif
         {{ $label }}
     </span>
 @endif

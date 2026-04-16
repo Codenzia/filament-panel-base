@@ -51,6 +51,15 @@
     @if ($collapseToIcons)
         @media (min-width: 64rem) {
 
+            /* Hide scrollbar when collapsed to icons */
+            .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav {
+                scrollbar-width: none;          /* Firefox */
+                -ms-overflow-style: none;       /* IE/Edge */
+            }
+            .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav::-webkit-scrollbar {
+                display: none;                  /* Chrome/Safari */
+            }
+
             /* Pill container around the nav group list */
             .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav-groups {
                 border-radius: 30px;

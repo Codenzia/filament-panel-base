@@ -67,17 +67,55 @@ use Codenzia\FilamentPanelBase\Middleware\SetCurrency;
 })
 ```
 
-### 4. Custom Theme (Tailwind v4)
+### 4. Custom Theme (Tailwind v4) — Required
 
-If your panel uses a custom Filament theme with `->viteTheme()`, you must add `@source` directives so Tailwind compiles the classes used by this package (panel badge, visit website button, blade components, etc.):
+Filament v4's pre-built `dist/theme.css` only includes internal `fi-*` component styles. It does **not** include general Tailwind utility classes (`size-5`, `grid`, `rounded-xl`, `p-5`, etc.) needed by custom Blade views. You **must** create a Vite theme that imports Filament's source theme CSS and adds `@source` directives for your app and any packages with custom views.
+
+**Step 1: Create the theme CSS file**
 
 ```css
 /* resources/css/filament/admin/theme.css */
-@source '../../../../vendor/codenzia/filament-panel-base/src/**/*.php';
-@source '../../../../vendor/codenzia/filament-panel-base/resources/views/**/*.blade.php';
+@import "../../../../vendor/filament/filament/resources/css/theme.css";
+
+@source '../../../../resources/views/filament';
+@source '../../../../app/Filament';
+@source '../../../../app/Providers/Filament/**/*.php';
+@source '../../../../vendor/codenzia/*/src/**/*.php';
+@source '../../../../vendor/codenzia/*/resources/views/**/*.blade.php';
 ```
 
-Then rebuild your assets with `npm run build`.
+> **Important:** Import Filament's **source** `theme.css` (from `resources/css/`), not the pre-built `dist/theme.css`. The source file includes `@import 'tailwindcss' source(none)` plus all `fi-*` component styles. Using bare `@import 'tailwindcss'` instead will give you Tailwind utilities but no Filament component styles, breaking the panel layout.
+
+The `@source` directives tell Tailwind v4 which files to scan for class names. Add additional `@source` lines for any other packages that ship custom Blade views.
+
+**Step 2: Register the theme in your panel provider**
+
+```php
+$panel
+    ->viteTheme('resources/css/filament/admin/theme.css');
+```
+
+**Step 3: Add the theme to your Vite config**
+
+```js
+// vite.config.js
+laravel({
+    input: [
+        'resources/css/app.css',
+        'resources/js/app.js',
+        'resources/css/filament/admin/theme.css',
+    ],
+    refresh: true,
+}),
+```
+
+**Step 4: Build**
+
+```bash
+npm run build
+```
+
+> **Without this setup**, utility classes used in package Blade views (icons, grids, spacing, etc.) will not be compiled and your panel will render incorrectly — for example, SVG icons may appear at full size instead of their intended dimensions.
 
 ### 5. Frontend Theme (Optional)
 
