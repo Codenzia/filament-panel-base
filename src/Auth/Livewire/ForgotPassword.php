@@ -22,13 +22,13 @@ class ForgotPassword extends Component
         // leaking which addresses are registered.
         Password::sendResetLink(['email' => $this->email]);
 
-        session()->flash('status', __('panel-base::auth.forgot_sent'));
+        session()->flash('status', __('filament-panel-base::auth.forgot_sent'));
     }
 
     public function render(): View
     {
-        return view('panel-base::livewire.auth.forgot-password')
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.forgot_title'));
+        return view('filament-panel-base::livewire.auth.forgot-password')
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.forgot_title'));
     }
 }

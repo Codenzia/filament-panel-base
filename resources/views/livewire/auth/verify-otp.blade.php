@@ -1,10 +1,10 @@
 <div class="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
     <header class="mb-6">
         <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            {{ __('panel-base::auth.verify_otp_title', ['channel' => $channelLabel]) }}
+            {{ __('filament-panel-base::auth.verify_otp_title', ['channel' => $channelLabel]) }}
         </h2>
         <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
-            {{ __('panel-base::auth.verify_otp_intro', ['length' => $length, 'target' => $target]) }}
+            {{ __('filament-panel-base::auth.verify_otp_intro', ['length' => $length, 'target' => $target]) }}
         </p>
     </header>
 
@@ -21,11 +21,11 @@
         </div>
 
         <button type="submit" class="flex w-full items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-            {{ __('panel-base::auth.verify_otp_submit') }}
+            {{ __('filament-panel-base::auth.verify_otp_submit') }}
         </button>
     </form>
 
     <button type="button" wire:click="resend" class="mt-4 block w-full text-center text-sm font-medium text-primary-600 hover:text-primary-700">
-        {{ __('panel-base::auth.verify_otp_resend') }}
+        {{ __('filament-panel-base::auth.verify_otp_resend') }}
     </button>
 </div>

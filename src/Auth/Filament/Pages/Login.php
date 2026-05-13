@@ -18,11 +18,11 @@ use Filament\Pages\SimplePage;
  */
 class Login extends SimplePage
 {
-    protected string $view = 'panel-base::filament.auth.login';
+    protected string $view = 'filament-panel-base::filament.auth.login';
 
     public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
     {
-        return __('panel-base::auth.login_title');
+        return __('filament-panel-base::auth.login_title');
     }
 
     public static function getRoutePath(\Filament\Panel $panel): string

@@ -32,12 +32,11 @@ class PhoneInput extends Field
     use CanBeReadOnly;
     use HasPlaceholder;
 
-    protected string $view = 'panel-base::forms.components.filament-phone-input';
+    protected string $view = 'filament-panel-base::forms.components.filament-phone-input';
 
-    /** @var array|Closure */
-    protected array | Closure $countries = [];
+    protected array|Closure $countries = [];
 
-    protected string | Closure $defaultCountryCode = '';
+    protected string|Closure $defaultCountryCode = '';
 
     protected function setUp(): void
     {
@@ -58,7 +57,7 @@ class PhoneInput extends Field
      * or an Eloquent Collection of models with those attributes.
      * Also accepts a Closure that returns either format.
      */
-    public function countries(array | Closure $countries): static
+    public function countries(array|Closure $countries): static
     {
         $this->countries = $countries;
 
@@ -92,7 +91,7 @@ class PhoneInput extends Field
     /**
      * Set the default country code (e.g. '+962') used when no value is loaded.
      */
-    public function defaultCountryCode(string | Closure $code): static
+    public function defaultCountryCode(string|Closure $code): static
     {
         $this->defaultCountryCode = $code;
 

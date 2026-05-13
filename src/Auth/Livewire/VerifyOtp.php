@@ -32,13 +32,13 @@ class VerifyOtp extends Component
         $target = $this->resolveTarget($settings);
 
         if ($target === null) {
-            $this->addError('code', __('panel-base::auth.verify_otp_invalid'));
+            $this->addError('code', __('filament-panel-base::auth.verify_otp_invalid'));
 
             return;
         }
 
         if (! $otp->verify($target, $this->code, $settings->otp_driver)) {
-            $this->addError('code', __('panel-base::auth.verify_otp_invalid'));
+            $this->addError('code', __('filament-panel-base::auth.verify_otp_invalid'));
 
             return;
         }
@@ -67,7 +67,7 @@ class VerifyOtp extends Component
                 'locale' => app()->getLocale(),
             ]);
 
-            session()->flash('status', __('panel-base::auth.verify_otp_resent'));
+            session()->flash('status', __('filament-panel-base::auth.verify_otp_resent'));
         } catch (\RuntimeException $exception) {
             $this->addError('code', $exception->getMessage());
         }
@@ -77,15 +77,15 @@ class VerifyOtp extends Component
     {
         $target = $this->resolveTarget($settings) ?? '';
 
-        return view('panel-base::livewire.auth.verify-otp', [
+        return view('filament-panel-base::livewire.auth.verify-otp', [
             'channel' => $settings->otp_driver,
-            'channelLabel' => __('panel-base::auth.channel.'.$settings->otp_driver),
+            'channelLabel' => __('filament-panel-base::auth.channel.'.$settings->otp_driver),
             'length' => $settings->otp_code_length,
             'target' => $target,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.verify_otp_title', [
-                'channel' => __('panel-base::auth.channel.'.$settings->otp_driver),
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.verify_otp_title', [
+                'channel' => __('filament-panel-base::auth.channel.'.$settings->otp_driver),
             ]));
     }
 

@@ -27,18 +27,18 @@ class VerifyEmailNotice extends Component
 
         $user->sendEmailVerificationNotification();
 
-        session()->flash('status', __('panel-base::auth.verify_email_resent'));
+        session()->flash('status', __('filament-panel-base::auth.verify_email_resent'));
     }
 
     public function render(): View
     {
         $email = Auth::user()?->email ?? '';
 
-        return view('panel-base::livewire.auth.verify-email-notice', [
+        return view('filament-panel-base::livewire.auth.verify-email-notice', [
             'email' => $email,
             'verified' => Auth::user()?->hasVerifiedEmail() ?? false,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.verify_email_title'));
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.verify_email_title'));
     }
 }

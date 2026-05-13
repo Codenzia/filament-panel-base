@@ -26,8 +26,8 @@ class AccountApprovedNotification extends Notification implements ShouldQueue
         $brand = config('app.name');
 
         return (new MailMessage)
-            ->subject(__('panel-base::auth.moderation_approved_subject', ['brand' => $brand]))
-            ->line(__('panel-base::auth.moderation_approved_body', ['brand' => $brand]))
-            ->action(__('panel-base::auth.sign_in'), url('/'));
+            ->subject(__('filament-panel-base::auth.moderation_approved_subject', ['brand' => $brand]))
+            ->line(__('filament-panel-base::auth.moderation_approved_body', ['brand' => $brand]))
+            ->action(__('filament-panel-base::auth.sign_in'), url('/'));
     }
 }

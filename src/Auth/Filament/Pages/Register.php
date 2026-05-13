@@ -12,11 +12,11 @@ use Filament\Pages\SimplePage;
  */
 class Register extends SimplePage
 {
-    protected string $view = 'panel-base::filament.auth.register';
+    protected string $view = 'filament-panel-base::filament.auth.register';
 
     public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
     {
-        return __('panel-base::auth.register_title');
+        return __('filament-panel-base::auth.register_title');
     }
 
     public static function getRoutePath(\Filament\Panel $panel): string

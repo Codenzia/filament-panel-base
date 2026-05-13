@@ -100,13 +100,13 @@ class Register extends Component
 
     public function render(AuthenticationSettings $settings): View
     {
-        return view('panel-base::livewire.auth.register', [
+        return view('filament-panel-base::livewire.auth.register', [
             'credentialsMode' => $settings->credentials_mode,
             'phoneRequired' => $settings->phone_required || $settings->credentials_mode === 'phone',
             'enabledSocialProviders' => $settings->social_providers_enabled,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.register_title'));
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.register_title'));
     }
 
     /**

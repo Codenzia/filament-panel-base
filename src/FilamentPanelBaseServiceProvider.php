@@ -26,7 +26,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 {
     public static string $name = 'filament-panel-base';
 
-    public static string $viewNamespace = 'panel-base';
+    public static string $viewNamespace = 'filament-panel-base';
 
     public function configurePackage(Package $package): void
     {
@@ -110,12 +110,12 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     protected function bootAuthModule(): void
     {
         if (class_exists(Livewire::class)) {
-            Livewire::component('panel-base::auth.register', \Codenzia\FilamentPanelBase\Auth\Livewire\Register::class);
-            Livewire::component('panel-base::auth.login', \Codenzia\FilamentPanelBase\Auth\Livewire\Login::class);
-            Livewire::component('panel-base::auth.verify-otp', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp::class);
-            Livewire::component('panel-base::auth.verify-email-notice', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class);
-            Livewire::component('panel-base::auth.forgot-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class);
-            Livewire::component('panel-base::auth.reset-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class);
+            Livewire::component('filament-panel-base::auth.register', \Codenzia\FilamentPanelBase\Auth\Livewire\Register::class);
+            Livewire::component('filament-panel-base::auth.login', \Codenzia\FilamentPanelBase\Auth\Livewire\Login::class);
+            Livewire::component('filament-panel-base::auth.verify-otp', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp::class);
+            Livewire::component('filament-panel-base::auth.verify-email-notice', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class);
+            Livewire::component('filament-panel-base::auth.forgot-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class);
+            Livewire::component('filament-panel-base::auth.reset-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class);
         }
 
         if ((bool) config('filament-panel-base.auth.routes.enabled', true)) {

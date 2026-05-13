@@ -36,7 +36,7 @@ final class ValidPhoneFormat implements ValidationRule
         }
 
         if (! is_string($value)) {
-            $fail(__('panel-base::auth.phone_invalid', ['attribute' => $attribute]));
+            $fail(__('filament-panel-base::auth.phone_invalid', ['attribute' => $attribute]));
 
             return;
         }
@@ -48,12 +48,12 @@ final class ValidPhoneFormat implements ValidationRule
                 $phone = new \Propaganistas\LaravelPhone\PhoneNumber($candidate, $this->countries);
 
                 if (! $phone->isValid()) {
-                    $fail(__('panel-base::auth.phone_invalid', ['attribute' => $attribute]));
+                    $fail(__('filament-panel-base::auth.phone_invalid', ['attribute' => $attribute]));
                 }
 
                 return;
             } catch (\Propaganistas\LaravelPhone\Exceptions\NumberParseException) {
-                $fail(__('panel-base::auth.phone_format_invalid', ['attribute' => $attribute]));
+                $fail(__('filament-panel-base::auth.phone_format_invalid', ['attribute' => $attribute]));
 
                 return;
             }
@@ -61,7 +61,7 @@ final class ValidPhoneFormat implements ValidationRule
 
         // Fallback regex when libphonenumber is unavailable: accept E.164 shape only.
         if (! preg_match('/^\+\d{7,15}$/', $candidate)) {
-            $fail(__('panel-base::auth.phone_format_invalid', ['attribute' => $attribute]));
+            $fail(__('filament-panel-base::auth.phone_format_invalid', ['attribute' => $attribute]));
         }
     }
 }

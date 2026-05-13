@@ -14,7 +14,7 @@ use Illuminate\Console\Command;
  */
 class EnableTranslationsCommand extends Command
 {
-    protected $signature = 'panel-base:enable-translations';
+    protected $signature = 'filament-panel-base:enable-translations';
 
     protected $description = 'Publish translation-loader migration & config, then print activation instructions.';
 

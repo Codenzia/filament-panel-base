@@ -61,15 +61,15 @@ class ResetPassword extends Component
             return;
         }
 
-        session()->flash('status', __('panel-base::auth.reset_done'));
+        session()->flash('status', __('filament-panel-base::auth.reset_done'));
 
         $this->redirect(route('login'), navigate: true);
     }
 
     public function render(): View
     {
-        return view('panel-base::livewire.auth.reset-password')
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.reset_title'));
+        return view('filament-panel-base::livewire.auth.reset-password')
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.reset_title'));
     }
 }

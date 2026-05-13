@@ -50,7 +50,7 @@ class ThrottleAuth
             $retryAfter = RateLimiter::availableIn($key);
 
             throw new ThrottleRequestsException(
-                __('panel-base::auth.throttle_rate_limited', ['seconds' => $retryAfter])
+                __('filament-panel-base::auth.throttle_rate_limited', ['seconds' => $retryAfter])
             );
         }
 

@@ -32,7 +32,7 @@ class Login extends Component
         $field = $this->resolveAuthField($settings);
 
         if (! Auth::attempt([$field => $this->identifier, 'password' => $this->password], $this->remember)) {
-            $this->addError('identifier', __('panel-base::auth.credentials_mismatch'));
+            $this->addError('identifier', __('filament-panel-base::auth.credentials_mismatch'));
 
             return;
         }
@@ -42,14 +42,14 @@ class Login extends Component
         if ($user instanceof HasModerationStatus) {
             if ($user->isSuspended()) {
                 Auth::logout();
-                $this->addError('identifier', __('panel-base::auth.account_suspended'));
+                $this->addError('identifier', __('filament-panel-base::auth.account_suspended'));
 
                 return;
             }
 
             if ($user->isPending()) {
                 Auth::logout();
-                $this->addError('identifier', __('panel-base::auth.account_pending'));
+                $this->addError('identifier', __('filament-panel-base::auth.account_pending'));
 
                 return;
             }
@@ -62,12 +62,12 @@ class Login extends Component
 
     public function render(AuthenticationSettings $settings): View
     {
-        return view('panel-base::livewire.auth.login', [
+        return view('filament-panel-base::livewire.auth.login', [
             'credentialsMode' => $settings->credentials_mode,
             'enabledSocialProviders' => $settings->social_providers_enabled,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'panel-base::layouts.auth'))
-            ->title(__('panel-base::auth.login_title'));
+            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->title(__('filament-panel-base::auth.login_title'));
     }
 
     private function resolveAuthField(AuthenticationSettings $settings): string

@@ -37,7 +37,7 @@ final class NotDisposableEmail implements ValidationRule
 
         foreach ($this->blocklist() as $blocked) {
             if ($host === $blocked || str_ends_with($host, '.'.$blocked)) {
-                $fail(__('panel-base::auth.email_disposable', ['attribute' => $attribute]));
+                $fail(__('filament-panel-base::auth.email_disposable', ['attribute' => $attribute]));
 
                 return;
             }

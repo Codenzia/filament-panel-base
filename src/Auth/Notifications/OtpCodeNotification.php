@@ -11,7 +11,7 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Email-channel OTP notification. Subject and body are translated via
- * the `panel-base::auth.*` translation keys so hosts can override the
+ * the `filament-panel-base::auth.*` translation keys so hosts can override the
  * wording per locale.
  */
 class OtpCodeNotification extends Notification implements ShouldQueue
@@ -40,11 +40,11 @@ class OtpCodeNotification extends Notification implements ShouldQueue
         $ttl = (int) ($this->context['ttl_minutes'] ?? config('filament-panel-base.auth.otp.ttl_minutes', 10));
 
         return (new MailMessage)
-            ->subject(__('panel-base::auth.otp_email_subject', ['brand' => $brand]))
-            ->greeting(__('panel-base::auth.otp_email_greeting'))
-            ->line(__('panel-base::auth.otp_email_intro', ['brand' => $brand]))
+            ->subject(__('filament-panel-base::auth.otp_email_subject', ['brand' => $brand]))
+            ->greeting(__('filament-panel-base::auth.otp_email_greeting'))
+            ->line(__('filament-panel-base::auth.otp_email_intro', ['brand' => $brand]))
             ->line('**'.$this->code.'**')
-            ->line(__('panel-base::auth.otp_email_ttl', ['minutes' => $ttl]))
-            ->line(__('panel-base::auth.otp_email_ignore'));
+            ->line(__('filament-panel-base::auth.otp_email_ttl', ['minutes' => $ttl]))
+            ->line(__('filament-panel-base::auth.otp_email_ignore'));
     }
 }

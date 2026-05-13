@@ -56,7 +56,7 @@ class FilamentPanelBasePlugin implements Plugin
     /**
      * Enable the built-in Translation Manager resource for this panel.
      *
-     * After enabling, run: php artisan panel-base:enable-translations
+     * After enabling, run: php artisan filament-panel-base:enable-translations
      * to publish the required migrations and config.
      */
     public function withTranslations(bool $enabled = true): static

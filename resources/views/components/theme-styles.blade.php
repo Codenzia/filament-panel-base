@@ -2,12 +2,12 @@
      These variables power Tailwind utility classes (via the publishable
      theme.css @theme directive) and can be consumed by any custom CSS.
 
-     Usage: <x-panel-base::theme-styles />
+     Usage: <x-filament-panel-base::theme-styles />
 
      Or pass colors explicitly:
-     <x-panel-base::theme-styles :colors="$myColors" />
+     <x-filament-panel-base::theme-styles :colors="$myColors" />
 
-     Works with <x-panel-base::dark-mode-script /> for FOUC prevention. --}}
+     Works with <x-filament-panel-base::dark-mode-script /> for FOUC prevention. --}}
 
 @php
     $colors = $colors ?? \Codenzia\FilamentPanelBase\FilamentPanelBasePlugin::make()->getThemeColors();

@@ -28,7 +28,7 @@ class AccountSuspendedNotification extends Notification implements ShouldQueue
         $brand = config('app.name');
 
         return (new MailMessage)
-            ->subject(__('panel-base::auth.moderation_suspended_subject', ['brand' => $brand]))
-            ->line(__('panel-base::auth.moderation_suspended_body', ['reason' => $this->reason ?? '—']));
+            ->subject(__('filament-panel-base::auth.moderation_suspended_subject', ['brand' => $brand]))
+            ->line(__('filament-panel-base::auth.moderation_suspended_body', ['reason' => $this->reason ?? '—']));
     }
 }

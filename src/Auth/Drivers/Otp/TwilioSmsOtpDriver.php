@@ -69,7 +69,7 @@ class TwilioSmsOtpDriver implements OtpDriver
         $brand = $context['brand'] ?? config('app.name');
 
         return trans(
-            'panel-base::auth.otp_sms_body',
+            'filament-panel-base::auth.otp_sms_body',
             ['code' => $code, 'brand' => $brand],
             null,
             (string) ($context['locale'] ?? app()->getLocale())

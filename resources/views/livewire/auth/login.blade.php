@@ -1,7 +1,7 @@
 <div class="rounded-lg bg-white p-6 shadow-sm ring-1 ring-gray-200 dark:bg-gray-800 dark:ring-gray-700">
     <header class="mb-6">
-        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ __('panel-base::auth.login_title') }}</h2>
-        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ __('panel-base::auth.login_subtitle') }}</p>
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">{{ __('filament-panel-base::auth.login_title') }}</h2>
+        <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">{{ __('filament-panel-base::auth.login_subtitle') }}</p>
     </header>
 
     @if (session('status'))
@@ -12,9 +12,9 @@
         <div>
             <label for="identifier" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {{ match ($credentialsMode) {
-                    'phone' => __('panel-base::auth.identifier_phone'),
-                    'both' => __('panel-base::auth.identifier_either'),
-                    default => __('panel-base::auth.identifier_email'),
+                    'phone' => __('filament-panel-base::auth.identifier_phone'),
+                    'both' => __('filament-panel-base::auth.identifier_either'),
+                    default => __('filament-panel-base::auth.identifier_email'),
                 } }}
             </label>
             <input wire:model="identifier" id="identifier" type="text" autocomplete="username" required
@@ -24,8 +24,8 @@
 
         <div>
             <div class="flex items-center justify-between">
-                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('panel-base::auth.password') }}</label>
-                <a href="{{ route('password.request') }}" class="text-sm text-primary-600 hover:text-primary-700">{{ __('panel-base::auth.forgot_password') }}</a>
+                <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('filament-panel-base::auth.password') }}</label>
+                <a href="{{ route('password.request') }}" class="text-sm text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.forgot_password') }}</a>
             </div>
             <input wire:model="password" id="password" type="password" autocomplete="current-password" required
                 class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100" />
@@ -34,31 +34,31 @@
 
         <label class="flex items-center text-sm text-gray-700 dark:text-gray-300">
             <input wire:model="remember" type="checkbox" class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500" />
-            <span class="ms-2">{{ __('panel-base::auth.remember_me') }}</span>
+            <span class="ms-2">{{ __('filament-panel-base::auth.remember_me') }}</span>
         </label>
 
         <button type="submit" class="flex w-full items-center justify-center rounded-md bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2">
-            {{ __('panel-base::auth.login_submit') }}
+            {{ __('filament-panel-base::auth.login_submit') }}
         </button>
     </form>
 
     @if (! empty($enabledSocialProviders))
         <div class="my-6 flex items-center gap-3">
             <hr class="flex-1 border-gray-200 dark:border-gray-700" />
-            <span class="text-xs text-gray-500">{{ __('panel-base::auth.or_continue_with') }}</span>
+            <span class="text-xs text-gray-500">{{ __('filament-panel-base::auth.or_continue_with') }}</span>
             <hr class="flex-1 border-gray-200 dark:border-gray-700" />
         </div>
         <div class="space-y-2">
             @foreach ($enabledSocialProviders as $provider)
                 <a href="{{ route('oauth.redirect', $provider) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                    {{ __('panel-base::auth.continue_with', ['provider' => ucfirst($provider)]) }}
+                    {{ __('filament-panel-base::auth.continue_with', ['provider' => ucfirst($provider)]) }}
                 </a>
             @endforeach
         </div>
     @endif
 
     <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-        {{ __('panel-base::auth.no_account_yet') }}
-        <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ __('panel-base::auth.create_account') }}</a>
+        {{ __('filament-panel-base::auth.no_account_yet') }}
+        <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.create_account') }}</a>
     </p>
 </div>

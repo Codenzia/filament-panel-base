@@ -128,7 +128,7 @@ class OtpService
         if (RateLimiter::tooManyAttempts($key, $perMinute)) {
             $retryAfter = RateLimiter::availableIn($key);
 
-            throw new \RuntimeException(__('panel-base::auth.otp_rate_limited', ['seconds' => $retryAfter]));
+            throw new \RuntimeException(__('filament-panel-base::auth.otp_rate_limited', ['seconds' => $retryAfter]));
         }
     }
 

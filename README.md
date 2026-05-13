@@ -124,12 +124,12 @@ The package includes a built-in theme system with 17 color presets and runtime C
 **Step 1: Add components to your layout `<head>`:**
 
 ```blade
-<x-panel-base::dark-mode-script />
-<x-panel-base::theme-styles />
+<x-filament-panel-base::dark-mode-script />
+<x-filament-panel-base::theme-styles />
 @vite(['resources/css/app.css', 'resources/js/app.js'])
 ```
 
-`<x-panel-base::dark-mode-script />` prevents a flash of unstyled content by applying the dark class before first paint. `<x-panel-base::theme-styles />` injects CSS custom properties (`--site-brand-*`, `--site-primary`, etc.) into `:root`.
+`<x-filament-panel-base::dark-mode-script />` prevents a flash of unstyled content by applying the dark class before first paint. `<x-filament-panel-base::theme-styles />` injects CSS custom properties (`--site-brand-*`, `--site-primary`, etc.) into `:root`.
 
 **Step 2: Import the theme CSS in your `resources/css/app.css`:**
 
@@ -261,8 +261,8 @@ ThemePresets::colorKeys();   // ['primary_color', 'danger_color', ...] — all 1
 
 | Component | Purpose |
 |---|---|
-| `<x-panel-base::theme-styles />` | Injects CSS custom properties into `:root` using `color-mix()` for brand scale generation |
-| `<x-panel-base::dark-mode-script />` | FOUC prevention — applies `dark` class before first paint |
+| `<x-filament-panel-base::theme-styles />` | Injects CSS custom properties into `:root` using `color-mix()` for brand scale generation |
+| `<x-filament-panel-base::dark-mode-script />` | FOUC prevention — applies `dark` class before first paint |
 
 The `theme-styles` component accepts an optional `:colors` prop. When omitted, it resolves colors automatically via `FilamentPanelBasePlugin::make()->getThemeColors()`.
 
@@ -272,7 +272,7 @@ The `theme-styles` component accepts an optional `:colors` prop. When omitted, i
 2. Config preset (`filament-panel-base.theme.preset`) + color overrides
 3. Ocean Blue defaults
 
-**CSS variables injected by `<x-panel-base::theme-styles />`:**
+**CSS variables injected by `<x-filament-panel-base::theme-styles />`:**
 
 | Variable | Source |
 |---|---|
@@ -442,9 +442,9 @@ class UserPanelProvider extends BasePanelProvider
 **Form fields** (Livewire-bound via `@entangle`):
 
 ```blade
-<x-panel-base::country-select :countries="$countries" wire-model="country_id" />
-<x-panel-base::country-code-select :countries="$countries" wire-model="country_code" />
-<x-panel-base::phone-input :countries="$countries" country-code-model="country_code" phone-model="whatsapp" />
+<x-filament-panel-base::country-select :countries="$countries" wire-model="country_id" />
+<x-filament-panel-base::country-code-select :countries="$countries" wire-model="country_code" />
+<x-filament-panel-base::phone-input :countries="$countries" country-code-model="country_code" phone-model="whatsapp" />
 ```
 
 `phone-input` combines a country code dropdown and phone number input into a single bordered group with a searchable dropdown. It accepts the same country collection as the other components and binds to two separate Livewire properties.
@@ -460,10 +460,10 @@ class UserPanelProvider extends BasePanelProvider
 **Navbar switchers** (pair with `SetCountry`/`SetCurrency`/`SetLocale` middleware):
 
 ```blade
-<x-panel-base::country-switcher :mode="$countryDropdownMode" />
-<x-panel-base::currency-switcher />
-<x-panel-base::locale-switcher :locales="$locales" :currentLocale="$currentLocale" />
-<x-panel-base::dark-mode-toggle />
+<x-filament-panel-base::country-switcher :mode="$countryDropdownMode" />
+<x-filament-panel-base::currency-switcher />
+<x-filament-panel-base::locale-switcher :locales="$locales" :currentLocale="$currentLocale" />
+<x-filament-panel-base::dark-mode-toggle />
 ```
 
 The switchers read view-shared data from middleware (`$availableCountries`, `$currentCountry`, `$availableCurrencies`, `$currentCurrency`, `$currentCurrencyMode`) and require routes named `country.switch`, `currency.switch`, and `locale.switch` in the consuming app.
@@ -479,9 +479,9 @@ The switchers read view-shared data from middleware (`$availableCountries`, `$cu
 
 ```blade
 <div class="relative flex items-center gap-3">
-    <x-panel-base::country-switcher :relative="false" align="start" />
-    <x-panel-base::currency-switcher :relative="false" align="start" />
-    <x-panel-base::locale-switcher :relative="false" align="start" :locales="$locales" :currentLocale="$currentLocale" />
+    <x-filament-panel-base::country-switcher :relative="false" align="start" />
+    <x-filament-panel-base::currency-switcher :relative="false" align="start" />
+    <x-filament-panel-base::locale-switcher :relative="false" align="start" :locales="$locales" :currentLocale="$currentLocale" />
 </div>
 ```
 
@@ -842,7 +842,7 @@ Use this when you need a **non-developer-friendly UI** to manage static language
 ### Step 1: Publish migrations and config
 
 ```bash
-php artisan panel-base:enable-translations
+php artisan filament-panel-base:enable-translations
 ```
 
 This publishes the `spatie/laravel-translation-loader` migration and config.
@@ -936,7 +936,7 @@ FilamentPanelBasePlugin::make()
     // Enable the translation manager UI for this panel (opt-in)
     ->withTranslations()
 
-// Get resolved theme colors (used internally by <x-panel-base::theme-styles />)
+// Get resolved theme colors (used internally by <x-filament-panel-base::theme-styles />)
 FilamentPanelBasePlugin::make()->getThemeColors();
 // Returns: ['primary_color' => '#3b82f6', 'danger_color' => '#ef4444', ...]
 ```
