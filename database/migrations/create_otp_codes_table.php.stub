@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    public function up(): void
+    {
+        Schema::create('otp_codes', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->string('target')->index();
+            $table->string('channel', 32)->index();
+            $table->string('code_hash');
+            $table->json('context')->nullable();
+            $table->unsignedSmallInteger('attempts')->default(0);
+            $table->string('ip', 45)->nullable();
+            $table->timestamp('expires_at')->index();
+            $table->timestamps();
+
+            $table->unique(['target', 'channel'], 'otp_codes_target_channel_unique');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::dropIfExists('otp_codes');
+    }
+};

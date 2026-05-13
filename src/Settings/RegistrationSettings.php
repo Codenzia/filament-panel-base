@@ -7,10 +7,15 @@ namespace Codenzia\FilamentPanelBase\Settings;
 use Spatie\LaravelSettings\Settings;
 
 /**
- * Shared registration settings for all Codenzia projects.
+ * @deprecated since 2.0 — use {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings} instead.
  *
- * Controls whether user registration is open or moderated,
- * and whether email verification is required.
+ * Retained for backward compatibility with consumers that import this
+ * class directly. The two settings groups (`registration` and `auth`)
+ * coexist; this class still reads/writes its original `registration.*`
+ * keys, but new code should target AuthenticationSettings.
+ *
+ * The aqarkom data migration moves admin-configured values into the new
+ * `auth.*` group during `filament-panel-base:install-auth`.
  */
 class RegistrationSettings extends Settings
 {

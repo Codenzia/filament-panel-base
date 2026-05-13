@@ -38,7 +38,10 @@
     "suggest": {
         "spatie/laravel-permission": "Required for NotifiesAdmins role-based queries",
         "spatie/laravel-translatable": "Required for translatable content support in Filament resources",
-        "lara-zeus/spatie-translatable": "Required for Filament v4 translatable plugin integration (locale switcher, resource concerns)"
+        "lara-zeus/spatie-translatable": "Required for Filament v4 translatable plugin integration (locale switcher, resource concerns)",
+        "livewire/livewire": "Required to use the front-of-site Livewire auth pages (Register, Login, VerifyOtp, ...)",
+        "laravel/socialite": "Required when enabling social login through the Auth module (->social(['google', ...]))",
+        "propaganistas/laravel-phone": "Required for libphonenumber-backed phone format validation in the auth module"
     },
     "autoload": {
         "psr-4": {

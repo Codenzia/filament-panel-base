@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase;
 
+use Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\Support\ThemePresets;
 use Filament\Contracts\Plugin;
@@ -19,6 +20,8 @@ class FilamentPanelBasePlugin implements Plugin
     protected ?\Closure $settingsResolver = null;
 
     protected bool $translationsEnabled = false;
+
+    protected ?AuthenticationPlugin $authentication = null;
 
     public function getId(): string
     {
@@ -65,6 +68,47 @@ class FilamentPanelBasePlugin implements Plugin
     public function isTranslationsEnabled(): bool
     {
         return $this->translationsEnabled;
+    }
+
+    /**
+     * Configure the Auth module — signup, login, verification, social,
+     * moderation. The closure receives an {@see AuthenticationPlugin}
+     * instance for fluent configuration; values applied via the fluent API
+     * override AuthenticationSettings for the request lifecycle.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withAuthentication(fn ($auth) => $auth
+     *           ->credentials('email', 'phone')
+     *           ->moderation()
+     *           ->verification(driver: 'whatsapp', allowed: ['whatsapp','email'])
+     *       );
+     */
+    public function withAuthentication(\Closure $callback): static
+    {
+        $this->authentication = app(AuthenticationPlugin::class);
+        $callback($this->authentication);
+        $this->authentication->enable()->apply();
+
+        return $this;
+    }
+
+    /**
+     * Resolve the AuthenticationPlugin instance (or null when the host
+     * never called `->withAuthentication()`).
+     */
+    public function getAuthentication(): ?AuthenticationPlugin
+    {
+        return $this->authentication;
+    }
+
+    /**
+     * Whether the Auth module is active for this panel.
+     */
+    public function isAuthenticationEnabled(): bool
+    {
+        return $this->authentication?->isEnabled() ?? false;
     }
 
     /**
@@ -116,13 +160,21 @@ class FilamentPanelBasePlugin implements Plugin
 
     public function register(Panel $panel): void
     {
-        if (! $this->translationsEnabled) {
-            return;
+        if ($this->translationsEnabled) {
+            $panel->resources([
+                \Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource::class,
+            ]);
         }
 
-        $panel->resources([
-            \Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource::class,
-        ]);
+        if ($this->authentication?->hasFilamentPanelPages()) {
+            if ($this->authentication->hasFilamentLoginPage()) {
+                $panel->login(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login::class);
+            }
+
+            if ($this->authentication->hasFilamentRegisterPage()) {
+                $panel->registration(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register::class);
+            }
+        }
     }
 
     public function boot(Panel $panel): void {}

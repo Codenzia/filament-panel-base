@@ -1,0 +1,93 @@
+<?php
+
+return [
+    // Generic
+    'name' => 'الاسم',
+    'email' => 'البريد الإلكتروني',
+    'phone' => 'رقم الهاتف',
+    'password' => 'كلمة المرور',
+    'password_confirmation' => 'تأكيد كلمة المرور',
+    'remember_me' => 'تذكرني',
+    'submit' => 'إرسال',
+    'cancel' => 'إلغاء',
+
+    // Register
+    'register_title' => 'إنشاء حساب',
+    'register_subtitle' => 'ابدأ بإنشاء حسابك.',
+    'register_submit' => 'إنشاء حساب',
+    'already_have_account' => 'لديك حساب بالفعل؟',
+    'sign_in' => 'تسجيل الدخول',
+
+    // Login
+    'login_title' => 'مرحباً بعودتك',
+    'login_subtitle' => 'سجل الدخول للمتابعة.',
+    'login_submit' => 'تسجيل الدخول',
+    'forgot_password' => 'نسيت كلمة المرور؟',
+    'no_account_yet' => 'ليس لديك حساب؟',
+    'create_account' => 'أنشئ حساباً',
+    'credentials_mismatch' => 'بيانات الاعتماد هذه لا تتطابق مع سجلاتنا.',
+    'account_suspended' => 'تم تعليق حسابك. يرجى التواصل مع الدعم.',
+    'account_pending' => 'حسابك في انتظار الموافقة. سيتم إعلامك عند الموافقة.',
+
+    // Identifier label
+    'identifier_email' => 'البريد الإلكتروني',
+    'identifier_phone' => 'رقم الهاتف',
+    'identifier_either' => 'البريد الإلكتروني أو الهاتف',
+
+    // Email verification
+    'verify_email_title' => 'تحقق من بريدك الإلكتروني',
+    'verify_email_intro' => 'لقد أرسلنا رابط التحقق إلى :email. افتح الرابط لتفعيل حسابك.',
+    'verify_email_resend' => 'إعادة إرسال رابط التحقق',
+    'verify_email_resent' => 'تم إرسال رابط تحقق جديد.',
+    'verify_email_done' => 'بريدك الإلكتروني تم التحقق منه بالفعل.',
+
+    // OTP verification
+    'verify_otp_title' => 'تحقق من :channel',
+    'verify_otp_intro' => 'أدخل الرمز المكون من :length أرقام الذي أرسلناه إلى :target.',
+    'verify_otp_submit' => 'تحقق',
+    'verify_otp_resend' => 'إعادة إرسال الرمز',
+    'verify_otp_resent' => 'تم إرسال رمز جديد.',
+    'verify_otp_invalid' => 'رمز التحقق غير صالح أو منتهي الصلاحية.',
+    'verify_otp_rate_limited' => 'محاولات كثيرة. حاول مرة أخرى خلال :seconds ثانية.',
+
+    // OTP delivery
+    'otp_email_subject' => 'رمز التحقق من :brand',
+    'otp_email_greeting' => 'مرحباً,',
+    'otp_email_intro' => 'استخدم الرمز أدناه لإكمال تسجيل الدخول أو التسجيل في :brand.',
+    'otp_email_ttl' => 'تنتهي صلاحية هذا الرمز خلال :minutes دقائق.',
+    'otp_email_ignore' => 'إذا لم تطلب هذا الرمز، يمكنك تجاهل هذا البريد بأمان.',
+    'otp_sms_body' => 'رمز التحقق من :brand هو :code',
+    'otp_rate_limited' => 'يرجى الانتظار :seconds ثانية قبل طلب رمز آخر.',
+
+    // Forgot / reset password
+    'forgot_title' => 'إعادة تعيين كلمة المرور',
+    'forgot_subtitle' => 'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة تعيين.',
+    'forgot_submit' => 'إرسال الرابط',
+    'forgot_sent' => 'إذا كان هذا البريد مسجلاً لدينا، فقد أرسلنا رابط إعادة التعيين.',
+    'reset_title' => 'اختر كلمة مرور جديدة',
+    'reset_submit' => 'تحديث كلمة المرور',
+    'reset_done' => 'تم تحديث كلمة المرور. يمكنك الآن تسجيل الدخول.',
+
+    // Social
+    'continue_with' => 'المتابعة باستخدام :provider',
+    'or_continue_with' => 'أو المتابعة باستخدام',
+
+    // Channel labels
+    'channel.email' => 'البريد الإلكتروني',
+    'channel.whatsapp' => 'واتساب',
+    'channel.twilio' => 'رسالة نصية',
+    'channel.vonage' => 'رسالة نصية',
+    'channel.null' => 'السجل',
+
+    // Moderation
+    'moderation_approved_subject' => 'تمت الموافقة على حسابك في :brand',
+    'moderation_approved_body' => 'مرحباً بك في :brand! حسابك الآن مفعّل. سجل الدخول للبدء.',
+    'moderation_suspended_subject' => 'تم تعليق حسابك في :brand',
+    'moderation_suspended_body' => 'تم تعليق حسابك. السبب: :reason',
+
+    // Validation
+    'email_disposable' => 'نطاق :attribute غير مسموح. يرجى استخدام بريد إلكتروني دائم.',
+    'phone_invalid' => ':attribute ليس رقم هاتف صالح.',
+    'phone_format_invalid' => 'صيغة :attribute غير صالحة. استخدم الصيغة الدولية، مثل +14155552671.',
+    'throttle_rate_limited' => 'محاولات كثيرة. حاول مرة أخرى خلال :seconds ثانية.',
+];

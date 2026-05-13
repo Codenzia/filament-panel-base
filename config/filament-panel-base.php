@@ -172,4 +172,80 @@ return [
         'scan_extensions' => ['php'],
         'scan_functions' => [],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Authentication Module
+    |--------------------------------------------------------------------------
+    |
+    | Static defaults for the Auth module. Runtime values live in
+    | AuthenticationSettings (Spatie Settings); the fluent
+    | FilamentPanelBasePlugin::withAuthentication() API takes precedence.
+    |
+    */
+    'auth' => [
+        /*
+        | Blade layout that Livewire auth views @extend. Hosts override this
+        | to fit their public site chrome. Set to null to use a minimal
+        | bundled fallback layout.
+        */
+        'layout' => 'layouts.app',
+
+        /*
+        | Front-of-site route registration. Set `enabled` to false to skip
+        | route registration entirely (hosts wire their own routes), or
+        | customise the prefix/name.
+        */
+        'routes' => [
+            'enabled' => true,
+            'prefix' => '',
+            'name' => '',
+            'middleware' => ['web'],
+        ],
+
+        /*
+        | OTP service.
+        */
+        'otp' => [
+            'code_length' => 6,
+            'ttl_minutes' => 10,
+            'max_attempts' => 5,
+        ],
+
+        /*
+        | Throttle limits for auth endpoints. Used by ThrottleAuth middleware.
+        | AuthenticationSettings overrides these per-deployment.
+        */
+        'throttle' => [
+            'per_minute' => 5,
+            'per_day' => 50,
+        ],
+
+        /*
+        | OTP driver credentials. Static, environment-driven (never DB-stored).
+        */
+        'drivers' => [
+            'whatsapp' => [
+                'api_url' => env('WHATSAPP_API_URL', 'https://graph.facebook.com/v21.0'),
+                'phone_id' => env('WHATSAPP_BUSINESS_PHONE_ID'),
+                'access_token' => env('WHATSAPP_ACCESS_TOKEN'),
+                'template_name' => env('WHATSAPP_TEMPLATE_NAME', 'verification_code'),
+                'template_language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
+            ],
+            'twilio' => [
+                'sid' => env('TWILIO_ACCOUNT_SID'),
+                'token' => env('TWILIO_AUTH_TOKEN'),
+                'from' => env('TWILIO_FROM'),
+            ],
+            'vonage' => [
+                'key' => env('VONAGE_KEY'),
+                'secret' => env('VONAGE_SECRET'),
+                'sms_from' => env('VONAGE_SMS_FROM', 'Codenzia'),
+            ],
+            'email' => [
+                'from_address' => env('MAIL_FROM_ADDRESS'),
+                'from_name' => env('MAIL_FROM_NAME'),
+            ],
+        ],
+    ],
 ];
