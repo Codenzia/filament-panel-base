@@ -23,6 +23,10 @@ class FilamentPanelBasePlugin implements Plugin
 
     protected ?AuthenticationPlugin $authentication = null;
 
+    protected bool $filamentAuthLoginEnabled = false;
+
+    protected bool $filamentAuthRegisterEnabled = false;
+
     public function getId(): string
     {
         return 'filament-panel-base';
@@ -112,6 +116,40 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
+     * Mount the auth module's Livewire register/login components inside
+     * Filament's panel chrome (replaces the panel's built-in `->login()` /
+     * `->registration()` pages). This is a panel-level concern only — it
+     * does NOT touch AuthenticationSettings, so it's safe to call during
+     * panel boot regardless of migration state.
+     *
+     * Typically called alongside `withAuthentication()` in AppServiceProvider:
+     *
+     *   // AppServiceProvider::boot — global auth config
+     *   FilamentPanelBasePlugin::make()
+     *       ->withAuthentication(fn ($auth) => $auth->credentials(...)->moderation());
+     *
+     *   // UserPanelProvider::panel — per-panel UI adapter
+     *   ->plugin(FilamentPanelBasePlugin::make()->withFilamentAuthPages(login: true))
+     */
+    public function withFilamentAuthPages(bool $login = false, bool $register = false): static
+    {
+        $this->filamentAuthLoginEnabled = $login;
+        $this->filamentAuthRegisterEnabled = $register;
+
+        return $this;
+    }
+
+    public function hasFilamentAuthLogin(): bool
+    {
+        return $this->filamentAuthLoginEnabled;
+    }
+
+    public function hasFilamentAuthRegister(): bool
+    {
+        return $this->filamentAuthRegisterEnabled;
+    }
+
+    /**
      * Resolve the settings instance.
      */
     public function resolveSettings(): ?object
@@ -166,14 +204,20 @@ class FilamentPanelBasePlugin implements Plugin
             ]);
         }
 
-        if ($this->authentication?->hasFilamentPanelPages()) {
-            if ($this->authentication->hasFilamentLoginPage()) {
-                $panel->login(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login::class);
-            }
+        // Honour both the top-level fluent API (preferred) and the legacy
+        // AuthenticationPlugin::filamentPanelPages() route (deprecated).
+        $loginEnabled = $this->filamentAuthLoginEnabled
+            || ($this->authentication?->hasFilamentLoginPage() ?? false);
 
-            if ($this->authentication->hasFilamentRegisterPage()) {
-                $panel->registration(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register::class);
-            }
+        $registerEnabled = $this->filamentAuthRegisterEnabled
+            || ($this->authentication?->hasFilamentRegisterPage() ?? false);
+
+        if ($loginEnabled) {
+            $panel->login(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login::class);
+        }
+
+        if ($registerEnabled) {
+            $panel->registration(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register::class);
         }
     }
 

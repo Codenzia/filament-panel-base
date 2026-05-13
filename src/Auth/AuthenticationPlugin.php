@@ -125,6 +125,12 @@ class AuthenticationPlugin
     /**
      * Mount the same Livewire components as Filament panel pages, replacing
      * the built-in `->login()` / `->registration()` chrome. Off by default.
+     *
+     * @deprecated Use {@see \Codenzia\FilamentPanelBase\FilamentPanelBasePlugin::withFilamentAuthPages()}
+     *             instead. The top-level method does not require calling
+     *             withAuthentication() in the panel provider, so it works
+     *             cleanly when the global auth config lives in AppServiceProvider
+     *             and the panel provider only needs to wire the in-panel UI.
      */
     public function filamentPanelPages(bool $login = false, bool $register = false): static
     {
