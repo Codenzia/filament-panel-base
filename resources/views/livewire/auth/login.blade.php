@@ -8,6 +8,10 @@
         <div class="mb-4 rounded-md bg-green-50 p-3 text-sm text-green-700 dark:bg-green-900/30 dark:text-green-300">{{ session('status') }}</div>
     @endif
 
+    @if (session('error'))
+        <div class="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-900/30 dark:text-red-300">{{ session('error') }}</div>
+    @endif
+
     <form wire:submit="login" class="space-y-4">
         <div>
             <label for="identifier" class="block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -51,7 +55,8 @@
         <div class="space-y-2">
             @foreach ($enabledSocialProviders as $provider)
                 <a href="{{ route('oauth.redirect', $provider) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
-                    {{ __('filament-panel-base::auth.continue_with', ['provider' => ucfirst($provider)]) }}
+                    <x-filament-panel-base::social-provider-icon :provider="$provider" />
+                    <span>{{ __('filament-panel-base::auth.continue_with', ['provider' => ucfirst($provider)]) }}</span>
                 </a>
             @endforeach
         </div>

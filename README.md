@@ -406,6 +406,125 @@ class CustomLogin extends \Livewire\Component
 }
 ```
 
+### Social login (OAuth)
+
+The Auth module ships a complete social-login flow built on `laravel/socialite`: redirect + callback routes, find-or-create-or-link logic, multi-identity storage in a `social_accounts` table, profile UI for linking/unlinking, and three email-conflict policies to defeat account-takeover.
+
+**What the plugin gives you:**
+
+- `GET /oauth/{provider}/redirect` and `GET /oauth/{provider}/callback` routes, throttled and gated by both `services.{provider}.client_id` and the admin's enable toggle.
+- A `social_accounts` table (one row per linked identity per user) with encrypted access/refresh tokens.
+- `FindsOrCreatesFromSocialite` trait that resolves a Socialite payload to a User by either matching `provider`+`provider_id`, applying the configured email-conflict policy, or creating a fresh user.
+- Connect/disconnect profile UI (`<livewire:filament-panel-base::auth.manage-social-accounts />`).
+- `SocialAccountMapping` (pre-persistence, mutable) and `SocialUserLinked` (post-persistence) events for app-level customisation.
+- Inline brand-icon Blade component (`<x-filament-panel-base::social-provider-icon :provider="$p" />`) for the common providers — no external icon dependency.
+
+**What the host app provides:**
+
+- The `laravel/socialite` package and provider credentials.
+- A User model that implements `SupportsSocialLogin` and uses the default trait.
+- The `social_accounts` migration, published from the plugin.
+
+#### Setup
+
+1. **Install Socialite:**
+
+    ```bash
+    composer require laravel/socialite
+    ```
+
+2. **Publish the migrations and run them:**
+
+    ```bash
+    php artisan vendor:publish --tag=filament-panel-base-auth-migrations
+    php artisan migrate
+    ```
+
+    This adds the `social_accounts` table. If you previously used the legacy single-provider columns (`users.provider` / `users.provider_id`), the publish also drops a one-shot data migration that copies them into the new table and removes the legacy columns. The migration is idempotent — safe on fresh installs.
+
+3. **Make your User model social-aware:**
+
+    ```php
+    use Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite;
+    use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
+
+    class User extends Authenticatable implements SupportsSocialLogin
+    {
+        use FindsOrCreatesFromSocialite;
+    }
+    ```
+
+    The trait provides `findOrCreateFromSocialite()`, `linkSocialAccount()`, and the `socialAccounts()` HasMany relation. Override any of them on the model if you need different behaviour.
+
+4. **Configure provider credentials** in `config/services.php` — standard Socialite:
+
+    ```php
+    'google' => [
+        'client_id'     => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect'      => '/oauth/google/callback',
+    ],
+    'github' => [
+        'client_id'     => env('GITHUB_CLIENT_ID'),
+        'client_secret' => env('GITHUB_CLIENT_SECRET'),
+        'redirect'      => '/oauth/github/callback',
+    ],
+    ```
+
+    The callback paths above match the routes the plugin registers — set them verbatim in your OAuth app dashboards too.
+
+5. **Enable providers via the plugin:**
+
+    ```php
+    use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
+
+    FilamentPanelBasePlugin::make()
+        ->withAuthentication(fn ($auth) => $auth
+            ->social(['google', 'github'])
+            ->socialEmailLinking('require_login')   // safest default
+            ->socialTrustVerifiedEmail(true)
+        );
+    ```
+
+    Or flip them at runtime from the admin's auth settings page — fluent overrides win for the lifetime of the request, settings persist.
+
+#### Email-conflict policies
+
+When a user signs in via a provider whose email matches an existing local user that has *not* previously linked this provider, the plugin needs to decide what to do. Pick one with `->socialEmailLinking($policy)` or the `auth.social_email_linking` setting:
+
+| Policy | Behaviour | Use when |
+|---|---|---|
+| `require_login` (default) | Refuse the auto-link. Redirect to login with a hint: "Sign in with your original method, then connect this provider from your profile." | Public-facing apps. **Recommended.** Defeats the account-takeover vector where an attacker spins up a provider account using a victim's email. |
+| `trust_verified` | Link only when **both** sides assert verified email: the user has `email_verified_at` set **and** the provider's payload includes `email_verified: true`. | Mid-trust apps that want fewer support tickets without inviting takeover. |
+| `auto` | Unconditional link, matching the historical Laravel/Socialite tutorial pattern. | **Avoid in production.** Only safe when the provider universe is fully trusted (e.g. SSO inside a closed org). |
+
+#### Linking and unlinking from the profile page
+
+Mount the manage component on whatever profile/settings page your app uses:
+
+```blade
+<livewire:filament-panel-base::auth.manage-social-accounts />
+```
+
+It lists each enabled provider as either "Connected" (with a Disconnect button) or "Available" (with a Connect button). Disconnect is automatically blocked when removing the last sign-in method would lock the user out — they have to set a password first.
+
+#### Customising attribute mapping
+
+Subscribe to `SocialAccountMapping` to mutate what gets persisted before either the User or the `SocialAccount` row is written:
+
+```php
+use Codenzia\FilamentPanelBase\Auth\Events\SocialAccountMapping;
+
+Event::listen(SocialAccountMapping::class, function (SocialAccountMapping $event): void {
+    $event->userAttributes['avatar_url'] = $event->socialUser->getAvatar();
+    $event->userAttributes['locale'] = $event->socialUser->getRaw()['locale'] ?? null;
+});
+```
+
+`$event->userAttributes` is only persisted when `$event->creatingUser === true`. `$event->socialAccountAttributes` is persisted every time a `social_accounts` row is written (signup, link, or re-link).
+
+For post-persistence side effects (welcome emails, audit logging) use `SocialUserLinked` instead — the `linked` flag is `true` on the first link/signup and `false` on returning sign-in.
+
 ### Middleware
 
 | Middleware | Description |

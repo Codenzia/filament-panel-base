@@ -1,0 +1,75 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+/**
+ * Migrate legacy single-provider columns (users.provider + users.provider_id)
+ * into the multi-identity social_accounts table.
+ *
+ * Idempotent: no-op when the legacy columns do not exist (fresh installs).
+ */
+return new class extends Migration
+{
+    public function up(): void
+    {
+        if (! Schema::hasColumn('users', 'provider') || ! Schema::hasColumn('users', 'provider_id')) {
+            return;
+        }
+
+        DB::table('users')
+            ->whereNotNull('provider')
+            ->whereNotNull('provider_id')
+            ->orderBy('id')
+            ->each(function (object $user): void {
+                $exists = DB::table('social_accounts')
+                    ->where('provider', $user->provider)
+                    ->where('provider_id', $user->provider_id)
+                    ->exists();
+
+                if ($exists) {
+                    return;
+                }
+
+                DB::table('social_accounts')->insert([
+                    'user_id' => $user->id,
+                    'provider' => $user->provider,
+                    'provider_id' => $user->provider_id,
+                    'email' => $user->email ?? null,
+                    'name' => $user->name ?? null,
+                    'created_at' => $user->created_at ?? now(),
+                    'updated_at' => $user->updated_at ?? now(),
+                ]);
+            });
+
+        Schema::table('users', function (Blueprint $table): void {
+            $table->dropColumn(['provider', 'provider_id']);
+        });
+    }
+
+    public function down(): void
+    {
+        if (Schema::hasColumn('users', 'provider')) {
+            return;
+        }
+
+        Schema::table('users', function (Blueprint $table): void {
+            $table->string('provider')->nullable()->after('remember_token');
+            $table->string('provider_id')->nullable()->after('provider');
+        });
+
+        DB::table('social_accounts')
+            ->orderBy('id')
+            ->each(function (object $row): void {
+                DB::table('users')
+                    ->where('id', $row->user_id)
+                    ->whereNull('provider')
+                    ->update([
+                        'provider' => $row->provider,
+                        'provider_id' => $row->provider_id,
+                    ]);
+            });
+    }
+};

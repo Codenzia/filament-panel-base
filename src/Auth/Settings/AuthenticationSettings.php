@@ -47,6 +47,27 @@ class AuthenticationSettings extends Settings
      */
     public array $social_providers_enabled = [];
 
+    /**
+     * How to handle a social sign-in whose email matches an existing user
+     * that has not previously linked this provider:
+     *
+     *  - 'require_login'  (default, safe): block the auto-link, prompt the
+     *    user to sign in with the original method and then connect from
+     *    their profile.
+     *  - 'trust_verified': link only when BOTH the existing user has
+     *    `email_verified_at` set AND the provider returned a verified email.
+     *  - 'auto': unconditional link — convenient but enables account takeover
+     *    if any provider returns an unverified email. Opt-in only.
+     */
+    public string $social_email_linking = 'require_login';
+
+    /**
+     * When `true`, treat a provider-asserted verified email as sufficient
+     * to mark `users.email_verified_at` at social signup. When `false`,
+     * social signups still go through Laravel's email verification flow.
+     */
+    public bool $social_trust_verified_email = true;
+
     /** Reject signups whose email domain is in the disposable-email blocklist. */
     public bool $disposable_email_blocking = true;
 

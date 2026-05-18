@@ -100,6 +100,37 @@ class AuthenticationPlugin
         return $this;
     }
 
+    /**
+     * Policy for handling a social sign-in whose email matches an existing user
+     * that has not previously linked this provider. See
+     * {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings::$social_email_linking}.
+     */
+    public function socialEmailLinking(string $policy): static
+    {
+        $normalized = strtolower($policy);
+
+        if (! in_array($normalized, ['require_login', 'trust_verified', 'auto'], true)) {
+            throw new \InvalidArgumentException(
+                "Unknown social_email_linking policy [{$policy}]. Expected one of: require_login, trust_verified, auto."
+            );
+        }
+
+        $this->overrides['social_email_linking'] = $normalized;
+
+        return $this;
+    }
+
+    /**
+     * Whether the plugin should trust a provider-asserted `email_verified`
+     * flag when stamping `users.email_verified_at` at social signup.
+     */
+    public function socialTrustVerifiedEmail(bool $trust = true): static
+    {
+        $this->overrides['social_trust_verified_email'] = $trust;
+
+        return $this;
+    }
+
     public function disposableEmailBlocking(bool $enabled = true): static
     {
         $this->overrides['disposable_email_blocking'] = $enabled;

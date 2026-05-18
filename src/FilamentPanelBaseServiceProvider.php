@@ -116,6 +116,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             Livewire::component('filament-panel-base::auth.verify-email-notice', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class);
             Livewire::component('filament-panel-base::auth.forgot-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class);
             Livewire::component('filament-panel-base::auth.reset-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class);
+            Livewire::component('filament-panel-base::auth.manage-social-accounts', \Codenzia\FilamentPanelBase\Auth\Livewire\ManageSocialAccounts::class);
         }
 
         if ((bool) config('filament-panel-base.auth.routes.enabled', true)) {
@@ -125,9 +126,17 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         Event::subscribe(AuthUserObserver::class);
 
         if ($this->app->runningInConsole()) {
+            $stamp = date('Y_m_d_His');
+
             $this->publishes([
                 __DIR__.'/../database/migrations/create_otp_codes_table.php.stub' => database_path(
-                    'migrations/'.date('Y_m_d_His').'_create_otp_codes_table.php'
+                    "migrations/{$stamp}_create_otp_codes_table.php"
+                ),
+                __DIR__.'/../database/migrations/create_social_accounts_table.php.stub' => database_path(
+                    "migrations/{$stamp}_create_social_accounts_table.php"
+                ),
+                __DIR__.'/../database/migrations/migrate_legacy_social_columns.php.stub' => database_path(
+                    'migrations/'.date('Y_m_d_His', strtotime('+1 second')).'_migrate_legacy_social_columns.php'
                 ),
             ], 'filament-panel-base-auth-migrations');
         }
@@ -169,7 +178,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     protected function makeTranslatablePlaceholder(): Closure
     {
         return function ($component): void {
-            $component->placeholder(function () use ($component): ?string {
+            $component->placeholder(function ($component): ?string {
                 $livewire = $component->getLivewire();
 
                 if (! method_exists($livewire, 'getActiveSchemaLocale')) {

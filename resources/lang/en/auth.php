@@ -71,6 +71,25 @@ return [
     // Social
     'continue_with' => 'Continue with :provider',
     'or_continue_with' => 'Or continue with',
+    'social_link_existing_email' => 'An account with this email already exists. Sign in with your original method, then connect :provider from your profile.',
+    'social_missing_email' => 'Your :provider account did not share an email address. Sign up with email instead, or contact support.',
+    'social_link_owned_by_other' => 'This :provider account is already linked to a different user. Disconnect it from that account first.',
+    'social_link_success' => ':provider has been connected to your account.',
+    'oauth_invalid_state' => 'Your sign-in session expired. Please try again.',
+    'oauth_provider_error' => 'Sign in with :provider failed. Please try again or use another method.',
+
+    // Manage connected accounts
+    'social_manage_title' => 'Connected accounts',
+    'social_manage_subtitle' => 'Link providers so you can sign in faster, or disconnect ones you no longer use.',
+    'social_connected' => 'Connected',
+    'social_available' => 'Available',
+    'social_connect' => 'Connect :provider',
+    'social_disconnect' => 'Disconnect',
+    'social_disconnect_locked' => 'Only sign-in method',
+    'social_disconnect_confirm' => 'Disconnect :provider from your account?',
+    'social_disconnect_success' => ':provider has been disconnected.',
+    'social_disconnect_blocked' => 'Set a password before disconnecting your only sign-in method.',
+    'social_none_configured' => 'No social providers are enabled for this site.',
 
     // Channel labels (for OTP UI)
     'channel.email' => 'email',

@@ -15,6 +15,8 @@ return new class extends SettingsMigration
             'auth.otp_driver' => 'email',
             'auth.allowed_otp_drivers' => ['email', 'whatsapp', 'twilio', 'vonage', 'null'],
             'auth.social_providers_enabled' => [],
+            'auth.social_email_linking' => 'require_login',
+            'auth.social_trust_verified_email' => true,
             'auth.disposable_email_blocking' => true,
             'auth.throttle_per_minute' => 5,
             'auth.throttle_per_day' => 50,

@@ -71,6 +71,25 @@ return [
     // Social
     'continue_with' => 'المتابعة باستخدام :provider',
     'or_continue_with' => 'أو المتابعة باستخدام',
+    'social_link_existing_email' => 'يوجد حساب مسجل بهذا البريد الإلكتروني. سجّل الدخول بطريقتك الأصلية، ثم اربط :provider من ملفك الشخصي.',
+    'social_missing_email' => 'حساب :provider الخاص بك لم يشارك عنوان بريد إلكتروني. سجّل باستخدام البريد الإلكتروني بدلاً من ذلك، أو تواصل مع الدعم.',
+    'social_link_owned_by_other' => 'حساب :provider هذا مرتبط بمستخدم آخر. افصل ربطه من ذلك الحساب أولاً.',
+    'social_link_success' => 'تم ربط :provider بحسابك.',
+    'oauth_invalid_state' => 'انتهت جلسة تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+    'oauth_provider_error' => 'فشل تسجيل الدخول عبر :provider. يرجى المحاولة مرة أخرى أو استخدام طريقة أخرى.',
+
+    // Manage connected accounts
+    'social_manage_title' => 'الحسابات المرتبطة',
+    'social_manage_subtitle' => 'اربط مزودي الدخول لتسجيل دخول أسرع، أو افصل ما لم تعد تستخدمه.',
+    'social_connected' => 'المرتبط',
+    'social_available' => 'المتاح',
+    'social_connect' => 'ربط :provider',
+    'social_disconnect' => 'فصل',
+    'social_disconnect_locked' => 'طريقة الدخول الوحيدة',
+    'social_disconnect_confirm' => 'فصل :provider عن حسابك؟',
+    'social_disconnect_success' => 'تم فصل :provider.',
+    'social_disconnect_blocked' => 'عيّن كلمة مرور قبل فصل طريقة الدخول الوحيدة لديك.',
+    'social_none_configured' => 'لم يتم تفعيل أي مزود لتسجيل الدخول لهذا الموقع.',
 
     // Channel labels
     'channel.email' => 'البريد الإلكتروني',

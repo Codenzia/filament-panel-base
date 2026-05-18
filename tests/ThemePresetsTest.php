@@ -7,13 +7,13 @@ use Codenzia\FilamentPanelBase\Support\ThemePresets;
 it('contains all expected presets', function () {
     $presets = ThemePresets::all();
 
-    expect($presets)->toHaveCount(18);
+    expect($presets)->toHaveCount(19);
     expect($presets)->toHaveKeys([
         'ocean_blue', 'forest_green', 'sunset_orange', 'royal_purple',
         'rose_garden', 'modern_dark', 'teal_breeze', 'amber_gold',
         'slate_steel', 'crimson_fire', 'sky_light', 'emerald_fresh',
         'indigo_classic', 'pink_blossom', 'warm_earth', 'midnight_blue',
-        'charcoal_noir', 'custom',
+        'charcoal_noir', 'currency_green', 'custom',
     ]);
 });
 
@@ -32,9 +32,9 @@ it('ensures all non-custom presets have all required color keys', function () {
             continue;
         }
 
-        foreach ($requiredKeys as $key) {
-            expect($preset)->toHaveKey($key, "Preset '{$slug}' is missing key '{$key}'");
-        }
+        $missing = array_values(array_diff($requiredKeys, array_keys($preset)));
+
+        expect($missing)->toBe([], "Preset '{$slug}' is missing keys: ".implode(', ', $missing));
     }
 });
 
@@ -47,7 +47,7 @@ it('custom preset has only a label', function () {
 it('returns labels for all presets', function () {
     $labels = ThemePresets::labels();
 
-    expect($labels)->toHaveCount(18);
+    expect($labels)->toHaveCount(19);
     expect($labels['ocean_blue'])->toBe('Ocean Blue');
     expect($labels['custom'])->toBe('Custom');
 });
