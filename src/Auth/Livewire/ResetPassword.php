@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +16,8 @@ use Livewire\Component;
 
 class ResetPassword extends Component
 {
+    use ThrottlesAuthAttempts;
+
     #[Locked]
     public string $token = '';
 
@@ -38,6 +41,8 @@ class ResetPassword extends Component
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
+        $this->ensureNotRateLimited('reset', $this->email, 'email');
+
         $status = Password::reset(
             [
                 'token' => $this->token,
@@ -56,10 +61,13 @@ class ResetPassword extends Component
         );
 
         if ($status !== Password::PASSWORD_RESET) {
+            $this->hitRateLimiter('reset', $this->email);
             $this->addError('email', __($status));
 
             return;
         }
+
+        $this->clearRateLimiter('reset', $this->email);
 
         session()->flash('status', __('filament-panel-base::auth.reset_done'));
 

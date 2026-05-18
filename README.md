@@ -1,6 +1,41 @@
-# Filament Panel Base
+# Filament Panel Base — Multi-panel branding, theming & localization for Filament
 
-Multi-panel architecture support for [Filament v4](https://filamentphp.com) with shared branding, dynamic theme colors, CSS custom property injection, localization middleware, user moderation, and country/currency components.
+[![Latest Version](https://img.shields.io/packagist/v/codenzia/filament-panel-base.svg?style=flat-square)](https://packagist.org/packages/codenzia/filament-panel-base)
+[![PHP Version](https://img.shields.io/packagist/php-v/codenzia/filament-panel-base.svg?style=flat-square)](https://packagist.org/packages/codenzia/filament-panel-base)
+[![Filament](https://img.shields.io/badge/Filament-v4%20%7C%20v5-f59e0b?style=flat-square)](https://filamentphp.com)
+[![License](https://img.shields.io/badge/license-MIT%20%7C%20Proprietary-blue?style=flat-square)](LICENSE.md)
+
+**Multi-panel architecture support for [Filament v4 and v5](https://filamentphp.com)** — shared branding, dynamic theme colours, CSS custom-property injection, localisation middleware, user moderation hooks, and country/currency form components. The architectural foundation behind every Codenzia Filament app (aqarkom, LarafilPos, snapcar, LaraFilCommerce).
+
+> **Why this exists.** Filament supports multiple panels out of the box, but each one defaults to its own brand, colour palette, locale handling, and middleware stack. Once you go beyond a single admin panel — say, an admin panel + a dashboard panel + a vendor panel — you end up duplicating provider code across three providers. This package extracts that shared layer into a `BasePanelProvider` you extend, plus a plugin that wires runtime branding from your `Settings` class.
+
+> **Try it live:** A working integration is included in the [Codenzia plugins demo](https://github.com/Codenzia/plugins-demo) at `/admin/demo/panel-base`.
+
+---
+
+## Features
+
+- **`BasePanelProvider`** — shared Filament panel scaffold; subclass per-panel for delta-only configuration.
+- **Runtime branding** — pull logo, app name, primary colour from a `Settings` class (Spatie Settings).
+- **Dynamic theme colours** — Filament `->colors([...])` reads from your settings at runtime.
+- **CSS custom-property injection** — `--primary-500` etc. injected into the layout based on settings.
+- **Localisation middleware** — locale switching, RTL detection, fallback chain.
+- **User moderation** — block/unblock/login-as scaffolding for support workflows.
+- **Country / currency components** — Filament form components with full ISO data and flag rendering.
+- **Translation loader** — DB-backed translations via `spatie/laravel-translation-loader`.
+
+---
+
+## Requirements
+
+| Dependency | Version |
+|---|---|
+| PHP | `^8.3` |
+| Filament | `^4.0 \|\| ^5.0` |
+| `spatie/laravel-settings` | `^3.0` |
+| `spatie/laravel-translation-loader` | `^2.8` |
+
+---
 
 ## Installation
 
@@ -283,6 +318,93 @@ The `theme-styles` component accepts an optional `:colors` prop. When omitted, i
 | `--site-text-primary`, `--site-text-secondary`, `--site-text-on-primary` | Text colors |
 | `--site-success`, `--site-warning`, `--site-danger`, `--site-info` | Status colors |
 | `--site-border`, `--site-shadow` | UI element colors |
+| `--site-surface-card`, `--site-surface-card-dark` | Auth-card background (light / dark) |
+| `--site-surface-input`, `--site-surface-input-dark` | Auth-input background (light / dark) |
+| `--site-surface-border`, `--site-surface-border-dark` | Auth-card ring + input border (light / dark) |
+
+### Theming auth pages
+
+The package ships login / register / forgot-password / reset-password / verify-email / verify-OTP views (under `resources/views/livewire/auth`). They are **not** publishable — consuming projects don't override the Blade. Instead, recolor them with runtime CSS variables that `<x-filament-panel-base::theme-styles />` writes onto `:root`.
+
+The auth views use two Tailwind v4 color scales backed by these variables:
+
+- **`primary-{50..900}`** — buttons, focus rings, links. Mirrors `brand-*`; both point at `--site-primary` / `--site-primary-hover` and the `--site-brand-*` scale.
+- **`surface-card` / `surface-input` / `surface-border`** (each with a `-dark` companion) — card chrome, input background, input/card border.
+
+**Overridable `--site-*` knobs:**
+
+| Variable | Default | Where it shows up |
+|---|---|---|
+| `--site-primary` | `#3b82f6` | Submit button, focus rings, links |
+| `--site-primary-hover` | `#2563eb` | Button hover state |
+| `--site-surface-card` | `#ffffff` | Card background (light) |
+| `--site-surface-card-dark` | `#1f2937` | Card background (dark) |
+| `--site-surface-input` | `#ffffff` | Input background (light) |
+| `--site-surface-input-dark` | `#111827` | Input background (dark) |
+| `--site-surface-border` | `#d1d5db` | Input border + card ring (light) |
+| `--site-surface-border-dark` | `#374151` | Input border + card ring (dark) |
+
+**Example — recolor without touching Blade:**
+
+```css
+/* resources/css/app.css */
+@import "../../vendor/codenzia/filament-panel-base/resources/css/theme.css";
+@import "tailwindcss";
+
+:root {
+    --site-primary: #16a34a;          /* green-600 — buttons, focus rings */
+    --site-primary-hover: #15803d;    /* green-700 */
+    --site-surface-card: #f9fafb;     /* gray-50 — card panel */
+    --site-surface-input: #ffffff;
+    --site-surface-border: #e5e7eb;   /* gray-200 — softer hairline */
+}
+```
+
+These overrides also apply if you set the matching keys (`primary_color`, `primary_hover_color`, `surface_card_color`, `surface_card_dark_color`, `surface_input_color`, `surface_input_dark_color`, `surface_border_color`, `surface_border_dark_color`) on a settings class implementing `ProvidesThemeColors` — `<x-filament-panel-base::theme-styles />` writes them onto `:root` for you.
+
+### Auth throttling
+
+Brute-force protection for the Livewire auth pages lives **inside the components**, not on the route. Filament/Livewire form submissions POST to `/livewire/update`, which bypasses route-level middleware — so any `throttle` middleware on the auth pages would never see the credential submission. The package handles this via the `ThrottlesAuthAttempts` trait used by `Login`, `Register`, `ForgotPassword`, `ResetPassword`, `VerifyOtp`, and `VerifyEmailNotice::resend`.
+
+Three buckets are checked on every attempt:
+
+- **Per-IP, per-minute** — catches one-IP rapid-fire.
+- **Per-identifier, per-minute** — catches distributed credential stuffing against one account from many IPs.
+- **Per-IP, per-day** — long-window backstop; not cleared on successful login.
+
+Both windows pull their limits from `AuthenticationSettings::throttle_per_minute` (default `5`) and `throttle_per_day` (default `50`). When a budget is exhausted, the component throws a `ValidationException` with the `auth.throttle_rate_limited` message routed to the form's error bag — no extra UI work needed.
+
+Identifiers (emails, phones, user ids, OTP targets) are HMAC'd with the app key before being used as cache keys, so raw addresses never land in the cache store.
+
+The `ThrottleAuth` middleware still ships, but it's scoped to the OAuth redirect/callback routes only (where every hit triggers external API work). Don't attach it to Livewire-backed routes — it has no effect there and only causes confusion.
+
+**Apply the same pattern to a custom auth flow:**
+
+```php
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
+
+class CustomLogin extends \Livewire\Component
+{
+    use ThrottlesAuthAttempts;
+
+    public function submit(): void
+    {
+        $this->validate([...]);
+
+        $this->ensureNotRateLimited('custom-login', $this->identifier);
+
+        if (! Auth::attempt(...)) {
+            $this->hitRateLimiter('custom-login', $this->identifier);
+            $this->addError('identifier', __('...'));
+
+            return;
+        }
+
+        $this->clearRateLimiter('custom-login', $this->identifier);
+        // ...
+    }
+}
+```
 
 ### Middleware
 
@@ -292,6 +414,7 @@ The `theme-styles` component accepts an optional `:colors` prop. When omitted, i
 | `SetCountry` | Auto-detects country from IP using geo API, stores in session |
 | `SetCurrency` | Sets active currency from country relationship or session |
 | `EnsureUserApproved` | Blocks suspended/pending users (requires `HasModerationStatus` contract) |
+| `ThrottleAuth` | Per-IP rate limit for native HTTP auth routes (OAuth redirect/callback). Livewire-backed pages use the `ThrottlesAuthAttempts` trait instead — see [Auth throttling](#auth-throttling). |
 
 ### Registration Settings
 

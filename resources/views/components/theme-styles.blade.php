@@ -27,6 +27,13 @@
     $info = $colors['info_color'] ?? '#3b82f6';
     $border = $colors['border_color'] ?? '#e2e8f0';
     $shadow = $colors['shadow_color'] ?? 'rgba(0, 0, 0, 0.1)';
+
+    $surfaceCard = $colors['surface_card_color'] ?? '#ffffff';
+    $surfaceCardDark = $colors['surface_card_dark_color'] ?? '#1f2937';
+    $surfaceInput = $colors['surface_input_color'] ?? '#ffffff';
+    $surfaceInputDark = $colors['surface_input_dark_color'] ?? '#111827';
+    $surfaceBorder = $colors['surface_border_color'] ?? '#d1d5db';
+    $surfaceBorderDark = $colors['surface_border_dark_color'] ?? '#374151';
 @endphp
 
 <style>
@@ -59,5 +66,13 @@
         --site-info: {{ $info }};
         --site-border: {{ $border }};
         --site-shadow: {{ $shadow }};
+
+        /* Auth-page surfaces — overridable per consuming project */
+        --site-surface-card: {{ $surfaceCard }};
+        --site-surface-card-dark: {{ $surfaceCardDark }};
+        --site-surface-input: {{ $surfaceInput }};
+        --site-surface-input-dark: {{ $surfaceInputDark }};
+        --site-surface-border: {{ $surfaceBorder }};
+        --site-surface-border-dark: {{ $surfaceBorderDark }};
     }
 </style>

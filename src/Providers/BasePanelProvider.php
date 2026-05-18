@@ -40,6 +40,65 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected bool $sidebarSearchEnabled = true;
 
+    protected bool $darkModeToggleEnabled = false;
+
+    protected ?string $authLinksLoginPanel = null;
+
+    protected ?string $authLinksRegisterPanel = null;
+
+    protected bool $sidebarCollapsibleEnabled = true;
+
+    /**
+     * Make the sidebar collapsible on desktop (default true — Filament's standard).
+     *
+     * Set to false for catalog/guest panels where the sidebar is the primary
+     * navigation and should always be visible — avoids the chicken-and-egg
+     * where the user can't find the toggle button when the sidebar is closed.
+     */
+    public function sidebarCollapsible(bool $enabled = true): static
+    {
+        $this->sidebarCollapsibleEnabled = $enabled;
+
+        return $this;
+    }
+
+    /**
+     * Enable the dark / light mode toggle in the topbar (default: off).
+     *
+     * Recommended for **guest / public panels** where there is no Filament
+     * user menu — the user menu already includes a built-in theme toggle
+     * for authenticated users, so leaving this off on auth-required panels
+     * avoids two conflicting toggles in the same chrome.
+     *
+     * The toggle is purely client-side: Alpine.js + `localStorage.theme`,
+     * paired with `<x-filament-panel-base::dark-mode-script />` for FOUC prevention.
+     */
+    public function showDarkModeToggle(bool $show = true): static
+    {
+        $this->darkModeToggleEnabled = $show;
+
+        return $this;
+    }
+
+    /**
+     * Show "Sign in" / "Sign up" buttons in the topbar (guest panels only).
+     *
+     * Pass the panel IDs that own the login + registration routes. The buttons
+     * resolve their URLs via Filament::getPanel($id)->getLoginUrl() so they
+     * always point to the right place even if the panel paths change.
+     * The buttons render only when no user is authenticated.
+     *
+     * @param  string|null  $loginPanel  Panel ID providing login (e.g. 'user'); null disables.
+     * @param  string|null  $registerPanel  Panel ID providing registration; null hides Sign up.
+     */
+    public function showAuthLinks(?string $loginPanel = null, ?string $registerPanel = null): static
+    {
+        $this->authLinksLoginPanel = $loginPanel;
+        $this->authLinksRegisterPanel = $registerPanel;
+
+        return $this;
+    }
+
     /**
      * Enable or disable the language dropdown in the topbar.
      */
@@ -152,8 +211,11 @@ abstract class BasePanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
             ->favicon(fn (): ?string => $this->resolveFavicon())
             ->colors(fn (): array => $this->getColorsFromSettings())
-            ->userMenuItems($this->getUserMenuItems($panel))
-            ->sidebarCollapsibleOnDesktop();
+            ->userMenuItems($this->getUserMenuItems($panel));
+
+        if ($this->sidebarCollapsibleEnabled) {
+            $panel->sidebarCollapsibleOnDesktop();
+        }
 
         if ($this->titleBadgeConfig) {
             $showOnAuthForms = $this->titleBadgeConfig['auth_visible'] ?? false;
@@ -187,6 +249,23 @@ abstract class BasePanelProvider extends PanelProvider
             );
         }
 
+        if ($this->darkModeToggleEnabled) {
+            $panel->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.dark-mode-toggle'),
+            );
+        }
+
+        if ($this->authLinksLoginPanel !== null) {
+            $panel->renderHook(
+                PanelsRenderHook::TOPBAR_END,
+                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.auth-links', [
+                    'loginPanel' => $this->authLinksLoginPanel,
+                    'registerPanel' => $this->authLinksRegisterPanel,
+                ]),
+            );
+        }
+
         if ($this->sidebarCollapseButtonPosition === 'right') {
             $this->registerRightSidebarCollapseButton($panel);
         } elseif ($this->sidebarIcon !== null || $this->sidebarSlideoverEnabled) {
@@ -206,10 +285,24 @@ abstract class BasePanelProvider extends PanelProvider
             $this->registerSidebarSlideover($panel);
         }
 
+        // When slideover is OFF but the sidebar is still collapsible-with-icons,
+        // inject the standalone polish CSS (with explicit narrow width). Apps using
+        // slideover already get the icon-only polish from sidebar-slideover-styles
+        // and shouldn't have it duplicated.
+        if (! $this->sidebarSlideoverEnabled
+            && $this->sidebarCollapsibleEnabled
+            && $this->sidebarCollapseToIcons
+        ) {
+            $panel->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapsed-icon-styles'),
+            );
+        }
+
         if ($this->sidebarSearchEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-search'),
+                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-search'),
             );
         }
 
@@ -437,7 +530,7 @@ abstract class BasePanelProvider extends PanelProvider
      */
     protected function getPanelBadge(bool $centered = false): \Illuminate\Contracts\View\View
     {
-        return view('panel-base::components.panel-badge', [
+        return view('filament-panel-base::components.panel-badge', [
             'label' => __($this->titleBadgeConfig['label']),
             'color' => $this->titleBadgeConfig['color'] ?? 'primary',
             'icon' => $this->titleBadgeConfig['icon'] ?? null,
@@ -447,7 +540,7 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected function getVisitWebsiteButton(): \Illuminate\Contracts\View\View
     {
-        return view('panel-base::components.visit-website-button', [
+        return view('filament-panel-base::components.visit-website-button', [
             'label' => $this->visitWebsiteLabel ?? __('Visit Website'),
         ]);
     }
@@ -457,7 +550,7 @@ abstract class BasePanelProvider extends PanelProvider
      */
     protected function getLocaleToggle(): string
     {
-        return view('panel-base::components.locale-switcher', [
+        return view('filament-panel-base::components.locale-switcher', [
             'locales' => SetLocale::getLocales(),
             'currentLocale' => app()->getLocale(),
         ])->render();
@@ -495,12 +588,12 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::TOPBAR_LOGO_BEFORE,
-            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-remover'),
+            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapse-remover'),
         );
 
         $panel->renderHook(
             PanelsRenderHook::SIDEBAR_NAV_START,
-            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-collapse-button', [
+            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapse-button', [
                 'sidebarIcon' => $this->sidebarIcon,
             ]),
         );
@@ -523,7 +616,7 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::HEAD_END,
-            fn (): \Illuminate\Contracts\View\View => view('panel-base::components.sidebar-slideover-styles', [
+            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-slideover-styles', [
                 'collapseToIcons' => $this->sidebarCollapseToIcons,
             ]),
         );

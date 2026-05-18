@@ -213,8 +213,16 @@ return [
         ],
 
         /*
-        | Throttle limits for auth endpoints. Used by ThrottleAuth middleware.
-        | AuthenticationSettings overrides these per-deployment.
+        | Throttle limits for auth flows. AuthenticationSettings overrides
+        | these per-deployment. Both windows are consumed by two layers:
+        |
+        |   - The ThrottlesAuthAttempts trait used by the Livewire auth
+        |     components (Login, Register, ForgotPassword, ResetPassword,
+        |     VerifyOtp, VerifyEmailNotice) — keyed on IP + identifier.
+        |   - The ThrottleAuth middleware on the OAuth redirect/callback
+        |     routes — keyed on IP only.
+        |
+        | Defaults match Laravel Fortify's login rate-limiter (5/min).
         */
         'throttle' => [
             'per_minute' => 5,

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasOtpVerification;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
 use Codenzia\FilamentPanelBase\Auth\Services\OtpService;
@@ -19,6 +20,8 @@ use Livewire\Component;
  */
 class VerifyOtp extends Component
 {
+    use ThrottlesAuthAttempts;
+
     public string $code = '';
 
     public function verify(OtpService $otp, AuthenticationSettings $settings): void
@@ -37,11 +40,16 @@ class VerifyOtp extends Component
             return;
         }
 
+        $this->ensureNotRateLimited('otp-verify', $target, 'code');
+
         if (! $otp->verify($target, $this->code, $settings->otp_driver)) {
+            $this->hitRateLimiter('otp-verify', $target);
             $this->addError('code', __('filament-panel-base::auth.verify_otp_invalid'));
 
             return;
         }
+
+        $this->clearRateLimiter('otp-verify', $target);
 
         $user = Auth::user();
 

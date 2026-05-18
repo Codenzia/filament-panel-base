@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
@@ -11,6 +12,8 @@ use Livewire\Component;
 
 class VerifyEmailNotice extends Component
 {
+    use ThrottlesAuthAttempts;
+
     public function resend(): void
     {
         $user = Auth::user();
@@ -24,6 +27,12 @@ class VerifyEmailNotice extends Component
 
             return;
         }
+
+        // Each resend triggers a real mail send; cap it on the user id so a
+        // logged-in attacker can't blow through the mail budget.
+        $userKey = (string) $user->getAuthIdentifier();
+        $this->ensureNotRateLimited('email-resend', $userKey, 'email');
+        $this->hitRateLimiter('email-resend', $userKey);
 
         $user->sendEmailVerificationNotification();
 

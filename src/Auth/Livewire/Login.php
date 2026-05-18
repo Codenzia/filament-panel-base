@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Illuminate\Contracts\View\View;
@@ -16,6 +17,8 @@ use Livewire\Component;
  */
 class Login extends Component
 {
+    use ThrottlesAuthAttempts;
+
     public string $identifier = '';
 
     public string $password = '';
@@ -29,9 +32,12 @@ class Login extends Component
             'password' => ['required', 'string'],
         ]);
 
+        $this->ensureNotRateLimited('login', $this->identifier);
+
         $field = $this->resolveAuthField($settings);
 
         if (! Auth::attempt([$field => $this->identifier, 'password' => $this->password], $this->remember)) {
+            $this->hitRateLimiter('login', $this->identifier);
             $this->addError('identifier', __('filament-panel-base::auth.credentials_mismatch'));
 
             return;
@@ -54,6 +60,8 @@ class Login extends Component
                 return;
             }
         }
+
+        $this->clearRateLimiter('login', $this->identifier);
 
         session()->regenerate();
 

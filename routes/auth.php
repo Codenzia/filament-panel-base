@@ -18,8 +18,16 @@ use Illuminate\Support\Facades\Route;
  * Auth routes shipped by codenzia/filament-panel-base. Disable with
  * `config('filament-panel-base.auth.routes.enabled') = false` and wire
  * your own routes pointing at the same Livewire components / controllers.
+ *
+ * Brute-force protection note:
+ * The Livewire form submissions on these pages POST to /livewire/update,
+ * which bypasses route-level middleware. Credential-, OTP-, and token-level
+ * throttling for those flows lives inside the Livewire components themselves
+ * via Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts. The
+ * ThrottleAuth middleware is reserved for native HTTP routes (OAuth GETs)
+ * where every hit has a real backend cost.
  */
-Route::middleware(['guest', ThrottleAuth::class])->group(function (): void {
+Route::middleware(['guest'])->group(function (): void {
     Route::get('/register', Register::class)->name('register');
     Route::get('/login', Login::class)->name('login');
     Route::get('/forgot-password', ForgotPassword::class)->name('password.request');

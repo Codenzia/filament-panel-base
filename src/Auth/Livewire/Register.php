@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasOtpVerification;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
 use Codenzia\FilamentPanelBase\Auth\Services\OtpService;
@@ -22,6 +23,8 @@ use Livewire\Component;
  */
 class Register extends Component
 {
+    use ThrottlesAuthAttempts;
+
     public string $name = '';
 
     public string $email = '';
@@ -42,6 +45,16 @@ class Register extends Component
     public function register(AuthenticationSettings $settings, RegistrationPipeline $pipeline, OtpService $otp): void
     {
         $fullPhone = $this->normalisePhone();
+
+        // Identifier for throttle: prefer email, fall back to phone, fall back
+        // to name. Burning budget on form spam is fine — register attempts
+        // create persistent rows in the users table, so even valid floods are
+        // worth rate-limiting before the validator runs.
+        $identifier = $this->email !== '' ? $this->email : ($fullPhone ?? $this->name);
+        $attribute = $this->email !== '' ? 'email' : ($fullPhone !== null ? 'phone' : 'name');
+
+        $this->ensureNotRateLimited('register', $identifier, $attribute);
+        $this->hitRateLimiter('register', $identifier);
 
         $this->validate(RegistrationRules::build($settings));
 
