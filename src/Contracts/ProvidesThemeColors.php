@@ -21,6 +21,13 @@ interface ProvidesThemeColors
      * When a preset is selected, implementations should return that preset's colors
      * merged with any custom overrides.
      *
+     * Optional auth-page surface overrides (used by the shipped Livewire auth views):
+     * 'surface_page_color', 'surface_page_dark_color',
+     * 'surface_card_color', 'surface_card_dark_color',
+     * 'surface_input_color', 'surface_input_dark_color',
+     * 'surface_border_color', 'surface_border_dark_color'.
+     * Omit them to inherit the gray defaults; presets do not need to define them.
+     *
      * @return array<string, string>
      */
     public function getThemeColors(): array;
