@@ -318,6 +318,7 @@ The `theme-styles` component accepts an optional `:colors` prop. When omitted, i
 | `--site-text-primary`, `--site-text-secondary`, `--site-text-on-primary` | Text colors |
 | `--site-success`, `--site-warning`, `--site-danger`, `--site-info` | Status colors |
 | `--site-border`, `--site-shadow` | UI element colors |
+| `--site-surface-page`, `--site-surface-page-dark` | Auth-layout body background (light / dark) |
 | `--site-surface-card`, `--site-surface-card-dark` | Auth-card background (light / dark) |
 | `--site-surface-input`, `--site-surface-input-dark` | Auth-input background (light / dark) |
 | `--site-surface-border`, `--site-surface-border-dark` | Auth-card ring + input border (light / dark) |
@@ -337,6 +338,8 @@ The auth views use two Tailwind v4 color scales backed by these variables:
 |---|---|---|
 | `--site-primary` | `#3b82f6` | Submit button, focus rings, links |
 | `--site-primary-hover` | `#2563eb` | Button hover state |
+| `--site-surface-page` | `#f9fafb` | Auth layout body background (light) |
+| `--site-surface-page-dark` | `#111827` | Auth layout body background (dark) |
 | `--site-surface-card` | `#ffffff` | Card background (light) |
 | `--site-surface-card-dark` | `#1f2937` | Card background (dark) |
 | `--site-surface-input` | `#ffffff` | Input background (light) |
@@ -360,7 +363,7 @@ The auth views use two Tailwind v4 color scales backed by these variables:
 }
 ```
 
-These overrides also apply if you set the matching keys (`primary_color`, `primary_hover_color`, `surface_card_color`, `surface_card_dark_color`, `surface_input_color`, `surface_input_dark_color`, `surface_border_color`, `surface_border_dark_color`) on a settings class implementing `ProvidesThemeColors` — `<x-filament-panel-base::theme-styles />` writes them onto `:root` for you.
+These overrides also apply if you set the matching keys (`primary_color`, `primary_hover_color`, `surface_page_color`, `surface_page_dark_color`, `surface_card_color`, `surface_card_dark_color`, `surface_input_color`, `surface_input_dark_color`, `surface_border_color`, `surface_border_dark_color`) on a settings class implementing `ProvidesThemeColors` — `<x-filament-panel-base::theme-styles />` writes them onto `:root` for you.
 
 ### Auth throttling
 

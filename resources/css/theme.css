@@ -15,6 +15,7 @@
  *
  *   bg-brand-{50..900}        text-brand-{50..900}      ring-brand-{50..900}
  *   bg-primary-{50..900}      text-primary-{50..900}    ring-primary-{50..900}
+ *   bg-surface-page           bg-surface-page-dark
  *   bg-surface-card           bg-surface-card-dark
  *   bg-surface-input          bg-surface-input-dark
  *   border-surface-border     border-surface-border-dark
@@ -29,6 +30,7 @@
  *
  *   --site-primary, --site-primary-hover
  *   --site-brand-50 … --site-brand-900
+ *   --site-surface-page, --site-surface-page-dark
  *   --site-surface-card, --site-surface-card-dark
  *   --site-surface-input, --site-surface-input-dark
  *   --site-surface-border, --site-surface-border-dark
@@ -62,6 +64,8 @@
     --color-primary-800: var(--site-brand-800, #1d4ed8);
     --color-primary-900: var(--site-brand-900, #1e3a8a);
 
+    --color-surface-page: var(--site-surface-page, #f9fafb);
+    --color-surface-page-dark: var(--site-surface-page-dark, #111827);
     --color-surface-card: var(--site-surface-card, #ffffff);
     --color-surface-card-dark: var(--site-surface-card-dark, #1f2937);
     --color-surface-input: var(--site-surface-input, #ffffff);

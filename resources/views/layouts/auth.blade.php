@@ -7,7 +7,7 @@
     <title>{{ $title ?? config('app.name') }}</title>
     @livewireStyles
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 antialiased">
+<body class="min-h-screen bg-surface-page dark:bg-surface-page-dark antialiased">
     <main class="flex min-h-screen items-center justify-center p-4">
         <div class="w-full max-w-md">
             <div class="mb-6 text-center">

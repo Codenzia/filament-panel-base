@@ -48,13 +48,13 @@
 
     @if (! empty($enabledSocialProviders))
         <div class="my-6 flex items-center gap-3">
-            <hr class="flex-1 border-gray-200 dark:border-gray-700" />
+            <hr class="flex-1 border-surface-border dark:border-surface-border-dark" />
             <span class="text-xs text-gray-500">{{ __('filament-panel-base::auth.or_continue_with') }}</span>
-            <hr class="flex-1 border-gray-200 dark:border-gray-700" />
+            <hr class="flex-1 border-surface-border dark:border-surface-border-dark" />
         </div>
         <div class="space-y-2">
             @foreach ($enabledSocialProviders as $provider)
-                <a href="{{ route('oauth.redirect', $provider) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                <a href="{{ route('oauth.redirect', $provider) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-surface-border bg-surface-input px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-surface-border-dark dark:bg-surface-input-dark dark:text-gray-200 dark:hover:bg-gray-800">
                     <x-filament-panel-base::social-provider-icon :provider="$provider" />
                     <span>{{ __('filament-panel-base::auth.continue_with', ['provider' => ucfirst($provider)]) }}</span>
                 </a>

@@ -15,7 +15,7 @@
     @if ($connectedAccounts->isNotEmpty())
         <div class="space-y-2">
             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('filament-panel-base::auth.social_connected') }}</h4>
-            <ul class="divide-y divide-gray-200 rounded-md border border-gray-200 dark:divide-gray-700 dark:border-gray-700">
+            <ul class="divide-y divide-surface-border rounded-md border border-surface-border dark:divide-surface-border-dark dark:border-surface-border-dark">
                 @foreach ($connectedAccounts as $account)
                     <li class="flex items-center justify-between gap-3 px-4 py-3">
                         <div class="flex items-center gap-3">
@@ -47,7 +47,7 @@
             <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('filament-panel-base::auth.social_available') }}</h4>
             <div class="space-y-2">
                 @foreach ($availableProviders as $provider)
-                    <a href="{{ route('oauth.redirect', ['provider' => $provider, 'link' => 1, 'return_to' => url()->current()]) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800">
+                    <a href="{{ route('oauth.redirect', ['provider' => $provider, 'link' => 1, 'return_to' => url()->current()]) }}" class="flex w-full items-center justify-center gap-2 rounded-md border border-surface-border bg-surface-input px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:border-surface-border-dark dark:bg-surface-input-dark dark:text-gray-200 dark:hover:bg-gray-800">
                         <x-filament-panel-base::social-provider-icon :provider="$provider" />
                         <span>{{ __('filament-panel-base::auth.social_connect', ['provider' => ucfirst($provider)]) }}</span>
                     </a>
