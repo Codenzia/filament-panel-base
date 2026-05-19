@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Middleware;
 
-use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
 use Closure;
+use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
 use Symfony\Component\HttpFoundation\Response;

@@ -22,6 +22,15 @@ use Illuminate\Validation\Rules\Password;
 trait HasProfileSlideOver
 {
     /**
+     * Whether the current user is allowed to edit their own profile.
+     * Override in child providers to lock down read-only / demo accounts.
+     */
+    public function canEditProfile(): bool
+    {
+        return true;
+    }
+
+    /**
      * Build the profile slideOver action for the user menu.
      */
     protected function getProfileSlideOverAction(): Action
@@ -38,6 +47,7 @@ trait HasProfileSlideOver
                     ->tabs($this->getProfileFormTabs())
                     ->columnSpanFull(),
             ])
+            ->modalSubmitAction(fn ($action) => $this->canEditProfile() ? $action : $action->hidden())
             ->action(fn (array $data) => $this->saveProfileData($data))
             ->sort(-1);
     }
@@ -76,13 +86,15 @@ trait HasProfileSlideOver
             TextInput::make('name')
                 ->label(__('filament-panels::auth/pages/edit-profile.form.name.label'))
                 ->required()
-                ->maxLength(255),
+                ->maxLength(255)
+                ->disabled(fn (): bool => ! $this->canEditProfile()),
             TextInput::make('email')
                 ->label(__('filament-panels::auth/pages/edit-profile.form.email.label'))
                 ->email()
                 ->required()
                 ->maxLength(255)
-                ->unique('users', 'email', ignorable: fn () => filament()->auth()->user()),
+                ->unique('users', 'email', ignorable: fn () => filament()->auth()->user())
+                ->disabled(fn (): bool => ! $this->canEditProfile()),
         ];
     }
 
@@ -101,7 +113,8 @@ trait HasProfileSlideOver
                 ->dehydrated(fn ($state): bool => filled($state))
                 ->dehydrateStateUsing(fn ($state): string => Hash::make($state))
                 ->live(debounce: 500)
-                ->same('passwordConfirmation'),
+                ->same('passwordConfirmation')
+                ->disabled(fn (): bool => ! $this->canEditProfile()),
             TextInput::make('passwordConfirmation')
                 ->label(__('filament-panels::auth/pages/edit-profile.form.password_confirmation.label'))
                 ->password()
@@ -109,7 +122,8 @@ trait HasProfileSlideOver
                 ->revealable(filament()->arePasswordsRevealable())
                 ->required()
                 ->visible(fn (Get $get): bool => filled($get('password')))
-                ->dehydrated(false),
+                ->dehydrated(false)
+                ->disabled(fn (): bool => ! $this->canEditProfile()),
         ];
     }
 
@@ -119,6 +133,15 @@ trait HasProfileSlideOver
      */
     protected function saveProfileData(array $data): void
     {
+        if (! $this->canEditProfile()) {
+            Notification::make()
+                ->warning()
+                ->title(__('Profile is read-only'))
+                ->send();
+
+            return;
+        }
+
         $user = filament()->auth()->user();
 
         if (empty($data['password'])) {
@@ -130,7 +153,7 @@ trait HasProfileSlideOver
 
         if (request()->hasSession() && isset($data['password'])) {
             request()->session()->put([
-                'password_hash_' . filament()->getAuthGuard() => $data['password'],
+                'password_hash_'.filament()->getAuthGuard() => $data['password'],
             ]);
         }
 

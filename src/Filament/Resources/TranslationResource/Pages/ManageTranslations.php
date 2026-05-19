@@ -27,7 +27,7 @@ class ManageTranslations extends ManageRecords
     public function getHeading(): string|Htmlable
     {
         if ($this->locale) {
-            return __('UI Translations') . ' — ' . strtoupper($this->locale);
+            return __('UI Translations').' — '.strtoupper($this->locale);
         }
 
         return __('UI Translations');
@@ -82,7 +82,7 @@ class ManageTranslations extends ManageRecords
                     ->get();
 
                 $suffix = $this->locale ? $this->locale : 'all';
-                $filename = 'ui-translations-' . $suffix . '-' . date('Y-m-d') . '.csv';
+                $filename = 'ui-translations-'.$suffix.'-'.date('Y-m-d').'.csv';
 
                 return response()->streamDownload(function () use ($translations, $locales): void {
                     $csv = Writer::createFromStream(fopen('php://output', 'w'));
@@ -125,10 +125,10 @@ class ManageTranslations extends ManageRecords
             ->modalHeading(__('Import UI Translations'))
             ->modalDescription(__('Upload a CSV file exported from this page. Only existing keys will be updated — new keys are not created.'))
             ->action(function (array $data): void {
-                $path = storage_path('app/private/' . $data['file']);
+                $path = storage_path('app/private/'.$data['file']);
 
                 if (! file_exists($path)) {
-                    $path = storage_path('app/' . $data['file']);
+                    $path = storage_path('app/'.$data['file']);
                 }
 
                 $csv = Reader::createFromPath($path, 'r');

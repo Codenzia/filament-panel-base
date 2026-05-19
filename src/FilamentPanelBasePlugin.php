@@ -27,6 +27,8 @@ class FilamentPanelBasePlugin implements Plugin
 
     protected bool $filamentAuthRegisterEnabled = false;
 
+    protected ?string $filamentAuthSettingsPageClass = null;
+
     public function getId(): string
     {
         return 'filament-panel-base';
@@ -150,6 +152,37 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
+     * Register the in-plugin auth-settings admin page on this panel. The page
+     * surfaces every {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings}
+     * field (registration, verification, OTP, social, throttling) grouped
+     * into sections so admins don't need to edit DB rows by hand.
+     *
+     * Pass a subclass to swap the default page — for example, a host-side
+     * subclass that adds Filament Shield's `HasPageShield` trait:
+     *
+     *     ->withFilamentAuthSettingsPage(MyAuthSettings::class)
+     *
+     * @param  class-string<\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings>|null  $page
+     */
+    public function withFilamentAuthSettingsPage(?string $page = null): static
+    {
+        $this->filamentAuthSettingsPageClass = $page
+            ?? \Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class;
+
+        return $this;
+    }
+
+    public function hasFilamentAuthSettingsPage(): bool
+    {
+        return $this->filamentAuthSettingsPageClass !== null;
+    }
+
+    public function getFilamentAuthSettingsPageClass(): ?string
+    {
+        return $this->filamentAuthSettingsPageClass;
+    }
+
+    /**
      * Resolve the settings instance.
      */
     public function resolveSettings(): ?object
@@ -218,6 +251,10 @@ class FilamentPanelBasePlugin implements Plugin
 
         if ($registerEnabled) {
             $panel->registration(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register::class);
+        }
+
+        if ($this->filamentAuthSettingsPageClass !== null) {
+            $panel->pages([$this->filamentAuthSettingsPageClass]);
         }
     }
 

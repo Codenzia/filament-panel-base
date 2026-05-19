@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Middleware;
 
-use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Closure;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;

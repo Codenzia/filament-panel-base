@@ -525,6 +525,55 @@ Event::listen(SocialAccountMapping::class, function (SocialAccountMapping $event
 
 For post-persistence side effects (welcome emails, audit logging) use `SocialUserLinked` instead — the `linked` flag is `true` on the first link/signup and `false` on returning sign-in.
 
+### Auth settings page (admin UI)
+
+The plugin ships a Filament page that surfaces every `AuthenticationSettings` field — registration mode, identifier, verification, OTP driver/lifetime, social providers, email-linking policy, throttle limits — grouped into sections so admins don't need to edit DB rows directly.
+
+#### Authorisation (REQUIRED — fail-closed default)
+
+This page controls authentication policy for the whole app, so it is **fail-closed by default**: `ManageAuthenticationSettings::canAccess()` returns `false`. Registering the page on a panel does **not** expose it — a host-side subclass with its own authorisation check is required.
+
+**With `bezhansalleh/filament-shield`:**
+
+```php
+namespace App\Filament\Pages;
+
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
+
+class AuthSettings extends ManageAuthenticationSettings
+{
+    use HasPageShield;
+}
+```
+
+**With a simple Gate/ability check (no shield):**
+
+```php
+namespace App\Filament\Pages;
+
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
+
+class AuthSettings extends ManageAuthenticationSettings
+{
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('manage-auth-settings') ?? false;
+    }
+}
+```
+
+Then register your subclass:
+
+```php
+FilamentPanelBasePlugin::make()
+    ->withFilamentAuthSettingsPage(\App\Filament\Pages\AuthSettings::class);
+```
+
+Calling `->withFilamentAuthSettingsPage()` with no argument is intentionally a no-op for end users: the page registers on the panel, but `canAccess()` still returns `false`. Always subclass — even in trusted internal panels — so the security check is local to your repo and visible in code review.
+
+Already maintaining your own settings page (the deprecated `RegistrationSettings`-backed pattern)? See [Legacy: `RegistrationSettings` (deprecated)](#legacy-registrationsettings-deprecated) below for the step-by-step swap.
+
 ### Middleware
 
 | Middleware | Description |
@@ -535,35 +584,21 @@ For post-persistence side effects (welcome emails, audit logging) use `SocialUse
 | `EnsureUserApproved` | Blocks suspended/pending users (requires `HasModerationStatus` contract) |
 | `ThrottleAuth` | Per-IP rate limit for native HTTP auth routes (OAuth redirect/callback). Livewire-backed pages use the `ThrottlesAuthAttempts` trait instead — see [Auth throttling](#auth-throttling). |
 
-### Registration Settings
+### Legacy: `RegistrationSettings` (deprecated)
 
-The package provides a shared `RegistrationSettings` class (`spatie/laravel-settings`) with two fields that complement the `EnsureUserApproved` middleware and `HasModerationStatus` contract:
+`Codenzia\FilamentPanelBase\Settings\RegistrationSettings` is the legacy settings group (`registration.*` keys) with only two fields — `registration_mode` and `require_email_verification`. It is **deprecated since 2.0** and retained solely for back-compat with apps that import the class directly.
 
-- `registration_mode` — `'open'` (default) or `'moderated'`
-- `require_email_verification` — `true` (default) or `false`
+**New code should target [`AuthenticationSettings`](src/Auth/Settings/AuthenticationSettings.php) instead** — same two fields plus everything else the auth module exposes (OTP driver, social providers, email-linking policy, throttle limits, …). The admin UI is the in-plugin [Auth settings page](#auth-settings-page-admin-ui) — no more hand-rolled "Manage Registration Settings" pages.
 
-The settings migration is auto-registered and idempotent. Run `php artisan migrate` to create the entries.
+**Migrating an existing app:**
 
-**Using the settings in your registration flow:**
+1. Add `->withFilamentAuthSettingsPage(\App\Filament\Pages\AuthSettings::class)` (or `discoverPages`) for the in-plugin page — see the [Auth settings page](#auth-settings-page-admin-ui) section for the shield-subclass pattern.
+2. Delete your hand-rolled page + Blade view.
+3. Stop seeding the `registration.*` group — `panel-base`'s settings migration already seeds `auth.*` defaults.
+4. Update any code that reads `app(RegistrationSettings::class)->registration_mode` to read from `AuthenticationSettings` instead.
+5. If you rely on Filament Shield permissions, rename the page permission (e.g. `View:ManageRegistrationSettings` → `View:AuthSettings`) via a one-off migration so existing roles carry over without a manual re-seed.
 
-```php
-use Codenzia\FilamentPanelBase\Settings\RegistrationSettings;
-
-$settings = app(RegistrationSettings::class);
-
-$user = User::create([
-    'name' => $name,
-    'email' => $email,
-    'password' => $password,
-    'status' => $settings->registration_mode === 'moderated' ? 'pending' : 'approved',
-]);
-
-if ($settings->require_email_verification) {
-    // redirect to email verification
-}
-```
-
-The package does **not** ship an admin page for these settings — consuming projects should build their own UI tailored to their needs.
+The deprecated class will be removed in the next major release.
 
 ### Contracts
 
@@ -1188,7 +1223,7 @@ FilamentPanelBasePlugin::make()->getThemeColors();
 - PHP 8.3+
 - Laravel 12+
 - Filament v4
-- `spatie/laravel-settings` ^3.0 (required, for `RegistrationSettings`)
+- `spatie/laravel-settings` ^3.0 (required, for `AuthenticationSettings` / `RegistrationSettings`)
 - `spatie/laravel-permission` (optional, for `NotifiesAdmins` trait)
 - `spatie/laravel-translatable` + `lara-zeus/spatie-translatable` (optional, for translatable database content)
 - `spatie/laravel-translation-loader` ^2.8 (bundled — activate with `->withTranslations()` for translation manager UI)

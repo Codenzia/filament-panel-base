@@ -63,7 +63,7 @@ class TranslationResource extends Resource
         return Actions\Action::make('manageTranslations')
             ->label(__('Manage UI Translations'))
             ->icon('heroicon-o-language')
-            ->url(fn($record): string => static::getUrl('index') . '?' . http_build_query([
+            ->url(fn ($record): string => static::getUrl('index').'?'.http_build_query([
                 'locale' => data_get($record, $localeAttribute),
             ]));
     }
@@ -106,7 +106,7 @@ class TranslationResource extends Resource
                     Forms\Components\Textarea::make('key')
                         ->label(__('Original Text'))
                         ->required()
-                        ->disabled(fn(?Translation $record): bool => $record !== null)
+                        ->disabled(fn (?Translation $record): bool => $record !== null)
                         ->rows(2),
 
                     ...static::getLocaleFields(),
@@ -183,10 +183,10 @@ class TranslationResource extends Resource
         $locales = Translation::getLocales();
 
         return collect($locales)
-            ->map(fn(string $locale): Forms\Components\Textarea => Forms\Components\Textarea::make("text.{$locale}")
+            ->map(fn (string $locale): Forms\Components\Textarea => Forms\Components\Textarea::make("text.{$locale}")
                 ->label(strtoupper($locale))
                 ->rows(3)
-                ->visible(fn($livewire): bool => ! $livewire?->locale || $livewire->locale === $locale)
+                ->visible(fn ($livewire): bool => ! $livewire?->locale || $livewire->locale === $locale)
                 ->dehydrated())
             ->all();
     }

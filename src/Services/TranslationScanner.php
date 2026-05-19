@@ -94,7 +94,7 @@ class TranslationScanner
             ->implode('|');
 
         // Pattern B: fn("text") with double quotes — single-line, handles escaped quotes
-        $patternB = '/(?<!\w)(?<!->)(?:' . $jsonFunctions . ')\(\s*"([^"\n\\\\]*(?:\\\\.[^"\n\\\\]*)*)"\s*[,)]/';
+        $patternB = '/(?<!\w)(?<!->)(?:'.$jsonFunctions.')\(\s*"([^"\n\\\\]*(?:\\\\.[^"\n\\\\]*)*)"\s*[,)]/';
 
         // Pattern C: fn('text') with single quotes — single-line, handles escaped quotes
         $patternC = "/(?<!\w)(?<!->)(?:{$jsonFunctions})\(\s*'([^'\n\\\\]*(?:\\\\.[^'\n\\\\]*)*)'\s*[,)]/";

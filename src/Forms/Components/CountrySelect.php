@@ -29,7 +29,7 @@ use Illuminate\Database\Eloquent\Model;
 class CountrySelect extends Select
 {
     /** Column on the related model that holds the ISO country code. */
-    protected string | Closure $codeAttribute = 'code';
+    protected string|Closure $codeAttribute = 'code';
 
     protected function setUp(): void
     {
@@ -44,7 +44,7 @@ class CountrySelect extends Select
     /**
      * Set the attribute name that holds the ISO country code on the related model.
      */
-    public function codeAttribute(string | Closure $attribute): static
+    public function codeAttribute(string|Closure $attribute): static
     {
         $this->codeAttribute = $attribute;
 
@@ -65,7 +65,7 @@ class CountrySelect extends Select
      *
      * Also accepts a Closure that returns an array in the same formats.
      */
-    public function countries(array | Closure $countries): static
+    public function countries(array|Closure $countries): static
     {
         return $this
             ->options(function () use ($countries): array {
@@ -100,7 +100,7 @@ class CountrySelect extends Select
                 $name = $country;
             }
 
-            $options[$key] = static::flagHtml($code) . ' ' . e($name);
+            $options[$key] = static::flagHtml($code).' '.e($name);
             $searchMap[$key] = $name;
         }
 
@@ -110,7 +110,7 @@ class CountrySelect extends Select
     /**
      * Override relationship to auto-add flag rendering.
      */
-    public function relationship(string | Closure | null $name = null, string | Closure | null $titleAttribute = null, ?Closure $modifyQueryUsing = null, bool $ignoreRecord = false): static
+    public function relationship(string|Closure|null $name = null, string|Closure|null $titleAttribute = null, ?Closure $modifyQueryUsing = null, bool $ignoreRecord = false): static
     {
         parent::relationship($name, $titleAttribute, $modifyQueryUsing, $ignoreRecord);
 
@@ -122,7 +122,7 @@ class CountrySelect extends Select
             ));
             $name = $record->getAttribute($this->getRelationshipTitleAttribute());
 
-            return static::flagHtml($code) . ' ' . e($name);
+            return static::flagHtml($code).' '.e($name);
         });
 
         return $this;
@@ -135,6 +135,6 @@ class CountrySelect extends Select
     {
         $code = e($code);
 
-        return '<span class="flag flag-' . $code . '" style="display:inline-block;vertical-align:middle;"></span>';
+        return '<span class="flag flag-'.$code.'" style="display:inline-block;vertical-align:middle;"></span>';
     }
 }

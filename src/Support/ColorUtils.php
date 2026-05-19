@@ -18,7 +18,7 @@ class ColorUtils
 
         // Handle shorthand hex (e.g., '#fff' -> '#ffffff')
         if (strlen($hex) === 3) {
-            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+            $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
         }
 
         return [

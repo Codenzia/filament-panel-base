@@ -38,6 +38,40 @@ it('captures social providers', function (): void {
     expect($plugin->getOverrides()['social_providers_enabled'])->toBe(['google', 'facebook']);
 });
 
+it('captures the social email-linking policy and normalises case', function (): void {
+    $plugin = (new AuthenticationPlugin)->socialEmailLinking('Trust_Verified');
+    expect($plugin->getOverrides()['social_email_linking'])->toBe('trust_verified');
+});
+
+it('rejects an unknown social email-linking policy', function (): void {
+    expect(fn () => (new AuthenticationPlugin)->socialEmailLinking('whatever'))
+        ->toThrow(\InvalidArgumentException::class);
+});
+
+it('captures the social-trust-verified-email flag', function (): void {
+    $plugin = (new AuthenticationPlugin)->socialTrustVerifiedEmail(false);
+    expect($plugin->getOverrides()['social_trust_verified_email'])->toBeFalse();
+
+    $plugin = (new AuthenticationPlugin)->socialTrustVerifiedEmail();
+    expect($plugin->getOverrides()['social_trust_verified_email'])->toBeTrue();
+});
+
+it('apply writes social policy + trust flag through to AuthenticationSettings', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    // Initialise the defaults explicitly — Spatie settings constructor is bypassed by newInstanceWithoutConstructor.
+    $settings->social_email_linking = 'require_login';
+    $settings->social_trust_verified_email = true;
+
+    (new AuthenticationPlugin)
+        ->socialEmailLinking('trust_verified')
+        ->socialTrustVerifiedEmail(false)
+        ->enable()
+        ->apply($settings);
+
+    expect($settings->social_email_linking)->toBe('trust_verified')
+        ->and($settings->social_trust_verified_email)->toBeFalse();
+});
+
 it('captures filament panel page flags', function (): void {
     $plugin = (new AuthenticationPlugin)->filamentPanelPages(login: true, register: true);
     expect($plugin->hasFilamentPanelPages())->toBeTrue()

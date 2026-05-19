@@ -12,6 +12,7 @@ class TestCase extends Orchestra
         return [
             FilamentPanelBaseServiceProvider::class,
             \Laravel\Socialite\SocialiteServiceProvider::class,
+            \Livewire\LivewireServiceProvider::class,
         ];
     }
 

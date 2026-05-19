@@ -42,7 +42,8 @@
         "lara-zeus/spatie-translatable": "Required for Filament v4 translatable plugin integration (locale switcher, resource concerns)",
         "livewire/livewire": "Required to use the front-of-site Livewire auth pages (Register, Login, VerifyOtp, ...)",
         "laravel/socialite": "Required when enabling social login through the Auth module (->social(['google', ...]))",
-        "propaganistas/laravel-phone": "Required for libphonenumber-backed phone format validation in the auth module"
+        "propaganistas/laravel-phone": "Required for libphonenumber-backed phone format validation in the auth module",
+        "bezhansalleh/filament-shield": "Recommended for per-page authorisation on ManageAuthenticationSettings (subclass + HasPageShield trait — see README)"
     },
     "autoload": {
         "psr-4": {

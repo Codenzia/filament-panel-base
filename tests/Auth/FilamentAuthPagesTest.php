@@ -51,3 +51,25 @@ it('still honours the legacy AuthenticationPlugin::filamentPanelPages path', fun
         ->and($auth->hasFilamentRegisterPage())->toBeTrue()
         ->and($auth->hasFilamentPanelPages())->toBeTrue();
 });
+
+it('the auth-settings page is opt-in and defaults to the in-plugin class', function (): void {
+    $plugin = new FilamentPanelBasePlugin;
+    expect($plugin->hasFilamentAuthSettingsPage())->toBeFalse()
+        ->and($plugin->getFilamentAuthSettingsPageClass())->toBeNull();
+
+    $plugin->withFilamentAuthSettingsPage();
+
+    expect($plugin->hasFilamentAuthSettingsPage())->toBeTrue()
+        ->and($plugin->getFilamentAuthSettingsPageClass())
+        ->toBe(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+});
+
+it('accepts a host subclass for the auth-settings page', function (): void {
+    // Hosts that need filament-shield permission gating extend the page and
+    // hand the subclass to withFilamentAuthSettingsPage().
+    $plugin = (new FilamentPanelBasePlugin)
+        ->withFilamentAuthSettingsPage(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+
+    expect($plugin->getFilamentAuthSettingsPageClass())
+        ->toBe(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+});

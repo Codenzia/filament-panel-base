@@ -82,7 +82,7 @@ class SetCountry
             }
 
             // Check cache first
-            $cacheKey = 'country_detection_' . md5($ip);
+            $cacheKey = 'country_detection_'.md5($ip);
             $cachedCountryId = Cache::get($cacheKey);
             if ($cachedCountryId) {
                 return $cachedCountryId;
@@ -109,7 +109,7 @@ class SetCountry
                 }
             }
         } catch (\Exception $e) {
-            Log::warning('Country detection failed: ' . $e->getMessage());
+            Log::warning('Country detection failed: '.$e->getMessage());
         }
 
         return null;
