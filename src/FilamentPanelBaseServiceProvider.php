@@ -68,6 +68,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     {
         $this->configureTranslatablePlaceholders();
         $this->bootAuthModule();
+        $this->bootDemoModule();
 
         // Register settings migration path so spatie/laravel-settings discovers them
         $settingsMigrationsPath = __DIR__.'/../database/settings';
@@ -139,7 +140,64 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                     'migrations/'.date('Y_m_d_His', strtotime('+1 second')).'_migrate_legacy_social_columns.php'
                 ),
             ], 'filament-panel-base-auth-migrations');
+
+            $this->publishes([
+                __DIR__.'/../database/migrations/create_demo_settings_table.php.stub' => database_path(
+                    "migrations/{$stamp}_create_demo_settings_table.php"
+                ),
+            ], 'filament-panel-base-demo-migrations');
         }
+    }
+
+    /**
+     * Boot the Demo module: register the /demo Livewire route and component
+     * when explicitly opted in via filament-panel-base.demo.enabled. No-op
+     * otherwise so production deployments stay clean by default.
+     *
+     * The Livewire component used at /demo is read from
+     * config('filament-panel-base.demo.component') — defaults to the package's
+     * DemoPage. Hosts swap it for a subclass to override data collection
+     * (collectStats, collectUsers, canLogInAs, ...).
+     */
+    protected function bootDemoModule(): void
+    {
+        if (! (bool) config('filament-panel-base.demo.enabled', false)) {
+            return;
+        }
+
+        // Defer the actual route + component registration to `booted()` so
+        // hosts can swap the Livewire component class from their own
+        // AppServiceProvider via:
+        //
+        //   config(['filament-panel-base.demo.component' => \App\Livewire\DemoPage::class]);
+        //
+        // Without the defer, the route binds to the package default before
+        // the host provider has had a chance to set the override.
+        $this->app->booted(function (): void {
+            /** @var class-string<\Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage> $component */
+            $component = (string) config(
+                'filament-panel-base.demo.component',
+                \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class,
+            );
+
+            if (! class_exists($component)) {
+                // Defensive: fall back to the package default if the host
+                // misconfigures the component class.
+                $component = \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class;
+            }
+
+            if (class_exists(Livewire::class)) {
+                Livewire::component('filament-panel-base::demo.page', $component);
+            }
+
+            $uri = (string) config('filament-panel-base.demo.route', '/demo');
+            /** @var array<int, string> $middleware */
+            $middleware = (array) config('filament-panel-base.demo.middleware', ['web']);
+
+            Route::middleware($middleware)
+                ->get($uri, $component)
+                ->name('filament-panel-base.demo');
+        });
     }
 
     protected function loadAuthRoutes(): void

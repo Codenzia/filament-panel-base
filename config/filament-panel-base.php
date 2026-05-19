@@ -183,6 +183,83 @@ return [
     | FilamentPanelBasePlugin::withAuthentication() API takes precedence.
     |
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Demo Page
+    |--------------------------------------------------------------------------
+    |
+    | Generic /demo landing page used for sales demos and QA — auto-discovered
+    | model counts, one-click "login as", optional Standard/Demo seed buttons
+    | (rendered only when the seeder class exists), and a footer with build
+    | date and PHP/Laravel/Filament versions.
+    |
+    | Enable with FILAMENT_PANEL_BASE_DEMO_ENABLED=true and set the gate
+    | password via APP_DEMO_PAGE_PWD. Disabled by default — never registers
+    | the route unless explicitly opted in.
+    |
+    */
+    'demo' => [
+        'enabled' => env('FILAMENT_PANEL_BASE_DEMO_ENABLED', false),
+
+        /* The route URI where the demo page lives. */
+        'route' => env('FILAMENT_PANEL_BASE_DEMO_ROUTE', '/demo'),
+
+        /* Middleware applied to the demo route. */
+        'middleware' => ['web'],
+
+        /* Layout the demo page extends. The bundled standalone layout is
+        | self-contained (Tailwind CDN) so the page renders regardless of
+        | the host app's CSS build state. */
+        'layout' => 'filament-panel-base::layouts.demo',
+
+        /* env() key holding the demo page password. The same value gates
+        | both opening the page and confirming seed buttons. */
+        'password_env' => 'APP_DEMO_PAGE_PWD',
+
+        /* The default password presented under the "Click Login to switch
+        | to any user" banner — purely cosmetic; doesn't unlock anything. */
+        'shared_user_password' => env('FILAMENT_PANEL_BASE_DEMO_USER_PWD', 'password'),
+
+        /* Where "Login as" sends users after authenticating. */
+        'app_url' => env('FILAMENT_PANEL_BASE_DEMO_APP_URL', '/admin'),
+
+        /* Optional admin email re-logged-in after seeding. Falls back to the
+        | first user (orderBy id) if empty or not found. */
+        'admin_email' => env('FILAMENT_PANEL_BASE_DEMO_ADMIN_EMAIL', ''),
+
+        /* Seeder classes. Only renders the corresponding button if the
+        | class exists in the host application. */
+        'seeders' => [
+            'standard' => 'Database\\Seeders\\StandardSeeder',
+            'demo' => 'Database\\Seeders\\DemoSeeder',
+        ],
+
+        /* Explicit stat tiles. Leave empty to auto-discover all Eloquent
+        | models under app/Models. Each entry: ['model' => FQCN, 'label'
+        | => ..., 'icon' => 'heroicon-o-...']. */
+        'stats' => [],
+
+        /* Model FQCNs or basenames to exclude from auto-discovery. */
+        'exclude_models' => [],
+
+        /* The Livewire component class that backs the /demo route. Hosts can
+        | subclass the default to override data-collection methods
+        | (collectStats, collectUsers, canLogInAs, ...) without forking the
+        | package. Set to the host's subclass FQCN to swap. */
+        'component' => \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class,
+
+        /* Named Livewire component slots rendered inside the demo page chrome.
+        | Each value is a Livewire component FQCN (or null to skip). The host's
+        | component receives no extra parameters by default; subscribe to the
+        | parent's events or read from session/config as needed. */
+        'sections' => [
+            'before_stats' => null,
+            'after_stats' => null,
+            'before_users' => null,
+            'after_users' => null,
+        ],
+    ],
+
     'auth' => [
         /*
         | Blade layout that Livewire auth views @extend. Hosts override this

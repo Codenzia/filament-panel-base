@@ -29,6 +29,8 @@ class FilamentPanelBasePlugin implements Plugin
 
     protected ?string $filamentAuthSettingsPageClass = null;
 
+    protected ?string $demoSettingsPageClass = null;
+
     public function getId(): string
     {
         return 'filament-panel-base';
@@ -183,6 +185,36 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
+     * Register the in-plugin Demo Settings admin page on this panel. The page
+     * lets admins view, rotate, and copy the share link for the /demo gate
+     * password (stored DB-first with .env fallback). Default access check
+     * requires the role named in config('filament-panel-base.admin_role').
+     *
+     * Pass a subclass to tighten the access check or customize the view:
+     *
+     *     ->withDemoSettingsPage(MyDemoSettings::class)
+     *
+     * @param  class-string<\Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings>|null  $page
+     */
+    public function withDemoSettingsPage(?string $page = null): static
+    {
+        $this->demoSettingsPageClass = $page
+            ?? \Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings::class;
+
+        return $this;
+    }
+
+    public function hasDemoSettingsPage(): bool
+    {
+        return $this->demoSettingsPageClass !== null;
+    }
+
+    public function getDemoSettingsPageClass(): ?string
+    {
+        return $this->demoSettingsPageClass;
+    }
+
+    /**
      * Resolve the settings instance.
      */
     public function resolveSettings(): ?object
@@ -255,6 +287,10 @@ class FilamentPanelBasePlugin implements Plugin
 
         if ($this->filamentAuthSettingsPageClass !== null) {
             $panel->pages([$this->filamentAuthSettingsPageClass]);
+        }
+
+        if ($this->demoSettingsPageClass !== null) {
+            $panel->pages([$this->demoSettingsPageClass]);
         }
     }
 
