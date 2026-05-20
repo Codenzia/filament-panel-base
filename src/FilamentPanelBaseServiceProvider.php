@@ -111,13 +111,30 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     protected function bootAuthModule(): void
     {
         if (class_exists(Livewire::class)) {
-            Livewire::component('filament-panel-base::auth.register', \Codenzia\FilamentPanelBase\Auth\Livewire\Register::class);
-            Livewire::component('filament-panel-base::auth.login', \Codenzia\FilamentPanelBase\Auth\Livewire\Login::class);
-            Livewire::component('filament-panel-base::auth.verify-otp', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp::class);
-            Livewire::component('filament-panel-base::auth.verify-email-notice', \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class);
-            Livewire::component('filament-panel-base::auth.forgot-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class);
-            Livewire::component('filament-panel-base::auth.reset-password', \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class);
-            Livewire::component('filament-panel-base::auth.manage-social-accounts', \Codenzia\FilamentPanelBase\Auth\Livewire\ManageSocialAccounts::class);
+            $authComponents = [
+                'filament-panel-base::auth.register' => \Codenzia\FilamentPanelBase\Auth\Livewire\Register::class,
+                'filament-panel-base::auth.login' => \Codenzia\FilamentPanelBase\Auth\Livewire\Login::class,
+                'filament-panel-base::auth.verify-otp' => \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp::class,
+                'filament-panel-base::auth.verify-email-notice' => \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class,
+                'filament-panel-base::auth.forgot-password' => \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class,
+                'filament-panel-base::auth.reset-password' => \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class,
+                'filament-panel-base::auth.manage-social-accounts' => \Codenzia\FilamentPanelBase\Auth\Livewire\ManageSocialAccounts::class,
+            ];
+
+            foreach ($authComponents as $alias => $class) {
+                Livewire::component($alias, $class);
+            }
+
+            // Livewire v4's Finder::resolveClassComponentClassName only checks
+            // registered namespaces for `ns::component` names, never explicit
+            // classComponents entries, so the calls above register the alias
+            // but lookups by alias fail. Register a missing-component resolver
+            // that mirrors classComponents so namespaced aliases resolve.
+            if (method_exists(Livewire::getFacadeRoot(), 'resolveMissingComponent')) {
+                Livewire::resolveMissingComponent(function (string $name) use ($authComponents): ?string {
+                    return $authComponents[$name] ?? null;
+                });
+            }
         }
 
         if ((bool) config('filament-panel-base.auth.routes.enabled', true)) {

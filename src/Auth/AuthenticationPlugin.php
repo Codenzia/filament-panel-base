@@ -222,14 +222,14 @@ class AuthenticationPlugin
 
         try {
             $settings ??= app(AuthenticationSettings::class);
-        } catch (\Throwable) {
-            return; // settings unavailable (fresh install / no DB) — silent no-op
-        }
 
-        foreach ($this->overrides as $key => $value) {
-            if (property_exists($settings, $key)) {
-                $settings->{$key} = $value;
+            foreach ($this->overrides as $key => $value) {
+                if (property_exists($settings, $key)) {
+                    $settings->{$key} = $value;
+                }
             }
+        } catch (\Throwable) {
+            // settings unavailable (fresh install / no DB / pre-migration test boot) — silent no-op
         }
     }
 }
