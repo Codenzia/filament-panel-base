@@ -23,6 +23,8 @@
 - **User moderation** — block/unblock/login-as scaffolding for support workflows.
 - **Country / currency components** — Filament form components with full ISO data and flag rendering.
 - **Translation loader** — DB-backed translations via `spatie/laravel-translation-loader`.
+- **`/demo` page** — drop-in Livewire landing page for sales demos and QA: password gate, auto-discovered model count tiles, one-click "login as" for every user, optional Standard/Demo seed buttons, footer with build date + dependency versions. Four levels of customization (config, view, section slots, full subclass).
+- **Demo Settings admin page** — view/rotate/share the `/demo` password from the panel without touching `.env`. Singleton `demo_settings` table with encrypted password cast.
 
 ---
 
@@ -1205,6 +1207,150 @@ Override scan paths, file extensions, and translation functions via config:
 
 The scanner always matches `__()` plus the PHP-specific grouped functions (`trans()`, `@lang()`, `Lang::get()`, etc.). The `scan_functions` config adds extra function names for JSON-style translation calls in other languages.
 
+## Demo Page (Optional)
+
+A drop-in `/demo` Livewire page for sales demos, QA, and reviewer walkthroughs. Auto-discovers your `app/Models/` classes for a stats grid, lists every user with a one-click "login as" button (super_admins blocked by default), shows optional Standard/Demo seed buttons when those seeders exist, and renders a footer with build date and PHP/Laravel/Filament versions. The page is gated by a single shared password sourced from `.env` (and optionally a DB row — see the Demo Settings page below).
+
+### When to use this
+
+You're shipping a Filament app to internal QA, sales prospects, or auditors and want a single URL that introduces every demo account and seed dataset without typing credentials.
+
+### Enable per host
+
+In `.env`:
+
+```env
+FILAMENT_PANEL_BASE_DEMO_ENABLED=true
+APP_DEMO_PAGE_PWD=replace-with-a-random-string
+```
+
+That's it — the package registers a `GET /demo` route automatically when enabled. Defaults to `web` middleware, the bundled standalone layout (Tailwind via CDN so it renders regardless of your CSS build state), and the included Livewire component.
+
+### Four customization levels
+
+The defaults work for a typical app. When you need more, lift up only the layer that's wrong — you don't have to fork the whole page.
+
+**1. Config-driven stat list.** Override the auto-discovered model counts:
+
+```php
+// config/filament-panel-base.php
+'demo' => [
+    'stats' => [
+        ['model' => \App\Models\Property::class, 'label' => 'Listings', 'icon' => 'heroicon-o-home'],
+        ['model' => \App\Models\Inquiry::class,  'label' => 'Inquiries', 'icon' => 'heroicon-o-envelope'],
+    ],
+    // Or keep auto-discovery and just hide noisy models:
+    'exclude_models' => [\App\Models\PivotJunk::class, 'PasswordReset'],
+],
+```
+
+**2. Publishable view.** Customize the markup without writing PHP:
+
+```bash
+php artisan vendor:publish --tag=filament-panel-base-views
+```
+
+Then edit `resources/views/vendor/filament-panel-base/livewire/demo/page.blade.php`.
+
+**3. Named Livewire section slots.** Plug your own Livewire components into the page chrome without forking it. Four slots: `before_stats`, `after_stats`, `before_users`, `after_users`.
+
+```php
+// config/filament-panel-base.php
+'demo' => [
+    'sections' => [
+        'before_stats' => \App\Livewire\AqarkomCountryFilterSection::class,
+        'after_stats'  => \App\Livewire\AqarkomMarketSnapshot::class,
+    ],
+],
+```
+
+The page renders `@livewire($component)` at each slot — your component dispatches Livewire events that the page (or its subclass) listens to via `#[On(...)]`.
+
+**4. Whole-component swap.** Subclass `DemoPage` and override `collectStats()`, `collectUsers()`, or `canLogInAs()`:
+
+```php
+// app/Livewire/DemoPage.php
+namespace App\Livewire;
+
+use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage as BaseDemoPage;
+
+class DemoPage extends BaseDemoPage
+{
+    protected function collectUsers(): array
+    {
+        // Limit to seeded demo accounts, decorate with domain counts
+        return User::whereIn('email', ['superadmin@example.test', 'agent@example.test'])
+            ->withCount(['properties', 'inquiries'])
+            ->get()
+            ->map(fn ($u) => /* ... return the expected shape ... */)
+            ->all();
+    }
+
+    protected function canLogInAs(Model $user): bool
+    {
+        // Hard email allowlist — replaces a bespoke POST /demo/login throttle gate
+        return in_array($user->email, self::DEMO_EMAILS, true);
+    }
+}
+```
+
+Then wire it in `AppServiceProvider::boot()`:
+
+```php
+config(['filament-panel-base.demo.component' => \App\Livewire\DemoPage::class]);
+```
+
+The route resolves this lazily via `$this->app->booted()`, so your host config wins over the package default.
+
+### Seed buttons
+
+The page conditionally renders Standard / Demo seed buttons when the corresponding class exists in your app. Override the seeder map if your classes have different names:
+
+```php
+'demo' => [
+    'seeders' => [
+        'standard' => 'Database\\Seeders\\StandardSeeder',
+        'demo' => 'Database\\Seeders\\DemoSeeder',
+    ],
+],
+```
+
+Both buttons trigger `migrate:fresh` + the configured seeder, then auto-login the first admin (or the one identified by `demo.admin_email`).
+
+---
+
+## Demo Settings Page (Optional)
+
+A Filament admin page (`ManageDemoSettings`, registered under the **Settings** navigation group) that lets admins view, regenerate, and share the `/demo` password without touching `.env`. Backed by a singleton `demo_settings` table with an encrypted password cast and a `last_used_at` timestamp updated on every successful gate unlock.
+
+### When to use this
+
+You're sharing `/demo` with prospects, you have multiple apps and don't want to memorize a different `.env` value for each one, and you want a "rotate now" button rather than redeploying when a password leaks.
+
+### Enable per panel
+
+```bash
+php artisan vendor:publish --tag=filament-panel-base-demo-migrations
+php artisan migrate
+```
+
+Then opt in via the plugin:
+
+```php
+FilamentPanelBasePlugin::make()
+    ->withDemoSettingsPage()
+```
+
+### Password resolution order
+
+`DemoPage::expectedPassword()` resolves in this order:
+
+1. `demo_settings.password` (DB row, encrypted cast) if the table exists and the value is set
+2. `APP_DEMO_PAGE_PWD` env var
+3. `null` → the gate is disabled (page renders without prompting)
+
+The `.env` fallback means a fresh install isn't locked out before the migration runs, and hosts that never set up the DB row keep the env-only behavior.
+
 ## Plugin API
 
 ```php
@@ -1215,6 +1361,9 @@ FilamentPanelBasePlugin::make()
     ->settingsClass(GeneralSettings::class)
     // Enable the translation manager UI for this panel (opt-in)
     ->withTranslations()
+    // Register the Demo Settings admin page (opt-in; requires the
+    // demo_settings migration — see "Demo Settings Page" above)
+    ->withDemoSettingsPage()
 
 // Get resolved theme colors (used internally by <x-filament-panel-base::theme-styles />)
 FilamentPanelBasePlugin::make()->getThemeColors();
