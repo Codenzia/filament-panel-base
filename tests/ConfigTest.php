@@ -1,8 +1,10 @@
 <?php
 
+use App\Models\User;
+
 it('publishes default config values', function () {
     expect(config('filament-panel-base.admin_role'))->toBe('super_admin')
-        ->and(config('filament-panel-base.user_model'))->toBe(\App\Models\User::class)
+        ->and(config('filament-panel-base.user_model'))->toBe(User::class)
         ->and(config('filament-panel-base.panels'))->toBe(['admin', 'dashboard']);
 });
 

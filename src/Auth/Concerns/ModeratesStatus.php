@@ -6,11 +6,12 @@ namespace Codenzia\FilamentPanelBase\Auth\Concerns;
 
 use Codenzia\FilamentPanelBase\Auth\Events\ModerationApproved;
 use Codenzia\FilamentPanelBase\Auth\Events\ModerationSuspended;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Default implementation of the status helpers required by
- * {@see \Codenzia\FilamentPanelBase\Contracts\HasModerationStatus}.
+ * {@see HasModerationStatus}.
  *
  * Assumes the host's users table has a string `status` column with the
  * canonical values 'pending', 'approved', 'suspended'.

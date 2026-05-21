@@ -7,6 +7,7 @@ namespace Codenzia\FilamentPanelBase\Auth\Http\Controllers;
 use Illuminate\Auth\Events\Verified;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Standalone verification-link handler. Replaces Laravel's default
@@ -32,7 +33,7 @@ class VerifyEmailController
     {
         $route = config('filament-panel-base.auth.routes.verified_redirect');
 
-        if (is_string($route) && $route !== '' && \Illuminate\Support\Facades\Route::has($route)) {
+        if (is_string($route) && $route !== '' && Route::has($route)) {
             return route($route);
         }
 

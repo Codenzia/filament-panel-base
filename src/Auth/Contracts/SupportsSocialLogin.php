@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Contracts;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,7 +13,7 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 /**
  * Contract for User models that support social (OAuth) login. The default
  * trait implementation lives in
- * {@see \Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite}.
+ * {@see FindsOrCreatesFromSocialite}.
  *
  * The contract requires three things from the host User model:
  *  1. A static find-or-create that resolves a Socialite payload to a User.

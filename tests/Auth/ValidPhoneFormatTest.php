@@ -1,6 +1,7 @@
 <?php
 
 use Codenzia\FilamentPanelBase\Auth\Rules\ValidPhoneFormat;
+use Propaganistas\LaravelPhone\PhoneNumber;
 
 it('accepts a well-formed E.164 number with the regex fallback', function (): void {
     // libphonenumber path is exercised only when the package is installed; the
@@ -24,7 +25,7 @@ it('rejects non-E.164 input via the regex fallback', function (): void {
     foreach ($cases as $candidate) {
         $failed = false;
 
-        if (! class_exists(\Propaganistas\LaravelPhone\PhoneNumber::class)) {
+        if (! class_exists(PhoneNumber::class)) {
             (new ValidPhoneFormat)->validate('phone', $candidate, function () use (&$failed) {
                 $failed = true;
             });

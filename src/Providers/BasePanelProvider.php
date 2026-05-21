@@ -5,17 +5,30 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Providers;
 
 use Codenzia\FilamentPanelBase\Concerns\HasProfileSlideOver;
+use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Filament\Actions\Action;
+use Filament\Http\Middleware\AuthenticateSession;
+use Filament\Http\Middleware\DisableBladeIconComponents;
+use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Facades\FilamentIcon;
 use Filament\View\PanelsIconAlias;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
+use Illuminate\Database\QueryException;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
+use LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin;
 
 abstract class BasePanelProvider extends PanelProvider
 {
@@ -221,16 +234,16 @@ abstract class BasePanelProvider extends PanelProvider
             $showOnAuthForms = $this->titleBadgeConfig['auth_visible'] ?? false;
             $panel->renderHook(
                 PanelsRenderHook::TOPBAR_LOGO_AFTER,
-                fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(),
+                fn (): View => $this->getPanelBadge(),
             );
             if ($showOnAuthForms) {
                 $panel->renderHook(
                     PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
-                    fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(centered: true),
+                    fn (): View => $this->getPanelBadge(centered: true),
                 );
                 $panel->renderHook(
                     PanelsRenderHook::AUTH_REGISTER_FORM_BEFORE,
-                    fn (): \Illuminate\Contracts\View\View => $this->getPanelBadge(centered: true),
+                    fn (): View => $this->getPanelBadge(centered: true),
                 );
             }
         }
@@ -238,7 +251,7 @@ abstract class BasePanelProvider extends PanelProvider
         if ($this->visitWebsiteEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_BEFORE,
-                fn (): \Illuminate\Contracts\View\View => $this->getVisitWebsiteButton(),
+                fn (): View => $this->getVisitWebsiteButton(),
             );
         }
 
@@ -252,14 +265,14 @@ abstract class BasePanelProvider extends PanelProvider
         if ($this->darkModeToggleEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::TOPBAR_END,
-                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.dark-mode-toggle'),
+                fn (): View => view('filament-panel-base::components.dark-mode-toggle'),
             );
         }
 
         if ($this->authLinksLoginPanel !== null) {
             $panel->renderHook(
                 PanelsRenderHook::TOPBAR_END,
-                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.auth-links', [
+                fn (): View => view('filament-panel-base::components.auth-links', [
                     'loginPanel' => $this->authLinksLoginPanel,
                     'registerPanel' => $this->authLinksRegisterPanel,
                 ]),
@@ -295,14 +308,14 @@ abstract class BasePanelProvider extends PanelProvider
         ) {
             $panel->renderHook(
                 PanelsRenderHook::HEAD_END,
-                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapsed-icon-styles'),
+                fn (): View => view('filament-panel-base::components.sidebar-collapsed-icon-styles'),
             );
         }
 
         if ($this->sidebarSearchEnabled) {
             $panel->renderHook(
                 PanelsRenderHook::SIDEBAR_NAV_START,
-                fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-search'),
+                fn (): View => view('filament-panel-base::components.sidebar-search'),
             );
         }
 
@@ -320,7 +333,7 @@ abstract class BasePanelProvider extends PanelProvider
      */
     protected function registerTranslatablePlugin(Panel $panel): void
     {
-        if (! class_exists(\LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::class)) {
+        if (! class_exists(SpatieTranslatablePlugin::class)) {
             return;
         }
 
@@ -330,17 +343,17 @@ abstract class BasePanelProvider extends PanelProvider
         // may not exist yet. Fall back to config-based locales gracefully
         // so the app can still boot (e.g. to run migrations via /console).
         try {
-            if ($providerClass && class_exists($providerClass) && is_a($providerClass, \Codenzia\FilamentPanelBase\Contracts\ProvidesLocales::class, true)) {
+            if ($providerClass && class_exists($providerClass) && is_a($providerClass, ProvidesLocales::class, true)) {
                 $locales = array_keys($providerClass::getActive());
             } else {
                 $locales = config('filament-panel-base.locale.available', ['en']);
             }
-        } catch (\Illuminate\Database\QueryException) {
+        } catch (QueryException) {
             $locales = config('filament-panel-base.locale.available', ['en']);
         }
 
         $panel->plugin(
-            \LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin::make()
+            SpatieTranslatablePlugin::make()
                 ->defaultLocales($locales)
                 ->persist()
         );
@@ -528,7 +541,7 @@ abstract class BasePanelProvider extends PanelProvider
     /**
      * Get a small badge identifying the current panel.
      */
-    protected function getPanelBadge(bool $centered = false): \Illuminate\Contracts\View\View
+    protected function getPanelBadge(bool $centered = false): View
     {
         return view('filament-panel-base::components.panel-badge', [
             'label' => __($this->titleBadgeConfig['label']),
@@ -538,7 +551,7 @@ abstract class BasePanelProvider extends PanelProvider
         ]);
     }
 
-    protected function getVisitWebsiteButton(): \Illuminate\Contracts\View\View
+    protected function getVisitWebsiteButton(): View
     {
         return view('filament-panel-base::components.visit-website-button', [
             'label' => $this->visitWebsiteLabel ?? __('Visit Website'),
@@ -562,15 +575,15 @@ abstract class BasePanelProvider extends PanelProvider
     protected function getSharedMiddleware(): array
     {
         return [
-            \Illuminate\Cookie\Middleware\EncryptCookies::class,
-            \Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse::class,
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Filament\Http\Middleware\AuthenticateSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-            \Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class,
-            \Illuminate\Routing\Middleware\SubstituteBindings::class,
-            \Filament\Http\Middleware\DisableBladeIconComponents::class,
-            \Filament\Http\Middleware\DispatchServingFilamentEvent::class,
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            AuthenticateSession::class,
+            ShareErrorsFromSession::class,
+            VerifyCsrfToken::class,
+            SubstituteBindings::class,
+            DisableBladeIconComponents::class,
+            DispatchServingFilamentEvent::class,
             SetLocale::class,
         ];
     }
@@ -588,12 +601,12 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::TOPBAR_LOGO_BEFORE,
-            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapse-remover'),
+            fn (): View => view('filament-panel-base::components.sidebar-collapse-remover'),
         );
 
         $panel->renderHook(
             PanelsRenderHook::SIDEBAR_NAV_START,
-            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-collapse-button', [
+            fn (): View => view('filament-panel-base::components.sidebar-collapse-button', [
                 'sidebarIcon' => $this->sidebarIcon,
             ]),
         );
@@ -616,7 +629,7 @@ abstract class BasePanelProvider extends PanelProvider
     {
         $panel->renderHook(
             PanelsRenderHook::HEAD_END,
-            fn (): \Illuminate\Contracts\View\View => view('filament-panel-base::components.sidebar-slideover-styles', [
+            fn (): View => view('filament-panel-base::components.sidebar-slideover-styles', [
                 'collapseToIcons' => $this->sidebarCollapseToIcons,
             ]),
         );

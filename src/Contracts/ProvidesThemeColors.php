@@ -4,13 +4,15 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Contracts;
 
+use Codenzia\FilamentPanelBase\Support\ThemePresets;
+
 /**
  * Contract for settings classes that provide theme color values.
  *
  * Implement this on your settings class to feed runtime colors
  * into the <x-filament-panel-base::theme-styles> component and Filament panel colors.
  *
- * @see \Codenzia\FilamentPanelBase\Support\ThemePresets for available presets
+ * @see ThemePresets for available presets
  */
 interface ProvidesThemeColors
 {

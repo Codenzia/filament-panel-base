@@ -44,17 +44,17 @@ it('vonage driver returns its channel name', function (): void {
 it('whatsapp driver suppresses send when credentials are missing', function (): void {
     $driver = new WhatsAppMetaOtpDriver('https://graph.facebook.com/v21.0', '', '', 'verification_code', 'en');
 
-    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(\Throwable::class);
+    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(Throwable::class);
 });
 
 it('twilio driver suppresses send when credentials are missing', function (): void {
     $driver = new TwilioSmsOtpDriver('', '', '');
 
-    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(\Throwable::class);
+    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(Throwable::class);
 });
 
 it('vonage driver suppresses send when credentials are missing', function (): void {
     $driver = new VonageSmsOtpDriver('', '', 'Codenzia');
 
-    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(\Throwable::class);
+    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(Throwable::class);
 });

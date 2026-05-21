@@ -7,6 +7,7 @@ namespace Codenzia\FilamentPanelBase\Services;
 use Carbon\Carbon;
 use Codenzia\FilamentPanelBase\Models\Translation;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Lang;
 
@@ -78,7 +79,7 @@ class TranslationScanner
      *   Single-line only, handles escaped quotes.
      *
      * @param  array<string>  $paths
-     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
+     * @return array{0: Collection, 1: Collection}
      */
     private function extractKeys(Filesystem $disk, array $paths): array
     {

@@ -37,7 +37,7 @@ class SocialiteService
      * and hands it to the host's `findOrCreateFromSocialite`. Returns `null`
      * when the configured policy refuses the sign-in (caller flashes errors).
      *
-     * @param  class-string<\Illuminate\Database\Eloquent\Model&SupportsSocialLogin>  $userModel
+     * @param  class-string<Model&SupportsSocialLogin>  $userModel
      */
     public function handle(string $provider, string $userModel): ?Model
     {

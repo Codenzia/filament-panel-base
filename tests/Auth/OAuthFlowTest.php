@@ -2,8 +2,10 @@
 
 declare(strict_types=1);
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialAccountMapping;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialUserLinked;
+use Codenzia\FilamentPanelBase\Auth\Http\Controllers\OAuthController;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Tests\Support\SocialiteFake;
@@ -19,8 +21,8 @@ use Laravel\Socialite\Two\InvalidStateException;
  * Covers the social-login flow end-to-end against the in-memory SQLite
  * schema. Socialite is mocked via the facade — no real OAuth round-trips.
  *
- * @see \Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite
- * @see \Codenzia\FilamentPanelBase\Auth\Http\Controllers\OAuthController
+ * @see FindsOrCreatesFromSocialite
+ * @see OAuthController
  */
 beforeEach(function (): void {
     Schema::create('users', function (Blueprint $table): void {
@@ -231,7 +233,7 @@ it('flashes a generic translated error on other Socialite errors', function (): 
 });
 
 it('throws LogicException when user model does not implement the contract', function (): void {
-    config()->set('filament-panel-base.user_model', \stdClass::class);
+    config()->set('filament-panel-base.user_model', stdClass::class);
 
     Socialite::shouldReceive('driver->user')->andReturn(new SocialiteFake);
 

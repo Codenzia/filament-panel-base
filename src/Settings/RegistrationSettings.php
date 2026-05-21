@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Settings;
 
+use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Spatie\LaravelSettings\Settings;
 
 /**
- * @deprecated since 2.0 — use {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings} instead.
+ * @deprecated since 2.0 — use {@see AuthenticationSettings} instead.
  *
  * Retained for backward compatibility with consumers that import this
  * class directly. The two settings groups (`registration` and `auth`)

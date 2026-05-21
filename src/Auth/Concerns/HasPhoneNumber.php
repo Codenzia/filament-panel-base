@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Concerns;
 
+use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 
 /**
- * Default implementation of {@see \Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone}.
+ * Default implementation of {@see HasPhone}.
  *
  * Assumes the host's users table has nullable `phone` and `phone_verified_at`
  * columns. Use `php artisan filament-panel-base:install --auth` to publish

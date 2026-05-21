@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\User;
+use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -31,7 +34,7 @@ return [
     | The fully qualified class name of your User model.
     |
     */
-    'user_model' => \App\Models\User::class,
+    'user_model' => User::class,
 
     /*
     |--------------------------------------------------------------------------
@@ -246,7 +249,7 @@ return [
         | subclass the default to override data-collection methods
         | (collectStats, collectUsers, canLogInAs, ...) without forking the
         | package. Set to the host's subclass FQCN to swap. */
-        'component' => \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class,
+        'component' => DemoPage::class,
 
         /* Named Livewire component slots rendered inside the demo page chrome.
         | Each value is a Livewire component FQCN (or null to skip). The host's

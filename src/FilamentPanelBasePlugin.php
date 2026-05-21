@@ -5,7 +5,13 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase;
 
 use Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin;
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login;
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register;
+use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
+use Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings;
+use Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource;
 use Codenzia\FilamentPanelBase\Support\ThemePresets;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
@@ -155,7 +161,7 @@ class FilamentPanelBasePlugin implements Plugin
 
     /**
      * Register the in-plugin auth-settings admin page on this panel. The page
-     * surfaces every {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings}
+     * surfaces every {@see AuthenticationSettings}
      * field (registration, verification, OTP, social, throttling) grouped
      * into sections so admins don't need to edit DB rows by hand.
      *
@@ -164,12 +170,12 @@ class FilamentPanelBasePlugin implements Plugin
      *
      *     ->withFilamentAuthSettingsPage(MyAuthSettings::class)
      *
-     * @param  class-string<\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings>|null  $page
+     * @param  class-string<ManageAuthenticationSettings>|null  $page
      */
     public function withFilamentAuthSettingsPage(?string $page = null): static
     {
         $this->filamentAuthSettingsPageClass = $page
-            ?? \Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class;
+            ?? ManageAuthenticationSettings::class;
 
         return $this;
     }
@@ -194,12 +200,12 @@ class FilamentPanelBasePlugin implements Plugin
      *
      *     ->withDemoSettingsPage(MyDemoSettings::class)
      *
-     * @param  class-string<\Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings>|null  $page
+     * @param  class-string<ManageDemoSettings>|null  $page
      */
     public function withDemoSettingsPage(?string $page = null): static
     {
         $this->demoSettingsPageClass = $page
-            ?? \Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings::class;
+            ?? ManageDemoSettings::class;
 
         return $this;
     }
@@ -265,7 +271,7 @@ class FilamentPanelBasePlugin implements Plugin
     {
         if ($this->translationsEnabled) {
             $panel->resources([
-                \Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource::class,
+                TranslationResource::class,
             ]);
         }
 
@@ -278,11 +284,11 @@ class FilamentPanelBasePlugin implements Plugin
             || ($this->authentication?->hasFilamentRegisterPage() ?? false);
 
         if ($loginEnabled) {
-            $panel->login(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login::class);
+            $panel->login(Login::class);
         }
 
         if ($registerEnabled) {
-            $panel->registration(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register::class);
+            $panel->registration(Register::class);
         }
 
         if ($this->filamentAuthSettingsPageClass !== null) {

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Auth;
 
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 
 /**
  * Fluent configurator for the Auth module. Reached via
@@ -15,7 +16,7 @@ use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
  * remainder of the request. They never write back to the database — admins
  * who want persistent changes use the Settings UI.
  *
- * @see \Codenzia\FilamentPanelBase\FilamentPanelBasePlugin::withAuthentication()
+ * @see FilamentPanelBasePlugin::withAuthentication()
  */
 class AuthenticationPlugin
 {
@@ -103,7 +104,7 @@ class AuthenticationPlugin
     /**
      * Policy for handling a social sign-in whose email matches an existing user
      * that has not previously linked this provider. See
-     * {@see \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings::$social_email_linking}.
+     * {@see AuthenticationSettings::$social_email_linking}.
      */
     public function socialEmailLinking(string $policy): static
     {
@@ -157,7 +158,7 @@ class AuthenticationPlugin
      * Mount the same Livewire components as Filament panel pages, replacing
      * the built-in `->login()` / `->registration()` chrome. Off by default.
      *
-     * @deprecated Use {@see \Codenzia\FilamentPanelBase\FilamentPanelBasePlugin::withFilamentAuthPages()}
+     * @deprecated Use {@see FilamentPanelBasePlugin::withFilamentAuthPages()}
      *             instead. The top-level method does not require calling
      *             withAuthentication() in the panel provider, so it works
      *             cleanly when the global auth config lives in AppServiceProvider

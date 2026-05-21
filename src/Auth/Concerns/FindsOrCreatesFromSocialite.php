@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Concerns;
 
+use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialAccountMapping;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialUserLinked;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
@@ -17,7 +18,7 @@ use RuntimeException;
 
 /**
  * Default implementation of
- * {@see \Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin}.
+ * {@see SupportsSocialLogin}.
  *
  * Resolution order:
  *   1. Match by `provider` + `provider_id` on the social_accounts table.
@@ -32,7 +33,7 @@ use RuntimeException;
  * Apps that need a different shape can override `findOrCreateFromSocialite`
  * directly on their User model.
  *
- * @mixin \Illuminate\Database\Eloquent\Model
+ * @mixin Model
  */
 trait FindsOrCreatesFromSocialite
 {

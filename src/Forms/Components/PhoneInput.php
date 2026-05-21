@@ -8,6 +8,7 @@ use Closure;
 use Filament\Forms\Components\Concerns\CanBeReadOnly;
 use Filament\Forms\Components\Concerns\HasPlaceholder;
 use Filament\Forms\Components\Field;
+use Illuminate\Support\Enumerable;
 
 /**
  * Phone input with country code dropdown and flag icons.
@@ -72,7 +73,7 @@ class PhoneInput extends Field
         $raw = $this->evaluate($this->countries);
 
         // Handle Eloquent Collection
-        if ($raw instanceof \Illuminate\Support\Enumerable) {
+        if ($raw instanceof Enumerable) {
             return $raw->map(fn ($model): array => [
                 'code' => strtolower((string) $model->code),
                 'phone_code' => (string) $model->phone_code,

@@ -4,6 +4,7 @@ use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Middleware\EnsureUserApproved;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
@@ -18,7 +19,7 @@ it('sets locale from session', function () {
     session(['locale' => 'ar']);
 
     $middleware = new SetLocale;
-    $middleware->handle($request, fn () => new \Illuminate\Http\Response);
+    $middleware->handle($request, fn () => new Response);
 
     expect(App::getLocale())->toBe('ar');
 });
@@ -34,7 +35,7 @@ it('falls back to config locale when session locale is not in available list', f
     session(['locale' => 'fr']);
 
     $middleware = new SetLocale;
-    $middleware->handle($request, fn () => new \Illuminate\Http\Response);
+    $middleware->handle($request, fn () => new Response);
 
     expect(App::getLocale())->toBe('en');
 });
@@ -75,7 +76,7 @@ it('redirects to login when not authenticated', function () {
     $request->setLaravelSession(app('session.store'));
 
     $middleware = new EnsureUserApproved;
-    $response = $middleware->handle($request, fn () => new \Illuminate\Http\Response);
+    $response = $middleware->handle($request, fn () => new Response);
 
     expect($response->getStatusCode())->toBe(302)
         ->and($response->headers->get('Location'))->toContain('login');
@@ -99,7 +100,7 @@ it('allows non-moderable users through', function () {
     $request->setLaravelSession(app('session.store'));
 
     $middleware = new EnsureUserApproved;
-    $response = $middleware->handle($request, fn () => new \Illuminate\Http\Response('OK'));
+    $response = $middleware->handle($request, fn () => new Response('OK'));
 
     expect($response->getStatusCode())->toBe(200);
 });
@@ -127,7 +128,7 @@ it('blocks suspended users', function () {
     $request->setLaravelSession(app('session.store'));
 
     $middleware = new EnsureUserApproved;
-    $response = $middleware->handle($request, fn () => new \Illuminate\Http\Response('OK'));
+    $response = $middleware->handle($request, fn () => new Response('OK'));
 
     expect($response->getStatusCode())->toBe(302)
         ->and($response->headers->get('Location'))->toContain('login');
@@ -156,7 +157,7 @@ it('redirects pending users to home', function () {
     $request->setLaravelSession(app('session.store'));
 
     $middleware = new EnsureUserApproved;
-    $response = $middleware->handle($request, fn () => new \Illuminate\Http\Response('OK'));
+    $response = $middleware->handle($request, fn () => new Response('OK'));
 
     expect($response->getStatusCode())->toBe(302)
         ->and($response->headers->get('Location'))->toContain('home');
@@ -182,7 +183,7 @@ it('allows approved users through', function () {
     $request->setLaravelSession(app('session.store'));
 
     $middleware = new EnsureUserApproved;
-    $response = $middleware->handle($request, fn () => new \Illuminate\Http\Response('OK'));
+    $response = $middleware->handle($request, fn () => new Response('OK'));
 
     expect($response->getStatusCode())->toBe(200);
 });

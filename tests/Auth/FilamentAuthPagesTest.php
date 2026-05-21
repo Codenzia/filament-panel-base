@@ -1,6 +1,7 @@
 <?php
 
 use Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin;
+use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 
 it('starts with the in-panel adapter disabled', function (): void {
@@ -61,15 +62,15 @@ it('the auth-settings page is opt-in and defaults to the in-plugin class', funct
 
     expect($plugin->hasFilamentAuthSettingsPage())->toBeTrue()
         ->and($plugin->getFilamentAuthSettingsPageClass())
-        ->toBe(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+        ->toBe(ManageAuthenticationSettings::class);
 });
 
 it('accepts a host subclass for the auth-settings page', function (): void {
     // Hosts that need filament-shield permission gating extend the page and
     // hand the subclass to withFilamentAuthSettingsPage().
     $plugin = (new FilamentPanelBasePlugin)
-        ->withFilamentAuthSettingsPage(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+        ->withFilamentAuthSettingsPage(ManageAuthenticationSettings::class);
 
     expect($plugin->getFilamentAuthSettingsPageClass())
-        ->toBe(\Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings::class);
+        ->toBe(ManageAuthenticationSettings::class);
 });

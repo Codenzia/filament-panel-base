@@ -3,6 +3,9 @@
 namespace Codenzia\FilamentPanelBase\Tests;
 
 use Codenzia\FilamentPanelBase\FilamentPanelBaseServiceProvider;
+use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\SocialiteServiceProvider;
+use Livewire\LivewireServiceProvider;
 use Orchestra\Testbench\TestCase as Orchestra;
 
 class TestCase extends Orchestra
@@ -11,15 +14,15 @@ class TestCase extends Orchestra
     {
         return [
             FilamentPanelBaseServiceProvider::class,
-            \Laravel\Socialite\SocialiteServiceProvider::class,
-            \Livewire\LivewireServiceProvider::class,
+            SocialiteServiceProvider::class,
+            LivewireServiceProvider::class,
         ];
     }
 
     protected function getPackageAliases($app): array
     {
         return [
-            'Socialite' => \Laravel\Socialite\Facades\Socialite::class,
+            'Socialite' => Socialite::class,
         ];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use App\Models\User;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasOtpVerification;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
@@ -58,7 +59,7 @@ class Register extends Component
 
         $this->validate(RegistrationRules::build($settings));
 
-        $userModel = config('filament-panel-base.user_model', \App\Models\User::class);
+        $userModel = config('filament-panel-base.user_model', User::class);
 
         $payload = array_filter([
             'name' => $this->name,

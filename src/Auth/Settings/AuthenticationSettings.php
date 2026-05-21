@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Settings;
 
+use Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin;
 use Spatie\LaravelSettings\Settings;
 
 /**
@@ -11,7 +12,7 @@ use Spatie\LaravelSettings\Settings;
  * overridden by the AuthenticationPlugin fluent API at panel-registration
  * time. Resolution order: fluent API → these settings → config defaults.
  *
- * @see \Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin
+ * @see AuthenticationPlugin
  */
 class AuthenticationSettings extends Settings
 {

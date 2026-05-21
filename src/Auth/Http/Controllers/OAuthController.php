@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Http\Controllers;
 
+use App\Models\User;
 use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Services\SocialiteService;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
@@ -66,7 +67,7 @@ class OAuthController
             && Auth::check()
             && (int) ($linkFlow['user_id'] ?? 0) === (int) Auth::id();
 
-        $userModel = config('filament-panel-base.user_model', \App\Models\User::class);
+        $userModel = config('filament-panel-base.user_model', User::class);
 
         if (! is_subclass_of($userModel, SupportsSocialLogin::class)) {
             throw new LogicException(sprintf(

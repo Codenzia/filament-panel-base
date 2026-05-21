@@ -45,7 +45,7 @@ it('captures the social email-linking policy and normalises case', function (): 
 
 it('rejects an unknown social email-linking policy', function (): void {
     expect(fn () => (new AuthenticationPlugin)->socialEmailLinking('whatever'))
-        ->toThrow(\InvalidArgumentException::class);
+        ->toThrow(InvalidArgumentException::class);
 });
 
 it('captures the social-trust-verified-email flag', function (): void {

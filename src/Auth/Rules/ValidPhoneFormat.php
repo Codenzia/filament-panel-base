@@ -6,6 +6,8 @@ namespace Codenzia\FilamentPanelBase\Auth\Rules;
 
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Propaganistas\LaravelPhone\Exceptions\NumberParseException;
+use Propaganistas\LaravelPhone\PhoneNumber;
 
 /**
  * Strict E.164 / international-format validation for phone numbers.
@@ -43,16 +45,16 @@ final class ValidPhoneFormat implements ValidationRule
 
         $candidate = trim($value);
 
-        if (class_exists(\Propaganistas\LaravelPhone\PhoneNumber::class)) {
+        if (class_exists(PhoneNumber::class)) {
             try {
-                $phone = new \Propaganistas\LaravelPhone\PhoneNumber($candidate, $this->countries);
+                $phone = new PhoneNumber($candidate, $this->countries);
 
                 if (! $phone->isValid()) {
                     $fail(__('filament-panel-base::auth.phone_invalid', ['attribute' => $attribute]));
                 }
 
                 return;
-            } catch (\Propaganistas\LaravelPhone\Exceptions\NumberParseException) {
+            } catch (NumberParseException) {
                 $fail(__('filament-panel-base::auth.phone_format_invalid', ['attribute' => $attribute]));
 
                 return;

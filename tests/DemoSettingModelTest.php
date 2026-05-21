@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Codenzia\FilamentPanelBase\Models\DemoSetting;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -69,8 +70,8 @@ it('casts rotated_at and last_used_at to Carbon', function () {
     $row->save();
     $row->refresh();
 
-    expect($row->rotated_at)->toBeInstanceOf(\Illuminate\Support\Carbon::class)
-        ->and($row->last_used_at)->toBeInstanceOf(\Illuminate\Support\Carbon::class);
+    expect($row->rotated_at)->toBeInstanceOf(Carbon::class)
+        ->and($row->last_used_at)->toBeInstanceOf(Carbon::class);
 });
 
 it('allows nullable password (gate disabled when no DB value and no env)', function () {

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Concerns;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notification as BaseNotification;
 use Illuminate\Support\Facades\Notification;
@@ -20,7 +21,7 @@ trait NotifiesAdmins
      */
     protected function notifyAdminsAndAuthor(BaseNotification $notification, ?Model $author = null): void
     {
-        $userModel = config('filament-panel-base.user_model', \App\Models\User::class);
+        $userModel = config('filament-panel-base.user_model', User::class);
         $adminRole = config('filament-panel-base.admin_role', 'super_admin');
 
         $recipients = $userModel::whereHas('roles', fn ($q) => $q->where('name', $adminRole))->get();

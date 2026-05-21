@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Events;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite;
 use Illuminate\Foundation\Events\Dispatchable;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 /**
- * Pre-persistence hook fired by the default {@see \Codenzia\FilamentPanelBase\Auth\Concerns\FindsOrCreatesFromSocialite}
+ * Pre-persistence hook fired by the default {@see FindsOrCreatesFromSocialite}
  * trait just before a new User row and/or SocialAccount row are written.
  *
  * Subscribers can mutate `$userAttributes` and `$socialAccountAttributes`

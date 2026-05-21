@@ -79,7 +79,7 @@ it('returns the DB row password when set (DB beats env)', function () {
 
     setDemoEnv('APP_DEMO_PAGE_PWD', 'from-env');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBe('from-the-database');
 });
 
@@ -87,7 +87,7 @@ it('falls back to env when the DB row password is null', function () {
     DemoSetting::current(); // create the row but leave password null
     setDemoEnv('APP_DEMO_PAGE_PWD', 'env-fallback-value');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBe('env-fallback-value');
 });
 
@@ -98,7 +98,7 @@ it('falls back to env when the DB row password is the empty string', function ()
 
     setDemoEnv('APP_DEMO_PAGE_PWD', 'env-after-empty');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBe('env-after-empty');
 });
 
@@ -106,7 +106,7 @@ it('falls back to env when the demo_settings table does not exist', function () 
     Schema::dropIfExists('demo_settings');
     setDemoEnv('APP_DEMO_PAGE_PWD', 'env-no-table');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBe('env-no-table');
 });
 
@@ -114,7 +114,7 @@ it('returns null when neither DB nor env has a value (gate disabled)', function 
     DemoSetting::current(); // row exists, password null
     // No env var set in beforeEach.
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBeNull();
 });
 
@@ -122,7 +122,7 @@ it('honors a custom password_env config key', function () {
     config(['filament-panel-base.demo.password_env' => 'MY_CUSTOM_DEMO_PWD']);
     setDemoEnv('MY_CUSTOM_DEMO_PWD', 'custom-env-key');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callExpectedPassword())->toBe('custom-env-key');
 
     setDemoEnv('MY_CUSTOM_DEMO_PWD', null); // cleanup
@@ -136,7 +136,7 @@ it('touchLastUsedAt() bumps the timestamp on the singleton row', function () {
     $row = DemoSetting::current();
     expect($row->last_used_at)->toBeNull();
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     $before = now();
     $page->callTouchLastUsedAt();
     $after = now();
@@ -150,7 +150,7 @@ it('touchLastUsedAt() bumps the timestamp on the singleton row', function () {
 it('touchLastUsedAt() no-ops when the table is missing (gate stays functional)', function () {
     Schema::dropIfExists('demo_settings');
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     // Must not throw — defensive try/catch in the implementation.
     $page->callTouchLastUsedAt();
     expect(true)->toBeTrue();
@@ -161,27 +161,29 @@ it('touchLastUsedAt() no-ops when the table is missing (gate stays functional)',
 // ---------------------------------------------------------------------------
 
 it('canLogInAs() blocks users with the super_admin role by default', function () {
-    $user = new class extends Model {
+    $user = new class extends Model
+    {
         public function hasRole(string $role): bool
         {
             return $role === 'super_admin';
         }
     };
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callIsSuperAdmin($user))->toBeTrue()
         ->and($page->callCanLogInAs($user))->toBeFalse();
 });
 
 it('canLogInAs() allows users without the super_admin role', function () {
-    $user = new class extends Model {
+    $user = new class extends Model
+    {
         public function hasRole(string $role): bool
         {
             return $role === 'editor';
         }
     };
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callIsSuperAdmin($user))->toBeFalse()
         ->and($page->callCanLogInAs($user))->toBeTrue();
 });
@@ -189,7 +191,7 @@ it('canLogInAs() allows users without the super_admin role', function () {
 it('canLogInAs() allows users on models without hasRole() (no Spatie permission)', function () {
     $user = new class extends Model {};
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callIsSuperAdmin($user))->toBeFalse()
         ->and($page->callCanLogInAs($user))->toBeTrue();
 });
@@ -197,27 +199,29 @@ it('canLogInAs() allows users on models without hasRole() (no Spatie permission)
 it('canLogInAs() respects a custom admin_role config', function () {
     config(['filament-panel-base.admin_role' => 'root']);
 
-    $user = new class extends Model {
+    $user = new class extends Model
+    {
         public function hasRole(string $role): bool
         {
             return $role === 'root';
         }
     };
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callIsSuperAdmin($user))->toBeTrue()
         ->and($page->callCanLogInAs($user))->toBeFalse();
 });
 
 it('canLogInAs() treats a hasRole() exception as not-super-admin', function () {
-    $user = new class extends Model {
+    $user = new class extends Model
+    {
         public function hasRole(string $role): bool
         {
-            throw new \RuntimeException('roles table missing');
+            throw new RuntimeException('roles table missing');
         }
     };
 
-    $page = new DemoPageTestDouble();
+    $page = new DemoPageTestDouble;
     expect($page->callIsSuperAdmin($user))->toBeFalse()
         ->and($page->callCanLogInAs($user))->toBeTrue();
 });

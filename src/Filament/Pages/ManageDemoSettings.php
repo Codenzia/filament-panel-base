@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Filament\Pages;
 
+use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Codenzia\FilamentPanelBase\Models\DemoSetting;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Str;
 
 /**
@@ -15,7 +17,7 @@ use Illuminate\Support\Str;
  *
  * Lets an admin view, rotate, and copy the share link without touching .env.
  * Password storage: DB-first (encrypted cast) with .env APP_DEMO_PAGE_PWD
- * as fallback — see {@see \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::expectedPassword()}.
+ * as fallback — see {@see DemoPage::expectedPassword()}.
  *
  * Access defaults to the role named in
  * config('filament-panel-base.admin_role') — typically super_admin.
@@ -57,12 +59,12 @@ class ManageDemoSettings extends Page
         return __('Demo Settings');
     }
 
-    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    public function getTitle(): string|Htmlable
     {
         return __('Demo Settings');
     }
 
-    public function getHeading(): string|\Illuminate\Contracts\Support\Htmlable
+    public function getHeading(): string|Htmlable
     {
         return __('Demo Settings');
     }

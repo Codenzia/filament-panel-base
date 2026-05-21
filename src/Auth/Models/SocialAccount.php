@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Models;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -39,7 +40,7 @@ class SocialAccount extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(
-            config('filament-panel-base.user_model', \App\Models\User::class),
+            config('filament-panel-base.user_model', User::class),
             'user_id'
         );
     }

@@ -6,8 +6,19 @@ namespace Codenzia\FilamentPanelBase;
 
 use Closure;
 use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\OtpDriverManager;
+use Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword;
+use Codenzia\FilamentPanelBase\Auth\Livewire\Login;
+use Codenzia\FilamentPanelBase\Auth\Livewire\ManageSocialAccounts;
+use Codenzia\FilamentPanelBase\Auth\Livewire\Register;
+use Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword;
+use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice;
+use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp;
 use Codenzia\FilamentPanelBase\Auth\Observers\AuthUserObserver;
+use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand;
 use Codenzia\FilamentPanelBase\Commands\InstallAuthCommand;
+use Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand;
+use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -34,8 +45,8 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             ->hasConfigFile(['filament-panel-base', 'disposable_emails'])
             ->hasTranslations()
             ->hasCommands([
-                \Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand::class,
-                \Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand::class,
+                EnableTranslationsCommand::class,
+                ScanTranslationsCommand::class,
                 InstallAuthCommand::class,
             ])
             ->hasInstallCommand(function (InstallCommand $command) {
@@ -60,7 +71,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // returns a fresh instance loaded from DB, which would silently undo
         // any in-memory override.
         $this->app->singleton(
-            \Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings::class
+            AuthenticationSettings::class
         );
     }
 
@@ -112,13 +123,13 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     {
         if (class_exists(Livewire::class)) {
             $authComponents = [
-                'filament-panel-base::auth.register' => \Codenzia\FilamentPanelBase\Auth\Livewire\Register::class,
-                'filament-panel-base::auth.login' => \Codenzia\FilamentPanelBase\Auth\Livewire\Login::class,
-                'filament-panel-base::auth.verify-otp' => \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp::class,
-                'filament-panel-base::auth.verify-email-notice' => \Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice::class,
-                'filament-panel-base::auth.forgot-password' => \Codenzia\FilamentPanelBase\Auth\Livewire\ForgotPassword::class,
-                'filament-panel-base::auth.reset-password' => \Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword::class,
-                'filament-panel-base::auth.manage-social-accounts' => \Codenzia\FilamentPanelBase\Auth\Livewire\ManageSocialAccounts::class,
+                'filament-panel-base::auth.register' => Register::class,
+                'filament-panel-base::auth.login' => Login::class,
+                'filament-panel-base::auth.verify-otp' => VerifyOtp::class,
+                'filament-panel-base::auth.verify-email-notice' => VerifyEmailNotice::class,
+                'filament-panel-base::auth.forgot-password' => ForgotPassword::class,
+                'filament-panel-base::auth.reset-password' => ResetPassword::class,
+                'filament-panel-base::auth.manage-social-accounts' => ManageSocialAccounts::class,
             ];
 
             foreach ($authComponents as $alias => $class) {
@@ -191,16 +202,16 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // Without the defer, the route binds to the package default before
         // the host provider has had a chance to set the override.
         $this->app->booted(function (): void {
-            /** @var class-string<\Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage> $component */
+            /** @var class-string<DemoPage> $component */
             $component = (string) config(
                 'filament-panel-base.demo.component',
-                \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class,
+                DemoPage::class,
             );
 
             if (! class_exists($component)) {
                 // Defensive: fall back to the package default if the host
                 // misconfigures the component class.
-                $component = \Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage::class;
+                $component = DemoPage::class;
             }
 
             if (class_exists(Livewire::class)) {

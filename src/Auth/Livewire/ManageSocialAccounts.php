@@ -8,6 +8,7 @@ use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
@@ -90,7 +91,7 @@ class ManageSocialAccounts extends Component
      */
     private function userHasOtherSignInMethod(SupportsSocialLogin $user, SocialAccount $account): bool
     {
-        /** @var \Illuminate\Database\Eloquent\Model $user */
+        /** @var Model $user */
         $password = $user->getAttribute('password');
 
         if (is_string($password) && $password !== '' && Hash::info($password)['algoName'] !== 'unknown') {

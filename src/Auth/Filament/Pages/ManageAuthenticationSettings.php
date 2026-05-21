@@ -15,6 +15,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Illuminate\Contracts\Support\Htmlable;
 
 /**
  * Admin settings page for the entire Auth module. Surfaces every
@@ -90,7 +91,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
         return __('filament-panel-base::auth.settings_nav_group');
     }
 
-    public function getTitle(): string|\Illuminate\Contracts\Support\Htmlable
+    public function getTitle(): string|Htmlable
     {
         return __('filament-panel-base::auth.settings_title');
     }
