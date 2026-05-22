@@ -6,6 +6,20 @@ use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 return [
     /*
     |--------------------------------------------------------------------------
+    | Branding
+    |--------------------------------------------------------------------------
+    |
+    | "Powered by Codenzia" footer rendered on every Filament panel page.
+    | Set CODENZIA_BRANDING=false in .env to hide it — useful when an app
+    | is sold/licensed to a customer who wants their own branding.
+    |
+    */
+    'branding' => [
+        'powered_by_enabled' => env('CODENZIA_BRANDING', true),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Panel IDs
     |--------------------------------------------------------------------------
     |

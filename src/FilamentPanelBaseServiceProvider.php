@@ -24,6 +24,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
@@ -80,6 +82,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         $this->configureTranslatablePlaceholders();
         $this->bootAuthModule();
         $this->bootDemoModule();
+        $this->bootBrandingFooter();
 
         // Register settings migration path so spatie/laravel-settings discovers them
         $settingsMigrationsPath = __DIR__.'/../database/settings';
@@ -226,6 +229,29 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 ->get($uri, $component)
                 ->name('filament-panel-base.demo');
         });
+    }
+
+    /**
+     * Register the "Powered by Codenzia" render hook on every Filament panel
+     * page. Hidden by setting CODENZIA_BRANDING=false in .env. Subtle by
+     * design — small muted line at the very bottom of the panel chrome.
+     */
+    protected function bootBrandingFooter(): void
+    {
+        if (! (bool) config('filament-panel-base.branding.powered_by_enabled', true)) {
+            return;
+        }
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::FOOTER,
+            fn (): string => Blade::render(<<<'BLADE'
+                <div class="py-3 text-center text-xs text-gray-400 dark:text-gray-600">
+                    Powered by
+                    <a href="https://www.codenzia.com" target="_blank" rel="noopener"
+                       class="font-medium hover:text-primary-500 transition">Codenzia</a>
+                </div>
+            BLADE)
+        );
     }
 
     protected function loadAuthRoutes(): void
