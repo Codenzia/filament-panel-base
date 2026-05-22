@@ -53,8 +53,11 @@ class DemoPage extends Component
         }
 
         $expected = $this->expectedPassword();
-        if ($expected === '' || $expected === null) {
-            // No password configured — auto-unlock so /demo isn't bricked.
+        if (($expected === '' || $expected === null)
+            && (bool) config('filament-panel-base.demo.allow_empty_password', false)
+        ) {
+            // Opt-in: auto-unlock when no password is configured. Off by
+            // default so /demo is never public unless a password is set.
             session()->put($this->sessionKey(), true);
         }
     }

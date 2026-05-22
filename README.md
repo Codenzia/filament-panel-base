@@ -1279,6 +1279,8 @@ APP_DEMO_PAGE_PWD=replace-with-a-random-string
 
 That's it — the package registers a `GET /demo` route automatically when enabled. Defaults to `web` middleware, the bundled standalone layout (Tailwind via CDN so it renders regardless of your CSS build state), and the included Livewire component.
 
+> **Always set `APP_DEMO_PAGE_PWD`.** With no password configured, `/demo` stays locked by default (the gate refuses every submission). See [Empty-password behavior](#empty-password-behavior) below if you need to opt into the legacy auto-unlock on fresh installs.
+
 ### Four customization levels
 
 The defaults work for a typical app. When you need more, lift up only the layer that's wrong — you don't have to fork the whole page.
@@ -1400,9 +1402,30 @@ FilamentPanelBasePlugin::make()
 
 1. `demo_settings.password` (DB row, encrypted cast) if the table exists and the value is set
 2. `APP_DEMO_PAGE_PWD` env var
-3. `null` → the gate is disabled (page renders without prompting)
+3. `null` → **gate stays locked** (page never renders the demo content without a password)
 
 The `.env` fallback means a fresh install isn't locked out before the migration runs, and hosts that never set up the DB row keep the env-only behavior.
+
+### Empty-password behavior
+
+When `expectedPassword()` resolves to `null` or `''`, `/demo` stays locked by default — the password form is shown and `unlock()` rejects every submission. `/demo` is never public unless a password is explicitly set.
+
+If you actively want the old behavior (auto-unlock when no password is configured — handy on fresh local installs), opt in:
+
+```env
+FILAMENT_PANEL_BASE_DEMO_ALLOW_EMPTY=true
+```
+
+Or per app:
+
+```php
+// config/filament-panel-base.php
+'demo' => [
+    'allow_empty_password' => true,
+],
+```
+
+Leave it off for staging/production deployments. The flag exists for local development convenience, not as a way to expose `/demo` without a password.
 
 ## Plugin API
 

@@ -157,6 +157,41 @@ it('touchLastUsedAt() no-ops when the table is missing (gate stays functional)',
 });
 
 // ---------------------------------------------------------------------------
+// mount(): allow_empty_password flag controls the empty-password fallback
+// ---------------------------------------------------------------------------
+
+it('mount() keeps the gate locked when no password is configured (secure default)', function () {
+    // No env var, no DB row password — expectedPassword() returns null.
+    config(['filament-panel-base.demo.allow_empty_password' => false]);
+    session()->forget('filament-panel-base.demo.unlocked');
+
+    $page = new DemoPageTestDouble;
+    $page->mount();
+
+    expect(session('filament-panel-base.demo.unlocked'))->not->toBeTrue();
+});
+
+it('mount() auto-unlocks when password is empty AND allow_empty_password is true', function () {
+    config(['filament-panel-base.demo.allow_empty_password' => true]);
+    session()->forget('filament-panel-base.demo.unlocked');
+
+    $page = new DemoPageTestDouble;
+    $page->mount();
+
+    expect(session('filament-panel-base.demo.unlocked'))->toBeTrue();
+});
+
+it('mount() leaves a previously-unlocked session unlocked regardless of flag', function () {
+    config(['filament-panel-base.demo.allow_empty_password' => false]);
+    session(['filament-panel-base.demo.unlocked' => true]);
+
+    $page = new DemoPageTestDouble;
+    $page->mount();
+
+    expect(session('filament-panel-base.demo.unlocked'))->toBeTrue();
+});
+
+// ---------------------------------------------------------------------------
 // canLogInAs(): default blocks super_admin
 // ---------------------------------------------------------------------------
 

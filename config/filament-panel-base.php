@@ -233,6 +233,12 @@ return [
         | both opening the page and confirming seed buttons. */
         'password_env' => 'APP_DEMO_PAGE_PWD',
 
+        /* When true, /demo auto-unlocks if no password is configured
+        | (preserves the "don't brick a fresh install" convenience). When
+        | false (default), the gate stays locked when the password is empty
+        | — /demo is never public unless a password is explicitly set. */
+        'allow_empty_password' => env('FILAMENT_PANEL_BASE_DEMO_ALLOW_EMPTY', false),
+
         /* The default password presented under the "Click Login to switch
         | to any user" banner — purely cosmetic; doesn't unlock anything. */
         'shared_user_password' => env('FILAMENT_PANEL_BASE_DEMO_USER_PWD', 'password'),
