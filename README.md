@@ -1427,6 +1427,23 @@ Or per app:
 
 Leave it off for staging/production deployments. The flag exists for local development convenience, not as a way to expose `/demo` without a password.
 
+### CLI: `demo:password`
+
+For SSH access or when the admin UI isn't enabled, manage the password from the command line. Writes go to the `demo_settings` DB row (encrypted cast) — same source the gate reads from first.
+
+```bash
+# Show the current password and its source (DB / env / unset)
+php artisan demo:password
+
+# Generate a fresh 16-char random password, save it, print it
+php artisan demo:password --regenerate
+
+# Set the password to a specific value
+php artisan demo:password --set='your-chosen-value'
+```
+
+Requires the `demo_settings` migration to have run (`php artisan vendor:publish --tag=filament-panel-base-demo-migrations && php artisan migrate`); read-only `php artisan demo:password` falls back to the env var when the table doesn't exist.
+
 ## Plugin API
 
 ```php

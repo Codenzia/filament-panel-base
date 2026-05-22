@@ -15,6 +15,7 @@ use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice;
 use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp;
 use Codenzia\FilamentPanelBase\Auth\Observers\AuthUserObserver;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Commands\DemoPasswordCommand;
 use Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand;
 use Codenzia\FilamentPanelBase\Commands\InstallAuthCommand;
 use Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand;
@@ -50,6 +51,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 EnableTranslationsCommand::class,
                 ScanTranslationsCommand::class,
                 InstallAuthCommand::class,
+                DemoPasswordCommand::class,
             ])
             ->hasInstallCommand(function (InstallCommand $command) {
                 $command
