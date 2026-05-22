@@ -66,7 +66,7 @@ class DemoPage extends Component
     {
         $expected = (string) $this->expectedPassword();
 
-        if ($expected === '' || $this->gatePassword !== $expected) {
+        if ($expected === '' || ! hash_equals($expected, $this->gatePassword)) {
             $this->gateError = __('Incorrect password.');
             $this->gatePassword = '';
 
@@ -129,7 +129,7 @@ class DemoPage extends Component
     {
         $expected = (string) $this->expectedPassword();
 
-        if ($expected === '' || $this->seederPassword !== $expected) {
+        if ($expected === '' || ! hash_equals($expected, $this->seederPassword)) {
             $this->passwordError = __('Incorrect password.');
 
             return;
