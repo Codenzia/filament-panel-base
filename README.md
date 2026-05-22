@@ -955,8 +955,61 @@ return [
         'preset' => 'ocean_blue',  // any ThemePresets key
         'colors' => [],            // override individual color keys
     ],
+
+    'branding' => [
+        // Render a small "Powered by Codenzia" footer on every panel page
+        // and via <x-filament-panel-base::powered-by /> on non-Filament pages.
+        // Set CODENZIA_BRANDING=false in .env to hide.
+        'powered_by_enabled' => env('CODENZIA_BRANDING', true),
+    ],
 ];
 ```
+
+## Branding
+
+A subtle **"Powered by Codenzia"** credit line is rendered on every Filament panel page automatically — no configuration needed. The package registers a `PanelsRenderHook::FOOTER` hook in its service provider that injects the credit into the panel chrome below the page content.
+
+### Where it appears
+
+- Every page inside a Filament panel (admin, dashboard, customer panels): admin index, resource list/create/edit/view, custom pages, settings pages, login / register / password-reset auth pages.
+
+### Where it does not appear automatically
+
+- Pages that live **outside** a Filament panel — your front-of-site Livewire/Blade pages, marketing routes, raw public endpoints. For those, drop the matching Blade component into your root layout:
+
+  ```blade
+  <x-filament-panel-base::powered-by />
+  ```
+
+  Same wording, same styling, same opt-out via `CODENZIA_BRANDING`.
+
+### Hiding the credit
+
+Set the env var in `.env`:
+
+```dotenv
+CODENZIA_BRANDING=false
+```
+
+The hook checks this on every request, so no cache clear is needed when toggling. Useful when an app graduates from a Codenzia-controlled demo to a customer-owned deployment that wants its own branding.
+
+### Styling
+
+The default markup uses Tailwind utilities (`text-xs`, `text-gray-400 dark:text-gray-600`) and respects your panel's primary color via `hover:text-primary-500`. To restyle, publish the package's `powered-by.blade.php` component or override the render hook in your own `AppServiceProvider`:
+
+```php
+use Filament\Support\Facades\FilamentView;
+use Filament\View\PanelsRenderHook;
+use Illuminate\Support\Facades\Blade;
+
+// In AppServiceProvider::boot()
+FilamentView::registerRenderHook(
+    PanelsRenderHook::FOOTER,
+    fn (): string => Blade::render('<your custom footer markup here>')
+);
+```
+
+The most recently-registered hook wins, so a host override replaces the package default cleanly.
 
 ## Translatable Content (Optional)
 
