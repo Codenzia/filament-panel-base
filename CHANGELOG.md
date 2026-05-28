@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **`<x-filament-panel-base::locale-switcher>` is now self-contained and works on public Blade pages, not just inside Filament panels.** The component previously relied on the host's Tailwind build compiling its utility classes AND on the external `flag-icons` library being loaded — both assumptions held inside a Filament panel but broke on plain public sites (unstyled dropdown + broken flag boxes). The view now ships its own scoped `@once` stylesheet (`.fpb-ls__*` classes) and renders a globe glyph + native language names by default, so it looks correct on any page. Backward-compatible: all existing props (`locales`, `currentLocale`, `switchRoute`, `align`, `relative`) still work.
+
 ### Added
+- **`:flags="true"` prop on the locale switcher.** Opt-in for hosts that want the original flag-icons sprites (and have the library loaded). When omitted (default), the switcher uses the globe glyph and stays dependency-free. Each entry still shows the native language name (with a built-in map for the most common locales) + the uppercased code + a check on the active locale.
+- **`Codenzia\FilamentPanelBase\Tests\LocaleSwitcherTest`** — 5 Pest tests covering the self-contained markup, the active-locale aria-current, the flags opt-in, the single-locale no-render, and the native-name fallback map.
 - **`/demo` Livewire page** (`Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage`). Drop-in landing page with password gate, auto-discovered model-count tiles, users table with one-click "login as", optional Standard/Demo seed buttons (rendered only when the seeder class exists), and a footer showing build date and PHP/Laravel/Filament versions. Opt-in per host via `FILAMENT_PANEL_BASE_DEMO_ENABLED=true` + `APP_DEMO_PAGE_PWD=...`.
 - **Demo Settings admin page** (`Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings`). Lets admins view, regenerate, and copy the `/demo` share link without touching `.env`. Singleton `demo_settings` table (encrypted password cast, rotated_at, last_used_at). Opt-in via `FilamentPanelBasePlugin::make()->withDemoSettingsPage()`.
 - **DB-first password resolution.** `DemoPage::expectedPassword()` reads `DemoSetting::current()->password` first and falls back to the `APP_DEMO_PAGE_PWD` env var, so existing hosts keep their env-only behaviour until they generate a DB value.
