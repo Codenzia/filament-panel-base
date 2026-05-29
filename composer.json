@@ -28,13 +28,15 @@
         "spatie/laravel-translation-loader": "^2.8"
     },
     "require-dev": {
+        "bacon/bacon-qr-code": "^3.1",
         "laravel/pint": "^1.29",
         "laravel/socialite": "^5.0",
         "nunomaduro/collision": "^8.0",
         "orchestra/testbench": "^10.0 || ^11.0",
         "pestphp/pest": "^4.0",
         "pestphp/pest-plugin-arch": "^4.0",
-        "pestphp/pest-plugin-laravel": "^4.0"
+        "pestphp/pest-plugin-laravel": "^4.0",
+        "pragmarx/google2fa": "^9.0"
     },
     "suggest": {
         "spatie/laravel-permission": "Required for NotifiesAdmins role-based queries",
@@ -43,7 +45,9 @@
         "livewire/livewire": "Required to use the front-of-site Livewire auth pages (Register, Login, VerifyOtp, ...)",
         "laravel/socialite": "Required when enabling social login through the Auth module (->social(['google', ...]))",
         "propaganistas/laravel-phone": "Required for libphonenumber-backed phone format validation in the auth module",
-        "bezhansalleh/filament-shield": "Recommended for per-page authorisation on ManageAuthenticationSettings (subclass + HasPageShield trait — see README)"
+        "bezhansalleh/filament-shield": "Recommended for per-page authorisation on ManageAuthenticationSettings (subclass + HasPageShield trait — see README)",
+        "pragmarx/google2fa": "Required for the TwoFactor module — TOTP secret generation and code verification (composer require pragmarx/google2fa)",
+        "bacon/bacon-qr-code": "Required for the TwoFactor module — renders the enrolment QR code as inline SVG (composer require bacon/bacon-qr-code)"
     },
     "autoload": {
         "psr-4": {

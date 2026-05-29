@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Providers;
 
+use Codenzia\FilamentPanelBase\Analytics\Http\Middleware\TrackVisit;
+use Codenzia\FilamentPanelBase\Analytics\Settings\AnalyticsSettings;
 use Codenzia\FilamentPanelBase\Concerns\HasProfileSlideOver;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
@@ -571,10 +573,15 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Get the shared middleware stack used by all panels.
+     *
+     * `TrackVisit` is appended only when AnalyticsSettings is loadable AND
+     * its `enabled` + `track_visits` flags are on. The settings lookup is
+     * wrapped because fresh installs (no migration yet) and tests that boot
+     * without a DB would otherwise throw before the migrate command runs.
      */
     protected function getSharedMiddleware(): array
     {
-        return [
+        $middleware = [
             EncryptCookies::class,
             AddQueuedCookiesToResponse::class,
             StartSession::class,
@@ -586,6 +593,28 @@ abstract class BasePanelProvider extends PanelProvider
             DispatchServingFilamentEvent::class,
             SetLocale::class,
         ];
+
+        if ($this->shouldTrackVisits()) {
+            $middleware[] = TrackVisit::class;
+        }
+
+        return $middleware;
+    }
+
+    /**
+     * Decide whether to mount the TrackVisit middleware. Default off when
+     * the settings row is missing — keeps cold-boot safe before migrations
+     * have been run on a fresh app.
+     */
+    protected function shouldTrackVisits(): bool
+    {
+        try {
+            $settings = app(AnalyticsSettings::class);
+
+            return $settings->enabled && $settings->track_visits;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     /**

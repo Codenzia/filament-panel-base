@@ -1,0 +1,243 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Codenzia\FilamentPanelBase\TwoFactor\Concerns;
+
+use Codenzia\FilamentPanelBase\TwoFactor\Events\RecoveryCodeUsed;
+use Codenzia\FilamentPanelBase\TwoFactor\Events\TwoFactorDisabled;
+use Codenzia\FilamentPanelBase\TwoFactor\Events\TwoFactorEnabled;
+use Codenzia\FilamentPanelBase\TwoFactor\Services\RecoveryCodeGenerator;
+use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorAuthenticator;
+use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Hash;
+
+/**
+ * Drop into the host's `App\Models\User`:
+ *
+ *     class User extends Authenticatable {
+ *         use HasTwoFactorAuthentication;
+ *     }
+ *
+ * Expects the three columns added by the package's auto-loaded migration:
+ *   - two_factor_secret           (text, encrypted at rest via accessor)
+ *   - two_factor_recovery_codes   (text, JSON-encoded hashes, encrypted)
+ *   - two_factor_confirmed_at     (timestamp)
+ *
+ * Column names match Laravel Fortify exactly so data is portable both
+ * directions without a backfill.
+ */
+trait HasTwoFactorAuthentication
+{
+    /**
+     * Decrypted secret accessor / encrypting mutator. Falls back to raw
+     * string when the value is already plaintext (covers legacy seeders
+     * that bypass the mutator).
+     */
+    protected function twoFactorSecret(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): ?string {
+                if ($value === null || $value === '') {
+                    return null;
+                }
+
+                try {
+                    return Crypt::decryptString($value);
+                } catch (\Throwable) {
+                    return $value;
+                }
+            },
+            set: fn (?string $value): ?string => $value === null || $value === ''
+                ? null
+                : Crypt::encryptString($value),
+        );
+    }
+
+    /**
+     * Decrypted recovery-code list (always returned hashed). Stored as an
+     * encrypted JSON string. Returns an empty array when 2FA has never
+     * been enabled.
+     *
+     * @return Attribute<array<int, string>, array<int, string>>
+     */
+    protected function twoFactorRecoveryCodes(): Attribute
+    {
+        return Attribute::make(
+            get: function (?string $value): array {
+                if ($value === null || $value === '') {
+                    return [];
+                }
+
+                try {
+                    $decrypted = Crypt::decryptString($value);
+                } catch (\Throwable) {
+                    $decrypted = $value;
+                }
+
+                $decoded = json_decode($decrypted, true);
+
+                return is_array($decoded) ? array_values($decoded) : [];
+            },
+            set: fn (array $codes): ?string => empty($codes)
+                ? null
+                : Crypt::encryptString((string) json_encode(array_values($codes))),
+        );
+    }
+
+    public function hasTwoFactorEnabled(): bool
+    {
+        return ! empty($this->getRawOriginal('two_factor_secret'))
+            && $this->two_factor_confirmed_at !== null;
+    }
+
+    /**
+     * Provision a fresh secret + plaintext recovery codes. The secret is
+     * persisted immediately; the user still needs to verify a code from
+     * their authenticator app to flip `two_factor_confirmed_at`.
+     *
+     * Returns the *plaintext* recovery codes so the caller can show them
+     * to the user once.
+     *
+     * @return array<int, string>
+     */
+    public function generateTwoFactorSecret(): array
+    {
+        /** @var TwoFactorAuthenticator $auth */
+        $auth = app(TwoFactorAuthenticator::class);
+        /** @var RecoveryCodeGenerator $gen */
+        $gen = app(RecoveryCodeGenerator::class);
+        /** @var TwoFactorSettings $settings */
+        $settings = app(TwoFactorSettings::class);
+
+        $this->two_factor_secret = $auth->generateSecret();
+
+        $plaintextCodes = $gen->generate($settings->recovery_code_count);
+        $this->two_factor_recovery_codes = array_map(
+            static fn (string $code): string => Hash::make($code),
+            $plaintextCodes,
+        );
+
+        $this->two_factor_confirmed_at = null;
+        $this->save();
+
+        return $plaintextCodes;
+    }
+
+    /**
+     * Confirm enrolment by verifying a TOTP code from the user's app.
+     * On success, flips `two_factor_confirmed_at` and emits TwoFactorEnabled.
+     */
+    public function confirmTwoFactor(string $code): bool
+    {
+        /** @var TwoFactorAuthenticator $auth */
+        $auth = app(TwoFactorAuthenticator::class);
+
+        $secret = $this->two_factor_secret;
+
+        if (empty($secret) || ! $auth->verify($secret, $code)) {
+            return false;
+        }
+
+        $this->two_factor_confirmed_at = now();
+        $this->save();
+
+        event(new TwoFactorEnabled($this));
+
+        return true;
+    }
+
+    /**
+     * Verify a code during the post-login challenge. Accepts either a
+     * TOTP code or a recovery code. Returns true on success; used
+     * recovery codes are consumed (removed from the stored list).
+     */
+    public function verifyTwoFactorCode(string $code): bool
+    {
+        /** @var TwoFactorAuthenticator $auth */
+        $auth = app(TwoFactorAuthenticator::class);
+
+        $secret = $this->two_factor_secret;
+
+        if (! empty($secret) && $auth->verify($secret, $code)) {
+            return true;
+        }
+
+        return $this->consumeRecoveryCode($code);
+    }
+
+    /**
+     * Issue a fresh batch of recovery codes, replacing the existing ones.
+     *
+     * @return array<int, string>
+     */
+    public function replaceRecoveryCodes(): array
+    {
+        /** @var RecoveryCodeGenerator $gen */
+        $gen = app(RecoveryCodeGenerator::class);
+        /** @var TwoFactorSettings $settings */
+        $settings = app(TwoFactorSettings::class);
+
+        $plaintextCodes = $gen->generate($settings->recovery_code_count);
+        $this->two_factor_recovery_codes = array_map(
+            static fn (string $code): string => Hash::make($code),
+            $plaintextCodes,
+        );
+        $this->save();
+
+        return $plaintextCodes;
+    }
+
+    public function disableTwoFactor(): void
+    {
+        $wasEnabled = $this->hasTwoFactorEnabled();
+
+        $this->two_factor_secret = null;
+        $this->two_factor_recovery_codes = [];
+        $this->two_factor_confirmed_at = null;
+        $this->save();
+
+        if ($wasEnabled) {
+            event(new TwoFactorDisabled($this));
+        }
+    }
+
+    /**
+     * Hash-compare and consume a recovery code. Single-use semantics —
+     * the matching hash is removed from the persisted list.
+     */
+    protected function consumeRecoveryCode(string $code): bool
+    {
+        $code = trim($code);
+
+        if ($code === '') {
+            return false;
+        }
+
+        $remaining = [];
+        $matched = false;
+
+        foreach ($this->two_factor_recovery_codes as $hash) {
+            if (! $matched && Hash::check($code, $hash)) {
+                $matched = true;
+
+                continue;
+            }
+
+            $remaining[] = $hash;
+        }
+
+        if (! $matched) {
+            return false;
+        }
+
+        $this->two_factor_recovery_codes = $remaining;
+        $this->save();
+
+        event(new RecoveryCodeUsed($this));
+
+        return true;
+    }
+}
