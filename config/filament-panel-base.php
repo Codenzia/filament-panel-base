@@ -283,6 +283,37 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Analytics Module
+    |--------------------------------------------------------------------------
+    |
+    | Static defaults for the Analytics module. Runtime values live in
+    | AnalyticsSettings (Spatie Settings); the fluent
+    | FilamentPanelBasePlugin::withAnalytics() API takes precedence.
+    |
+    | `exclude_routes` is the only knob NOT mirrored in AnalyticsSettings —
+    | it's deploy-time config (asset / health-check paths) that has no UX
+    | value behind an admin Settings page.
+    |
+    */
+    'analytics' => [
+        /*
+        | Route patterns (Laravel `Request::is()` globs) that should never
+        | produce a `visits` row. Cosmetic + perf — admins still see real
+        | traffic in widgets, not asset noise.
+        */
+        'exclude_routes' => [
+            'livewire/livewire.js',
+            'livewire/livewire.js.map',
+            'horizon*',
+            'telescope*',
+            'sanctum/*',
+            '_debugbar/*',
+            'up',
+        ],
+    ],
+
     'auth' => [
         /*
         | Blade layout that Livewire auth views @extend. Hosts override this

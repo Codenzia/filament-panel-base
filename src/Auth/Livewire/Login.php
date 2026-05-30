@@ -7,6 +7,9 @@ namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
+use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
+use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorChallengeSession;
+use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -63,9 +66,65 @@ class Login extends Component
 
         $this->clearRateLimiter('login', $this->identifier);
 
+        if ($this->shouldChallengeForTwoFactor($user)) {
+            $challenge = app(TwoFactorChallengeSession::class);
+            $challenge->stash($user, $this->remember);
+            Auth::logout();
+
+            $this->redirect(route('two-factor.challenge'), navigate: true);
+
+            return;
+        }
+
         session()->regenerate();
 
         $this->redirect(session()->pull('url.intended', route('home')), navigate: true);
+    }
+
+    /**
+     * Decide whether to interrupt this successful credential check with a
+     * TOTP challenge. Skips when:
+     *  - the 2FA module is disabled at the settings level
+     *  - the User model doesn't use HasTwoFactorAuthentication
+     *  - the user has not confirmed enrolment
+     *  - a long-lived "remember this device" cookie is present + accepted
+     */
+    private function shouldChallengeForTwoFactor(mixed $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        try {
+            $settings = app(TwoFactorSettings::class);
+        } catch (\Throwable) {
+            return false;
+        }
+
+        if (! $settings->enabled) {
+            return false;
+        }
+
+        if (! in_array(HasTwoFactorAuthentication::class, class_uses_recursive($user), true)) {
+            return false;
+        }
+
+        if (! $user->hasTwoFactorEnabled()) {
+            return false;
+        }
+
+        if ($settings->remember_device) {
+            try {
+                $challenge = app(TwoFactorChallengeSession::class);
+                if ($challenge->deviceIsRemembered($user)) {
+                    return false;
+                }
+            } catch (\Throwable) {
+                // Fall through to challenge.
+            }
+        }
+
+        return true;
     }
 
     public function render(AuthenticationSettings $settings): View

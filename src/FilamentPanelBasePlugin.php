@@ -4,15 +4,30 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase;
 
+use Codenzia\FilamentPanelBase\Analytics\AnalyticsPlugin;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Pages\AnalyticsPage;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\AuthFunnelWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\DeviceTypeWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\ErrorRateSparklineWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\FailedLoginsChartWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\GeoBreakdownWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\SlowestPagesWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\TopPagesWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\VisitorsChartWidget;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\VisitorsTodayWidget;
 use Codenzia\FilamentPanelBase\Auth\AuthenticationPlugin;
 use Codenzia\FilamentPanelBase\Auth\Filament\Pages\Login;
 use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
 use Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\CommandPalette\CommandPalettePlugin;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings;
 use Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource;
+use Codenzia\FilamentPanelBase\Sessions\SessionManagementPlugin;
 use Codenzia\FilamentPanelBase\Support\ThemePresets;
+use Codenzia\FilamentPanelBase\TwoFactor\Filament\Pages\TwoFactorChallengePage;
+use Codenzia\FilamentPanelBase\TwoFactor\TwoFactorPlugin;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
@@ -28,6 +43,18 @@ class FilamentPanelBasePlugin implements Plugin
     protected bool $translationsEnabled = false;
 
     protected ?AuthenticationPlugin $authentication = null;
+
+    protected ?AnalyticsPlugin $analytics = null;
+
+    protected ?TwoFactorPlugin $twoFactor = null;
+
+    protected ?SessionManagementPlugin $sessionManagement = null;
+
+    protected ?CommandPalettePlugin $commandPalette = null;
+
+    protected ?string $filamentAnalyticsPageClass = null;
+
+    protected ?string $twoFactorChallengePageClass = null;
 
     protected bool $filamentAuthLoginEnabled = false;
 
@@ -123,6 +150,221 @@ class FilamentPanelBasePlugin implements Plugin
     public function isAuthenticationEnabled(): bool
     {
         return $this->authentication?->isEnabled() ?? false;
+    }
+
+    /**
+     * Configure the Analytics module — visitor tracking, auth-event recording,
+     * resource-usage stats, plus the rollup/prune schedule. The closure
+     * receives an {@see AnalyticsPlugin} for fluent overrides; values applied
+     * via the fluent API override AnalyticsSettings for the request lifecycle.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withAnalytics(fn ($a) => $a
+     *           ->ipAnonymization('truncate')
+     *           ->retainRawDays(30)
+     *           ->writeQueue('analytics')
+     *       );
+     */
+    public function withAnalytics(?\Closure $callback = null): static
+    {
+        $this->analytics = app(AnalyticsPlugin::class);
+
+        if ($callback !== null) {
+            $callback($this->analytics);
+        }
+
+        $this->analytics->enable()->apply();
+
+        return $this;
+    }
+
+    public function getAnalytics(): ?AnalyticsPlugin
+    {
+        return $this->analytics;
+    }
+
+    public function isAnalyticsEnabled(): bool
+    {
+        return $this->analytics?->isEnabled() ?? false;
+    }
+
+    /**
+     * Configure the Two-Factor Authentication module — issuer name, recovery
+     * code count, acceptance window, role-based mandatory enrolment. The
+     * closure receives a {@see TwoFactorPlugin} for fluent overrides;
+     * values applied via the fluent API override TwoFactorSettings for the
+     * request lifecycle. The challenge route ('/two-factor-challenge') is
+     * always registered when this method is called.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withTwoFactor(fn ($tf) => $tf
+     *           ->issuer('Acme Inc.')
+     *           ->acceptanceWindow(2)
+     *           ->requireForRoles(['super_admin'])
+     *       );
+     */
+    public function withTwoFactor(?\Closure $callback = null): static
+    {
+        $this->twoFactor = app(TwoFactorPlugin::class);
+
+        if ($callback !== null) {
+            $callback($this->twoFactor);
+        }
+
+        $this->twoFactor->enable()->apply();
+
+        return $this;
+    }
+
+    public function getTwoFactor(): ?TwoFactorPlugin
+    {
+        return $this->twoFactor;
+    }
+
+    public function isTwoFactorEnabled(): bool
+    {
+        return $this->twoFactor?->isEnabled() ?? false;
+    }
+
+    /**
+     * Configure the Session & Device Management module — listing of active
+     * sessions in the profile slide-over, per-row revoke, "sign out
+     * everywhere else", and optional new-device-login notification. The
+     * closure receives a {@see SessionManagementPlugin} for fluent
+     * overrides; values applied via the fluent API override
+     * SessionManagementSettings for the request lifecycle.
+     *
+     * REQUIRES `SESSION_DRIVER=database` to actually surface sessions —
+     * the profile tab degrades to a friendly notice otherwise.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withSessionManagement(fn ($s) => $s
+     *           ->notifyOnNewDevice()
+     *           ->idleThresholdMinutes(15)
+     *       );
+     */
+    public function withSessionManagement(?\Closure $callback = null): static
+    {
+        $this->sessionManagement = app(SessionManagementPlugin::class);
+
+        if ($callback !== null) {
+            $callback($this->sessionManagement);
+        }
+
+        $this->sessionManagement->enable()->apply();
+
+        return $this;
+    }
+
+    public function getSessionManagement(): ?SessionManagementPlugin
+    {
+        return $this->sessionManagement;
+    }
+
+    public function isSessionManagementEnabled(): bool
+    {
+        return $this->sessionManagement?->isEnabled() ?? false;
+    }
+
+    /**
+     * Configure the Command Palette (Cmd-K) module — recent-view tracking,
+     * keyboard hint, action limits. The closure receives a
+     * {@see CommandPalettePlugin} for fluent overrides; values applied via
+     * the fluent API override CommandPaletteSettings for the request
+     * lifecycle.
+     *
+     * The palette renders on every Filament panel page via a render hook
+     * once this method is called. Host plugins can push extra actions by
+     * resolving the {@see \Codenzia\FilamentPanelBase\CommandPalette\CommandPaletteRegistry}
+     * singleton and calling `register()`.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withCommandPalette(fn ($c) => $c
+     *           ->hotkeyLabel('⌘K')
+     *           ->recentViewLimit(15)
+     *       );
+     */
+    public function withCommandPalette(?\Closure $callback = null): static
+    {
+        $this->commandPalette = app(CommandPalettePlugin::class);
+
+        if ($callback !== null) {
+            $callback($this->commandPalette);
+        }
+
+        $this->commandPalette->enable()->apply();
+
+        return $this;
+    }
+
+    public function getCommandPalette(): ?CommandPalettePlugin
+    {
+        return $this->commandPalette;
+    }
+
+    public function isCommandPaletteEnabled(): bool
+    {
+        return $this->commandPalette?->isEnabled() ?? false;
+    }
+
+    /**
+     * Mount a Filament-chrome wrapper around the TwoFactorChallenge Livewire
+     * component so the post-login challenge renders inside this panel's auth
+     * cards instead of the public Livewire route. Optional — panels that use
+     * the public route can skip this entirely.
+     *
+     * @param  class-string<TwoFactorChallengePage>|null  $page
+     */
+    public function withFilamentTwoFactorChallengePage(?string $page = null): static
+    {
+        $this->twoFactorChallengePageClass = $page ?? TwoFactorChallengePage::class;
+
+        return $this;
+    }
+
+    public function hasFilamentTwoFactorChallengePage(): bool
+    {
+        return $this->twoFactorChallengePageClass !== null;
+    }
+
+    public function getFilamentTwoFactorChallengePageClass(): ?string
+    {
+        return $this->twoFactorChallengePageClass;
+    }
+
+    /**
+     * Mount the in-panel Analytics page (visitors today, 30-day chart, etc.)
+     * on this panel. Default page is open to any authenticated user — subclass
+     * and override `canAccess()` (or add Shield's `HasPageShield`) for
+     * tighter authorisation.
+     *
+     *     ->withFilamentAnalyticsPage(MyAnalyticsPage::class)
+     *
+     * @param  class-string<AnalyticsPage>|null  $page
+     */
+    public function withFilamentAnalyticsPage(?string $page = null): static
+    {
+        $this->filamentAnalyticsPageClass = $page ?? AnalyticsPage::class;
+
+        return $this;
+    }
+
+    public function hasFilamentAnalyticsPage(): bool
+    {
+        return $this->filamentAnalyticsPageClass !== null;
+    }
+
+    public function getFilamentAnalyticsPageClass(): ?string
+    {
+        return $this->filamentAnalyticsPageClass;
     }
 
     /**
@@ -297,6 +539,30 @@ class FilamentPanelBasePlugin implements Plugin
 
         if ($this->demoSettingsPageClass !== null) {
             $panel->pages([$this->demoSettingsPageClass]);
+        }
+
+        if ($this->twoFactorChallengePageClass !== null) {
+            $panel->pages([$this->twoFactorChallengePageClass]);
+        }
+
+        if ($this->filamentAnalyticsPageClass !== null) {
+            $panel->pages([$this->filamentAnalyticsPageClass]);
+
+            // Filament needs the analytics widgets registered at the panel
+            // level so it can bind their Livewire component aliases —
+            // returning them from AnalyticsPage::getWidgets() alone is not
+            // enough; Livewire would error "component not found" on render.
+            $panel->widgets([
+                VisitorsTodayWidget::class,
+                ErrorRateSparklineWidget::class,
+                VisitorsChartWidget::class,
+                AuthFunnelWidget::class,
+                FailedLoginsChartWidget::class,
+                TopPagesWidget::class,
+                SlowestPagesWidget::class,
+                GeoBreakdownWidget::class,
+                DeviceTypeWidget::class,
+            ]);
         }
     }
 

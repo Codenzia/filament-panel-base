@@ -12,6 +12,7 @@ use Codenzia\FilamentPanelBase\Auth\Livewire\Register;
 use Codenzia\FilamentPanelBase\Auth\Livewire\ResetPassword;
 use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyEmailNotice;
 use Codenzia\FilamentPanelBase\Auth\Livewire\VerifyOtp;
+use Codenzia\FilamentPanelBase\TwoFactor\Livewire\TwoFactorChallenge;
 use Illuminate\Support\Facades\Route;
 
 /**
@@ -43,6 +44,14 @@ Route::middleware(['auth'])->group(function (): void {
         ->name('verification.verify');
 
     Route::get('/verify-otp', VerifyOtp::class)->name('verification.otp');
+});
+
+// 2FA challenge: registered outside the 'auth' group because the user has
+// NOT logged in at this point — only credentials passed. Pending state
+// lives in the session via TwoFactorChallengeSession.
+Route::middleware(['web'])->group(function (): void {
+    Route::get('/two-factor-challenge', TwoFactorChallenge::class)
+        ->name('two-factor.challenge');
 });
 
 Route::middleware([ThrottleAuth::class])->group(function (): void {

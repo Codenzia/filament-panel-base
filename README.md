@@ -25,6 +25,10 @@
 - **Translation loader** — DB-backed translations via `spatie/laravel-translation-loader`.
 - **`/demo` page** — drop-in Livewire landing page for sales demos and QA: password gate, auto-discovered model count tiles, one-click "login as" for every user, optional Standard/Demo seed buttons, footer with build date + dependency versions. Four levels of customization (config, view, section slots, full subclass).
 - **Demo Settings admin page** — view/rotate/share the `/demo` password from the panel without touching `.env`. Singleton `demo_settings` table with encrypted password cast.
+- **Analytics module** — visitor tracking middleware, auth-event recording, AnalyticsPage with 9 widgets (visitors today, 30-day chart, top pages, slowest pages, error-rate sparkline, geo breakdown, device types, auth funnel, failed-login chart), date-range filter, tenant scoping, hourly rollup + nightly prune commands.
+- **Two-Factor Authentication module** — TOTP enrolment via the profile slide-over, post-login challenge flow with intermediate session state, 8 single-use recovery codes hashed at rest, remember-device cookie, optional role-based mandatory enrolment middleware. Pluggable issuer/digits/period/window via fluent API.
+- **Sessions & Devices module** — self-service "Devices & Sessions" tab listing every active session from Laravel's database driver, per-row revoke, "sign out everywhere else", new-device-login event for sending alert emails.
+- **Command Palette (Cmd-K)** — global Cmd-K modal augmenting Filament's chrome with navigation jumps, a "Recent" group auto-populated from record-page views, and an extensible registry where consumer plugins push their own actions.
 
 ---
 
@@ -1444,6 +1448,342 @@ php artisan demo:password --set='your-chosen-value'
 
 Requires the `demo_settings` migration to have run (`php artisan vendor:publish --tag=filament-panel-base-demo-migrations && php artisan migrate`); read-only `php artisan demo:password` falls back to the env var when the table doesn't exist.
 
+## Analytics
+
+Visitor + auth-event tracking with a ready-to-mount AnalyticsPage. Off by default — call `->withAnalytics()` on the plugin to turn it on.
+
+### Quick start
+
+```php
+// AppServiceProvider::boot — global config
+FilamentPanelBasePlugin::make()
+    ->withAnalytics()           // sensible defaults
+    ->withFilamentAnalyticsPage(); // mounts /admin/analytics
+
+// then:
+php artisan migrate
+```
+
+That's it. The three analytics tables (`visits`, `visits_daily`, `auth_events`) and the settings rows are auto-loaded — no `vendor:publish` required. Visit `/admin/analytics` to see the dashboard.
+
+### Plugin API
+
+```php
+->withAnalytics(fn ($a) => $a
+    ->trackVisits()                  // default true
+    ->trackAuthEvents()              // default true
+    ->ipAnonymization('truncate')    // 'none' | 'truncate' | 'hash'
+    ->retainRawDays(30)              // raw visits pruned after N days
+    ->retainAggregatedDays(365)      // visits_daily kept N days
+    ->botFilter()                    // tag bot UAs is_bot=true (excluded from widgets)
+    ->writeQueue('analytics')        // dispatch RecordVisitJob to this queue (null = sync)
+)
+```
+
+### What gets recorded
+
+**`visits`** (every page view, retained `retain_raw_days`):
+`id`, `session_id`, `user_id`, `tenant_id`, `tenant_type`, `panel`, `route_name`, `path`, `method`, `status`, `referrer_host`, `country_code`, `ip_hash`, `device_type`, `browser`, `platform`, `is_bot`, `duration_ms`, `created_at`.
+
+**`auth_events`** (small rows, retained `retain_aggregated_days`):
+type is one of `login.success`, `login.failed`, `logout`, `register`, `otp.requested`, `otp.verified`, `social.login`, `moderation.*`, `password.reset`, `two_factor.enabled`, `two_factor.disabled`, `two_factor.failed`, `two_factor.recovery_used`.
+
+### Scheduled commands
+
+Boot automatically when `runningInConsole()`:
+
+| Command | Cadence | Job |
+|---|---|---|
+| `filament-panel-base:analytics:rollup` | Hourly, no overlap | Rebuild `visits_daily` buckets for the affected dates. |
+| `filament-panel-base:analytics:prune` | Daily at 03:15, no overlap | Chunk-delete `visits` rows older than `retain_raw_days`, `visits_daily` + `auth_events` older than `retain_aggregated_days`. |
+
+### Tenant scoping
+
+Widgets and the rollup are tenant-scoped via `filament()->getTenant()`. If your panel uses Filament tenancy, each tenant's admins see only their own visits/auth events.
+
+### Subclassing the page for Shield / custom access
+
+```php
+// Your subclass
+namespace App\Filament\Admin\Pages;
+
+use BezhanSalleh\FilamentShield\Traits\HasPageShield;
+use Codenzia\FilamentPanelBase\Analytics\Filament\Pages\AnalyticsPage as Base;
+
+class AnalyticsPage extends Base
+{
+    use HasPageShield;
+}
+
+// In your panel
+->withFilamentAnalyticsPage(\App\Filament\Admin\Pages\AnalyticsPage::class)
+```
+
+### Privacy + GDPR
+
+- `ip_anonymization='truncate'` (default) zeroes the last octet (IPv4) / last 80 bits (IPv6) before hashing — pseudonymous but not reversible.
+- `ip_anonymization='hash'` stores only `sha256(raw_ip)`.
+- `ip_anonymization='none'` stores the raw IP (hashed for the column type) — use only if your legal posture allows it.
+- Retention is enforced by the prune command; nothing leaks indefinitely once `retain_raw_days` passes.
+
+---
+
+## Two-Factor Authentication
+
+TOTP enrolment + post-login challenge with recovery codes. Off by default — call `->withTwoFactor()` on the plugin to turn it on.
+
+### Install dependencies
+
+```bash
+composer require pragmarx/google2fa bacon/bacon-qr-code
+```
+
+Both are listed as `suggest:` — install them only if you use 2FA. The services throw a clear `RuntimeException` if missing.
+
+### Quick start
+
+```php
+// 1. AppServiceProvider::boot
+FilamentPanelBasePlugin::make()
+    ->withTwoFactor()
+    ->withFilamentTwoFactorChallengePage();  // optional: render challenge inside panel chrome
+
+// 2. User model
+use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
+
+class User extends Authenticatable
+{
+    use HasTwoFactorAuthentication;
+}
+
+// 3. Profile slide-over tab — extend your PanelProvider
+use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorProfileTab;
+
+class AdminPanelProvider extends BasePanelProvider
+{
+    use HasTwoFactorProfileTab;
+
+    protected function getProfileFormTabs(): array
+    {
+        return [
+            ...parent::getProfileFormTabs(),
+            $this->getTwoFactorProfileTab(),
+        ];
+    }
+}
+
+// 4. Run migrations — adds the 3 columns to your users table
+php artisan migrate
+```
+
+### Plugin API
+
+```php
+->withTwoFactor(fn ($tf) => $tf
+    ->issuer('Acme Inc.')             // shown in the authenticator app entry
+    ->digits(6)                       // 6, 7, or 8 (Google Authenticator wants 6)
+    ->period(30)                      // TOTP step in seconds (RFC default 30)
+    ->acceptanceWindow(1)             // accept ±N step codes (clock-skew tolerance)
+    ->recoveryCodeCount(8)            // 8 single-use codes per user
+    ->requireForRoles(['super_admin']) // enforce via RequireTwoFactor middleware
+    ->rememberDevice(true, days: 30)  // long-lived cookie to skip repeat challenges
+)
+```
+
+### How the post-login challenge works
+
+1. User submits credentials → `Login` Livewire validates them.
+2. If the user has `hasTwoFactorEnabled() === true`, the credentials pass but `Auth::login()` is **not** called. Instead the user id + remember flag are stashed in the session under `codenzia.two_factor_challenge`.
+3. The user is redirected to `route('two-factor.challenge')` (`/two-factor-challenge`).
+4. The user enters either a 6-digit TOTP code or a 10-10 recovery code. The challenge component verifies via the trait's `verifyTwoFactorCode()`, calls `Auth::login()`, regenerates the session, and redirects to the intended URL.
+5. If they tick "Trust this device for 30 days", a HMAC cookie keyed on `(user_id, secret, app_key)` is queued. Regenerating the 2FA secret or disabling 2FA invalidates it automatically.
+
+### Mandatory enrolment for specific roles
+
+```php
+->withTwoFactor(fn ($tf) => $tf->requireForRoles(['super_admin', 'finance']));
+
+// Wire the middleware in your panel
+$panel->authMiddleware([
+    Authenticate::class,
+    \Codenzia\FilamentPanelBase\TwoFactor\Http\Middleware\RequireTwoFactor::class,
+]);
+```
+
+`RequireTwoFactor` redirects matching users to the challenge page on every request until they enrol. It needs `spatie/laravel-permission`'s `hasAnyRole()` on your user model; without it, the middleware fails open (no lockout).
+
+### Database columns
+
+The auto-loaded migration adds these to your `users` table (idempotent via `Schema::hasColumn` guards — safe to re-run, safe alongside an existing Fortify install since the names match exactly):
+
+| Column | Type | Notes |
+|---|---|---|
+| `two_factor_secret` | `text` nullable | Encrypted at rest via accessor. |
+| `two_factor_recovery_codes` | `text` nullable | Encrypted JSON of bcrypt hashes. |
+| `two_factor_confirmed_at` | `timestamp` nullable | Null until the user verifies one code. |
+
+### Events
+
+| Event | Fired when |
+|---|---|
+| `TwoFactorEnabled` | User confirmed enrolment with a valid TOTP code. |
+| `TwoFactorDisabled` | User turned 2FA off (only fires if it was enabled). |
+| `RecoveryCodeUsed` | A recovery code was consumed during a challenge. Send a "we noticed" email here. |
+| `TwoFactorChallengeFailed` | Invalid code submitted at challenge. Auto-persisted as `auth_events.type = two_factor.failed` for dashboards. |
+
+---
+
+## Sessions & Devices
+
+Self-service active-session list with per-row revoke and "sign out everywhere else". Off by default — call `->withSessionManagement()` on the plugin to turn it on.
+
+### Requirement: database session driver
+
+This module reads Laravel's `sessions` table directly. **`SESSION_DRIVER=database`** is required. With any other driver the profile tab degrades to a friendly "configure database sessions to see this" notice — nothing crashes, but the list stays empty.
+
+```bash
+# .env
+SESSION_DRIVER=database
+
+php artisan session:table   # if you don't already have one
+php artisan migrate
+```
+
+### Quick start
+
+```php
+// 1. AppServiceProvider::boot
+FilamentPanelBasePlugin::make()->withSessionManagement();
+
+// 2. Profile slide-over tab — extend your PanelProvider
+use Codenzia\FilamentPanelBase\Sessions\Concerns\HasSessionManagementProfileTab;
+
+class AdminPanelProvider extends BasePanelProvider
+{
+    use HasSessionManagementProfileTab;
+
+    protected function getProfileFormTabs(): array
+    {
+        return [
+            ...parent::getProfileFormTabs(),
+            $this->getSessionManagementProfileTab(),
+        ];
+    }
+}
+```
+
+### Plugin API
+
+```php
+->withSessionManagement(fn ($s) => $s
+    ->notifyOnNewDevice()             // fire NewDeviceLogin on unseen IP+UA fingerprints
+    ->idleThresholdMinutes(15)        // sessions older than this show as "last active X min ago"
+    ->allowLogoutOtherDevices()       // expose the "sign out everywhere else" button
+)
+```
+
+### `NewDeviceLogin` event
+
+A `DetectNewDeviceLogin` listener subscribes to `Illuminate\Auth\Events\Login`. On every successful login it computes `sha256(ip|user_agent)` and looks for a matching existing row in the `sessions` table for that user. If none is found, it dispatches `Codenzia\FilamentPanelBase\Sessions\Events\NewDeviceLogin($user, $ipAddress, $userAgent)` — wire your own listener to email the user.
+
+```php
+// In your EventServiceProvider or a Listener
+use Codenzia\FilamentPanelBase\Sessions\Events\NewDeviceLogin;
+
+Event::listen(NewDeviceLogin::class, function (NewDeviceLogin $event): void {
+    Mail::to($event->user)->send(new NewDeviceLoginMail($event));
+});
+```
+
+The fingerprint is intentionally coarse (IP + UA, not browser cookies) so private-mode browsing from a known device doesn't trigger false positives.
+
+### What the user sees
+
+For each active session: device-type icon (desktop/mobile/tablet), browser + OS, IP address, "active now" or "last active X minutes ago", a "Current" badge on the row matching `session()->getId()`, and a Revoke button (or Sign out for the current row).
+
+If there's more than one row, a "Sign out everywhere else" button appears at the top of the list.
+
+---
+
+## Command Palette (Cmd-K)
+
+A global Cmd-K modal that augments Filament's chrome with navigation jumps and recently viewed records. Off by default — call `->withCommandPalette()` on the plugin to turn it on.
+
+### Quick start
+
+```php
+FilamentPanelBasePlugin::make()->withCommandPalette();
+php artisan migrate   // creates command_palette_recent_views table
+```
+
+Once enabled, pressing **Cmd+K** (macOS) or **Ctrl+K** anywhere on a Filament page opens a search modal. Navigation entries for every Filament resource and page on the current panel appear by default.
+
+### Plugin API
+
+```php
+->withCommandPalette(fn ($c) => $c
+    ->hotkeyLabel('⌘K')               // displayed hint (rendering only)
+    ->recentViewLimit(15)             // max items kept per (user, panel)
+    ->trackRecentViews(true)          // auto-record record-page views
+)
+```
+
+### Recent-record auto-tracking
+
+Wired into `Filament::serving()`. On every served request, if the current Livewire controller is a Filament resource record page (has `getRecord()` + `getResource()`), a row is upserted into `command_palette_recent_views` for the authenticated user. The recorder is best-effort and silently swallows any failure.
+
+Pruning happens at write-time per `(user, panel)` tuple — no scheduled job required.
+
+### Adding your own actions
+
+Implement `CommandPaletteContributor` (or pass a callable / raw array) and register with the singleton registry:
+
+```php
+use Codenzia\FilamentPanelBase\CommandPalette\CommandPaletteRegistry;
+use Codenzia\FilamentPanelBase\CommandPalette\Contracts\CommandPaletteContributor;
+use Codenzia\FilamentPanelBase\CommandPalette\Data\CommandPaletteAction;
+
+class QuickActionsContributor implements CommandPaletteContributor
+{
+    public function actions(?string $query = null): iterable
+    {
+        return [
+            new CommandPaletteAction(
+                id: 'action:export-csv',
+                label: 'Export users to CSV',
+                url: route('admin.users.export'),
+                description: 'Download a snapshot of every user as CSV.',
+                icon: 'heroicon-o-arrow-down-tray',
+                group: 'Actions',
+                keywords: ['download', 'spreadsheet'],
+            ),
+        ];
+    }
+}
+
+// AppServiceProvider::boot
+app(CommandPaletteRegistry::class)->register(new QuickActionsContributor);
+```
+
+Or, for a one-shot:
+
+```php
+app(CommandPaletteRegistry::class)->register(fn () => [
+    new CommandPaletteAction(id: 'quick', label: 'Quick action', url: '/x'),
+]);
+```
+
+Actions are deduped by `id`, scored against the query (label prefix > label substring > haystack substring), and capped at 50 entries per modal render.
+
+### Keyboard
+
+- `Cmd+K` / `Ctrl+K` — toggle the modal
+- `↑` / `↓` — move selection
+- `Enter` — open the selected action
+- `Esc` — close
+
+All handled by Alpine.js inside the modal — no JS bundle changes.
+
 ## Plugin API
 
 ```php
@@ -1457,6 +1797,16 @@ FilamentPanelBasePlugin::make()
     // Register the Demo Settings admin page (opt-in; requires the
     // demo_settings migration — see "Demo Settings Page" above)
     ->withDemoSettingsPage()
+    // Analytics module — visitor tracking, auth events, AnalyticsPage
+    ->withAnalytics()
+    ->withFilamentAnalyticsPage()
+    // Two-Factor Authentication — opt-in TOTP + post-login challenge
+    ->withTwoFactor()
+    ->withFilamentTwoFactorChallengePage()
+    // Active session listing in the profile slide-over (requires SESSION_DRIVER=database)
+    ->withSessionManagement()
+    // Cmd-K command palette mounted on every Filament page in this panel
+    ->withCommandPalette()
 
 // Get resolved theme colors (used internally by <x-filament-panel-base::theme-styles />)
 FilamentPanelBasePlugin::make()->getThemeColors();
