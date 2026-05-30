@@ -1,16 +1,25 @@
-name: release
+name: Release to public
 
-# Tag-triggered release. Force-pushes commit + tag from this -dev repo to
-# the public mirror Codenzia/filament-panel-base, then creates a GitHub
-# Release on the public repo. Packagist auto-detects via its webhook.
-
+# Cuts a release of this plugin: squash-mirrors -dev -> public and tags it for
+# Packagist. Trigger from the Actions tab ("Run workflow" + version). Logic lives
+# in the central reusable workflow; this is just the button.
 on:
-  push:
-    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release (e.g. 0.1.0)"
+        required: true
+        type: string
+      dev_branch:
+        description: "Dev branch to release from"
+        required: false
+        type: string
+        default: main
 
 jobs:
   release:
-    uses: Codenzia/plugin-runtime/.github/workflows/plugin-release.yml@main
+    uses: Codenzia/deploy-runtime/.github/workflows/release-plugin.yml@main
     with:
-      public_repo: Codenzia/filament-panel-base
+      version: ${{ inputs.version }}
+      dev_branch: ${{ inputs.dev_branch }}
     secrets: inherit
