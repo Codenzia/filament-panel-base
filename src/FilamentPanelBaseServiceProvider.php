@@ -205,6 +205,10 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             $this->loadAuthRoutes();
         }
 
+        if ((bool) config('filament-panel-base.locale.routes.enabled', true)) {
+            $this->loadLocaleRoutes();
+        }
+
         Event::subscribe(AuthUserObserver::class);
 
         if ($this->app->runningInConsole()) {
@@ -519,6 +523,23 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         Route::middleware($middleware)
             ->prefix($prefix)
             ->name($name)
+            ->group($routesFile);
+    }
+
+    protected function loadLocaleRoutes(): void
+    {
+        $routesFile = __DIR__.'/../routes/locale.php';
+
+        if (! file_exists($routesFile)) {
+            return;
+        }
+
+        $prefix = (string) config('filament-panel-base.locale.routes.prefix', '');
+        /** @var array<int, string> $middleware */
+        $middleware = (array) config('filament-panel-base.locale.routes.middleware', ['web']);
+
+        Route::middleware($middleware)
+            ->prefix($prefix)
             ->group($routesFile);
     }
 

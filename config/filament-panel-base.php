@@ -63,6 +63,18 @@ return [
         'provider' => null,
         'available' => ['en'],
         'detection_order' => ['session', 'cookie', 'config'],
+
+        /*
+        | Locale-switcher route registration. When enabled (default), the
+        | package ships a `locale.switch` named route that sessions the
+        | chosen locale and bounces back to the previous page. Disable if
+        | the host app wires its own implementation under that name.
+        */
+        'routes' => [
+            'enabled' => true,
+            'prefix' => '',
+            'middleware' => ['web'],
+        ],
     ],
 
     /*
