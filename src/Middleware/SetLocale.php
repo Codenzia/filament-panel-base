@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Middleware;
 
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Closure;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesLocales;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Number;
 use Symfony\Component\HttpFoundation\Response;
 
 class SetLocale
@@ -20,6 +23,17 @@ class SetLocale
 
         if (array_key_exists($locale, $activeLanguages)) {
             App::setLocale($locale);
+
+            // Carbon (date diffs, ->translatedFormat(), ->diffForHumans()) and
+            // the Number helper (currency, ordinals, percentages) both keep
+            // their own per-process locale. Forgetting either is the classic
+            // "UI is Arabic but dates/numbers still print English" bug.
+            Carbon::setLocale($locale);
+            CarbonImmutable::setLocale($locale);
+
+            if (class_exists(Number::class)) {
+                Number::useLocale($locale);
+            }
 
             // Sync the translatable content locale whenever the UI locale changes,
             // so the content editor defaults to the same language as the UI.

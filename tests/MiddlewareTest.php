@@ -1,5 +1,7 @@
 <?php
 
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Middleware\EnsureUserApproved;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
@@ -8,6 +10,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Number;
 
 // ─── SetLocale ───────────────────────────────────────────
 
@@ -48,6 +51,24 @@ it('provides static getLocales method', function () {
     expect($locales)->toBeArray()
         ->and($locales)->toHaveKey('en')
         ->and($locales)->toHaveKey('ar');
+});
+
+it('propagates the chosen locale to Carbon and the Number helper', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar']]);
+
+    $request = Request::create('/test');
+    $request->setLaravelSession(app('session.store'));
+    session(['locale' => 'ar']);
+
+    (new SetLocale)->handle($request, fn () => new Response);
+
+    expect(App::getLocale())->toBe('ar')
+        ->and(Carbon::getLocale())->toBe('ar')
+        ->and(CarbonImmutable::getLocale())->toBe('ar');
+
+    if (class_exists(Number::class)) {
+        expect(Number::defaultLocale())->toBe('ar');
+    }
 });
 
 it('builds locale array from config when no provider is set', function () {
