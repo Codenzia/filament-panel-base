@@ -43,15 +43,15 @@ class AnalyticsPage extends Dashboard
 
     protected static ?string $title = 'Analytics';
 
-    protected static ?int $navigationSort = 90;
+    protected static ?int $navigationSort = 0;
 
     /**
-     * Filament 4 supports getNavigationGroup() — kept as a string so callers
-     * can swap the constant via translation files.
+     * Filament 4 supports getNavigationGroup() — kept translatable so host apps
+     * can place Analytics wherever they like (here, under the System group).
      */
     public static function getNavigationGroup(): ?string
     {
-        return __('Insights');
+        return __('System');
     }
 
     /**

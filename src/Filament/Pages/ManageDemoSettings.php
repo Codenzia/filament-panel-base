@@ -28,9 +28,9 @@ class ManageDemoSettings extends Page
 {
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-key';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+    protected static string|\UnitEnum|null $navigationGroup = 'System';
 
-    protected static ?int $navigationSort = 55;
+    protected static ?int $navigationSort = 99;
 
     protected string $view = 'filament-panel-base::filament.pages.manage-demo-settings';
 
