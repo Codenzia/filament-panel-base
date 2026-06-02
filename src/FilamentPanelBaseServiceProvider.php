@@ -145,6 +145,18 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // Register Blade component namespace
         Blade::componentNamespace('Codenzia\\FilamentPanelBase\\View\\Components', static::$viewNamespace);
 
+        // Filament's base layout switches between LTR and RTL purely via
+        // __('filament-panels::layout.direction'). Ship minimal layout
+        // overrides for common RTL locales (ar / he / fa / ur) so the
+        // <html dir="..."> attribute flips automatically the moment the
+        // active locale changes — no host wiring, no extra package needed.
+        // filament/translations (when installed) keeps providing the rest
+        // of the strings; we only override `direction`.
+        $filamentPanelsLang = __DIR__.'/../resources/lang/vendor/filament-panels';
+        if (is_dir($filamentPanelsLang)) {
+            $this->loadTranslationsFrom($filamentPanelsLang, 'filament-panels');
+        }
+
         // Register flag-icons CSS with Filament's asset system.
         // Auto-injected on Filament panels via @filamentStyles.
         FilamentAsset::register([

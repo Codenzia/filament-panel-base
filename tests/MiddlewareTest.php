@@ -86,6 +86,31 @@ it('builds locale array from config when no provider is set', function () {
         ->and($locales['en'])->toHaveKey('flag');
 });
 
+it('marks known RTL locales as rtl in the config-fallback payload', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar', 'he', 'fa', 'ur', 'fr']]);
+
+    $locales = SetLocale::getLocales();
+
+    expect($locales['en']['dir'])->toBe('ltr')
+        ->and($locales['ar']['dir'])->toBe('rtl')
+        ->and($locales['he']['dir'])->toBe('rtl')
+        ->and($locales['fa']['dir'])->toBe('rtl')
+        ->and($locales['ur']['dir'])->toBe('rtl')
+        ->and($locales['fr']['dir'])->toBe('ltr');
+});
+
+it('flips Filament panels layout direction to rtl when an RTL locale is active', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar']]);
+
+    $request = Request::create('/test');
+    $request->setLaravelSession(app('session.store'));
+    session(['locale' => 'ar']);
+
+    (new SetLocale)->handle($request, fn () => new Response);
+
+    expect(__('filament-panels::layout.direction'))->toBe('rtl');
+});
+
 // ─── EnsureUserApproved ──────────────────────────────────
 
 it('redirects to login when not authenticated', function () {

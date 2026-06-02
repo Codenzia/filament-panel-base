@@ -75,9 +75,27 @@ class SetLocale
 
         $locales = [];
         foreach ($available as $code) {
-            $locales[$code] = ['name' => $code, 'native' => $code, 'dir' => 'ltr', 'flag' => ''];
+            $locales[$code] = [
+                'name' => $code,
+                'native' => $code,
+                'dir' => self::isRtlLocale($code) ? 'rtl' : 'ltr',
+                'flag' => '',
+            ];
         }
 
         return $locales;
+    }
+
+    /**
+     * Static list of canonical RTL locale codes. Keeps the locale-switcher
+     * fallback honest: declaring 'ar' should produce dir=rtl in the
+     * dropdown payload without forcing the host to wire a ProvidesLocales
+     * implementation.
+     */
+    public static function isRtlLocale(string $code): bool
+    {
+        return in_array(strtolower($code), [
+            'ar', 'he', 'fa', 'ur', 'ps', 'sd', 'yi', 'ku', 'dv',
+        ], true);
     }
 }
