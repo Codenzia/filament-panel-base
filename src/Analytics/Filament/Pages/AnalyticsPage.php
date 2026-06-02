@@ -32,6 +32,11 @@ class AnalyticsPage extends Dashboard
 {
     protected static ?string $slug = 'analytics';
 
+    // Dashboard::getRoutePath() returns $routePath (NOT $slug); without this the
+    // page inherits the default '/' and collides with the panel's home dashboard,
+    // so its route is never registered.
+    protected static string $routePath = 'analytics';
+
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-chart-bar';
 
     protected static ?string $navigationLabel = 'Analytics';
