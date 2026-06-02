@@ -37,7 +37,7 @@ class ForgotPassword extends Component
     public function render(): View
     {
         return view('filament-panel-base::livewire.auth.forgot-password')
-            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.forgot_title'));
     }
 }

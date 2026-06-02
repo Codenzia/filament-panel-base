@@ -119,7 +119,7 @@ class Register extends Component
             'phoneRequired' => $settings->phone_required || $settings->credentials_mode === 'phone',
             'enabledSocialProviders' => $settings->social_providers_enabled,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.register_title'));
     }
 

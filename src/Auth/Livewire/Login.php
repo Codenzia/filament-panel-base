@@ -133,7 +133,7 @@ class Login extends Component
             'credentialsMode' => $settings->credentials_mode,
             'enabledSocialProviders' => $settings->social_providers_enabled,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.login_title'));
     }
 
