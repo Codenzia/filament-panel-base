@@ -587,11 +587,99 @@ Already maintaining your own settings page (the deprecated `RegistrationSettings
 
 | Middleware | Description |
 |---|---|
-| `SetLocale` | Detects locale from session/cookie, validates against `ProvidesLocales` provider |
+| `SetLocale` | Detects locale from session/cookie, validates against `ProvidesLocales` provider, then propagates the chosen code onto `Carbon`, `CarbonImmutable`, `Number::useLocale()`, and the spatie-translatable active locale so the whole formatting stack moves in lockstep with the UI |
 | `SetCountry` | Auto-detects country from IP using geo API, stores in session |
 | `SetCurrency` | Sets active currency from country relationship or session |
 | `EnsureUserApproved` | Blocks suspended/pending users (requires `HasModerationStatus` contract) |
 | `ThrottleAuth` | Per-IP rate limit for native HTTP auth routes (OAuth redirect/callback). Livewire-backed pages use the `ThrottlesAuthAttempts` trait instead — see [Auth throttling](#auth-throttling). |
+
+### Localisation
+
+The package treats locale handling as a layered concern — middleware, routing, model traits, vendor overrides — instead of one big switcher. Everything below works without `filament/translations` or `laravel-lang/lang` installed (those packages improve translation coverage but are not required for the mechanics to function).
+
+#### Declaring locales
+
+```php
+// config/filament-panel-base.php
+'locale' => [
+    'available' => ['en', 'ar', 'fr'],         // codes the user can switch to
+    'detection_order' => ['session', 'cookie', 'config'],
+    'routes' => [
+        'enabled' => true,                      // ships `locale.switch` named route
+        'prefix' => '',
+        'middleware' => ['web'],
+    ],
+],
+```
+
+`available` doubles as the allowlist for both `SetLocale` middleware and the shipped `locale.switch` controller — only codes listed here can become the active locale, so a malformed URL like `/locale/zz` is silently ignored instead of crashing.
+
+For dynamic locales pulled from the database, register a class implementing `Codenzia\FilamentPanelBase\Contracts\ProvidesLocales` and reference it via `locale.provider`. The contract returns `['ar' => ['native' => 'العربية', 'dir' => 'rtl', 'flag' => 'sa'], ...]`.
+
+#### `locale.switch` route
+
+`Codenzia\FilamentPanelBase\Http\Controllers\LocaleController::switch` backs the `locale.switch` named route. The bundled `<x-filament-panel-base::locale-switcher>` view points at it by default (`switchRoute` prop), so the dropdown works the moment the plugin is registered — no host wiring. To replace it with your own controller, set `locale.routes.enabled = false` and register a `Route::get(...)->name('locale.switch')` yourself.
+
+#### Carbon, `Number`, and translatable content stay in sync
+
+After `App::setLocale($locale)`, the `SetLocale` middleware also calls:
+
+- `Carbon::setLocale($locale)` and `CarbonImmutable::setLocale($locale)` — fixes `->diffForHumans()`, `->translatedFormat(...)`, and date diffs that would otherwise stay in the previously-set process locale.
+- `Number::useLocale($locale)` (when present) — fixes `Number::currency()`, `Number::ordinal()`, `Number::percentage()`, etc.
+- `session(['spatie_translatable_active_locale' => $locale])` — switches the active locale for `spatie/laravel-translatable` content so translatable Filament fields default to the same language as the UI.
+
+No host code is required to opt in; the propagation runs on every request that hits the panel.
+
+#### RTL auto-toggle
+
+Filament v4's base layout reads `__('filament-panels::layout.direction')` to populate `<html dir="...">`. The package ships minimal `layout.direction` overrides for the canonical RTL locales under the `filament-panels` namespace:
+
+- `ar` (Arabic)
+- `he` (Hebrew)
+- `fa` (Persian / Farsi)
+- `ur` (Urdu)
+
+Declaring any of these in `locale.available` flips the entire panel to RTL the moment a user picks the locale — sidebars on the right, modal close buttons on the left, navigation chevrons mirrored. No additional packages required.
+
+If you maintain your own list of RTL locales (e.g. a niche dialect), pair it with `SetLocale::isRtlLocale(string $code): bool`, which exposes the same allowlist (`ar, he, fa, ur, ps, sd, yi, ku, dv`) used by the config-fallback dropdown payload.
+
+#### Validation translations
+
+Adding `ar` to `locale.available` is half the story — Laravel's validator looks for `lang/ar/validation.php` in the host's resources, and if it doesn't exist, every validation error falls back to English. Two strategies:
+
+1. **Production-quality translations.** `composer require laravel-lang/lang` ships community-maintained translations for 70+ locales. Run `php artisan lang:add ar` and you're done.
+
+2. **Quick scaffold.** When you need a starting template (or the locale isn't covered by `laravel-lang/lang`):
+
+   ```bash
+   php artisan filament-panel-base:scaffold-validation                # uses config('filament-panel-base.locale.available')
+   php artisan filament-panel-base:scaffold-validation ar fr de       # explicit codes
+   php artisan filament-panel-base:scaffold-validation ar --force     # overwrite existing
+   ```
+
+   Seeds each target with Laravel's bundled English `validation.php`, ready to translate. Skips files that already exist unless `--force` is passed.
+
+#### Per-user preferred locale
+
+For notifications, mark your User model with the `HasPreferredLocale` trait:
+
+```php
+use Codenzia\FilamentPanelBase\Concerns\HasPreferredLocale;
+use Illuminate\Contracts\Translation\HasLocalePreference;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+
+class User extends Authenticatable implements HasLocalePreference
+{
+    use HasPreferredLocale;
+    use Notifiable;
+
+    // Optional — defaults to the 'locale' column.
+    protected string $preferredLocaleAttribute = 'ui_lang';
+}
+```
+
+Laravel's `NotificationSender` wraps every `Notification::send($user, ...)` in `withLocale($user->preferredLocale(), ...)` whenever the notifiable implements `HasLocalePreference`. Approval emails, password resets, OTP messages all dispatch in the user's chosen language with no per-notification code. The trait falls back to `config('app.locale')` when the column is null/empty so a missing preference never short-circuits the wrap mid-send.
 
 ### Legacy: `RegistrationSettings` (deprecated)
 
@@ -671,6 +759,7 @@ class Currency extends Model implements ProvidesCurrencies
 | `HasProfileSlideOver` | Profile-editing slideOver action in the user menu with vertical tabs (Personal Info + Change Password) |
 | `NotifiesAdmins` | Sends notifications to admin-role users and optionally the content author |
 | `HasContactValidation` | Shared validation rules for lead capture forms (name, phone, email, WhatsApp) |
+| `HasPreferredLocale` | Implements Laravel's `HasLocalePreference` so notifications auto-dispatch in the user's chosen language — see [Localisation](#localisation) |
 
 #### HasProfileSlideOver
 
