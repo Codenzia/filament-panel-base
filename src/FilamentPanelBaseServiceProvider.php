@@ -28,6 +28,7 @@ use Codenzia\FilamentPanelBase\CommandPalette\Settings\CommandPaletteSettings;
 use Codenzia\FilamentPanelBase\Commands\DemoPasswordCommand;
 use Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand;
 use Codenzia\FilamentPanelBase\Commands\InstallAuthCommand;
+use Codenzia\FilamentPanelBase\Commands\ScaffoldValidationLangCommand;
 use Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand;
 use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Codenzia\FilamentPanelBase\Sessions\Listeners\DetectNewDeviceLogin;
@@ -65,6 +66,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             ->hasCommands([
                 EnableTranslationsCommand::class,
                 ScanTranslationsCommand::class,
+                ScaffoldValidationLangCommand::class,
                 InstallAuthCommand::class,
                 DemoPasswordCommand::class,
                 RollupAnalyticsCommand::class,
