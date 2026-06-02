@@ -6,6 +6,18 @@ use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 return [
     /*
     |--------------------------------------------------------------------------
+    | Admin navigation group
+    |--------------------------------------------------------------------------
+    |
+    | Sidebar group the package's admin pages (Analytics, Authentication, Demo
+    | settings) live under. Host apps can override this to place them wherever
+    | fits their information architecture.
+    |
+    */
+    'admin_navigation_group' => env('FILAMENT_PANEL_BASE_ADMIN_NAV_GROUP', 'System'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Branding
     |--------------------------------------------------------------------------
     |

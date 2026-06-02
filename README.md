@@ -55,6 +55,22 @@ Publish the config file:
 php artisan vendor:publish --tag="filament-panel-base-config"
 ```
 
+### Admin navigation group
+
+The package's admin pages — **Analytics**, **Authentication settings**, and **Demo settings** — are grouped in the sidebar under a single, configurable group (default **`System`**). Override it per app to fit your information architecture:
+
+```php
+// config/filament-panel-base.php
+'admin_navigation_group' => 'System', // or 'Settings', 'Admin', etc.
+```
+
+```dotenv
+# or via .env
+FILAMENT_PANEL_BASE_ADMIN_NAV_GROUP="System"
+```
+
+Each page reads this at runtime via `getNavigationGroup()`, so a host app can place them wherever it likes without subclassing. (Demo settings sorts last within the group.)
+
 ## Setup
 
 ### 1. Register the plugin

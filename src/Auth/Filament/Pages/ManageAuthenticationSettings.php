@@ -72,8 +72,6 @@ class ManageAuthenticationSettings extends Page implements HasForms
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-shield-check';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'System';
-
     protected static ?int $navigationSort = 50;
 
     protected string $view = 'filament-panel-base::filament.auth.manage-authentication-settings';
@@ -88,7 +86,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
 
     public static function getNavigationGroup(): ?string
     {
-        return __('filament-panel-base::auth.settings_nav_group');
+        return config('filament-panel-base.admin_navigation_group', 'System');
     }
 
     public function getTitle(): string|Htmlable

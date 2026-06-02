@@ -46,12 +46,11 @@ class AnalyticsPage extends Dashboard
     protected static ?int $navigationSort = 0;
 
     /**
-     * Filament 4 supports getNavigationGroup() — kept translatable so host apps
-     * can place Analytics wherever they like (here, under the System group).
+     * Host apps place this page via config('filament-panel-base.admin_navigation_group').
      */
     public static function getNavigationGroup(): ?string
     {
-        return __('System');
+        return config('filament-panel-base.admin_navigation_group', 'System');
     }
 
     /**
