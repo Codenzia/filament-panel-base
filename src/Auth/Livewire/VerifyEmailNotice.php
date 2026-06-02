@@ -47,7 +47,7 @@ class VerifyEmailNotice extends Component
             'email' => $email,
             'verified' => Auth::user()?->hasVerifiedEmail() ?? false,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.verify_email_title'));
     }
 }

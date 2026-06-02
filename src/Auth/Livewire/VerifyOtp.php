@@ -91,7 +91,7 @@ class VerifyOtp extends Component
             'length' => $settings->otp_code_length,
             'target' => $target,
         ])
-            ->layout(config('filament-panel-base.auth.layout', 'filament-panel-base::layouts.auth'))
+            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.verify_otp_title', [
                 'channel' => __('filament-panel-base::auth.channel.'.$settings->otp_driver),
             ]));

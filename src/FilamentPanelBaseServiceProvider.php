@@ -28,6 +28,7 @@ use Codenzia\FilamentPanelBase\CommandPalette\Settings\CommandPaletteSettings;
 use Codenzia\FilamentPanelBase\Commands\DemoPasswordCommand;
 use Codenzia\FilamentPanelBase\Commands\EnableTranslationsCommand;
 use Codenzia\FilamentPanelBase\Commands\InstallAuthCommand;
+use Codenzia\FilamentPanelBase\Commands\ScaffoldValidationLangCommand;
 use Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand;
 use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Codenzia\FilamentPanelBase\Sessions\Listeners\DetectNewDeviceLogin;
@@ -65,6 +66,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             ->hasCommands([
                 EnableTranslationsCommand::class,
                 ScanTranslationsCommand::class,
+                ScaffoldValidationLangCommand::class,
                 InstallAuthCommand::class,
                 DemoPasswordCommand::class,
                 RollupAnalyticsCommand::class,
@@ -145,6 +147,18 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // Register Blade component namespace
         Blade::componentNamespace('Codenzia\\FilamentPanelBase\\View\\Components', static::$viewNamespace);
 
+        // Filament's base layout switches between LTR and RTL purely via
+        // __('filament-panels::layout.direction'). Ship minimal layout
+        // overrides for common RTL locales (ar / he / fa / ur) so the
+        // <html dir="..."> attribute flips automatically the moment the
+        // active locale changes — no host wiring, no extra package needed.
+        // filament/translations (when installed) keeps providing the rest
+        // of the strings; we only override `direction`.
+        $filamentPanelsLang = __DIR__.'/../resources/lang/vendor/filament-panels';
+        if (is_dir($filamentPanelsLang)) {
+            $this->loadTranslationsFrom($filamentPanelsLang, 'filament-panels');
+        }
+
         // Register flag-icons CSS with Filament's asset system.
         // Auto-injected on Filament panels via @filamentStyles.
         FilamentAsset::register([
@@ -203,6 +217,10 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 
         if ((bool) config('filament-panel-base.auth.routes.enabled', true)) {
             $this->loadAuthRoutes();
+        }
+
+        if ((bool) config('filament-panel-base.locale.routes.enabled', true)) {
+            $this->loadLocaleRoutes();
         }
 
         Event::subscribe(AuthUserObserver::class);
@@ -519,6 +537,23 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         Route::middleware($middleware)
             ->prefix($prefix)
             ->name($name)
+            ->group($routesFile);
+    }
+
+    protected function loadLocaleRoutes(): void
+    {
+        $routesFile = __DIR__.'/../routes/locale.php';
+
+        if (! file_exists($routesFile)) {
+            return;
+        }
+
+        $prefix = (string) config('filament-panel-base.locale.routes.prefix', '');
+        /** @var array<int, string> $middleware */
+        $middleware = (array) config('filament-panel-base.locale.routes.middleware', ['web']);
+
+        Route::middleware($middleware)
+            ->prefix($prefix)
             ->group($routesFile);
     }
 

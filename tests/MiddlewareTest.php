@@ -1,5 +1,7 @@
 <?php
 
+use Carbon\Carbon;
+use Carbon\CarbonImmutable;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Middleware\EnsureUserApproved;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
@@ -8,6 +10,7 @@ use Illuminate\Http\Response;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Number;
 
 // ─── SetLocale ───────────────────────────────────────────
 
@@ -50,6 +53,24 @@ it('provides static getLocales method', function () {
         ->and($locales)->toHaveKey('ar');
 });
 
+it('propagates the chosen locale to Carbon and the Number helper', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar']]);
+
+    $request = Request::create('/test');
+    $request->setLaravelSession(app('session.store'));
+    session(['locale' => 'ar']);
+
+    (new SetLocale)->handle($request, fn () => new Response);
+
+    expect(App::getLocale())->toBe('ar')
+        ->and(Carbon::getLocale())->toBe('ar')
+        ->and(CarbonImmutable::getLocale())->toBe('ar');
+
+    if (class_exists(Number::class)) {
+        expect(Number::defaultLocale())->toBe('ar');
+    }
+});
+
 it('builds locale array from config when no provider is set', function () {
     config([
         'filament-panel-base.locale.provider' => null,
@@ -63,6 +84,31 @@ it('builds locale array from config when no provider is set', function () {
         ->and($locales['en'])->toHaveKey('native')
         ->and($locales['en'])->toHaveKey('dir')
         ->and($locales['en'])->toHaveKey('flag');
+});
+
+it('marks known RTL locales as rtl in the config-fallback payload', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar', 'he', 'fa', 'ur', 'fr']]);
+
+    $locales = SetLocale::getLocales();
+
+    expect($locales['en']['dir'])->toBe('ltr')
+        ->and($locales['ar']['dir'])->toBe('rtl')
+        ->and($locales['he']['dir'])->toBe('rtl')
+        ->and($locales['fa']['dir'])->toBe('rtl')
+        ->and($locales['ur']['dir'])->toBe('rtl')
+        ->and($locales['fr']['dir'])->toBe('ltr');
+});
+
+it('flips Filament panels layout direction to rtl when an RTL locale is active', function () {
+    config(['filament-panel-base.locale.available' => ['en', 'ar']]);
+
+    $request = Request::create('/test');
+    $request->setLaravelSession(app('session.store'));
+    session(['locale' => 'ar']);
+
+    (new SetLocale)->handle($request, fn () => new Response);
+
+    expect(__('filament-panels::layout.direction'))->toBe('rtl');
 });
 
 // ─── EnsureUserApproved ──────────────────────────────────
