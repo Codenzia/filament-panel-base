@@ -548,11 +548,13 @@ class FilamentPanelBasePlugin implements Plugin
         if ($this->filamentAnalyticsPageClass !== null) {
             $panel->pages([$this->filamentAnalyticsPageClass]);
 
-            // Filament needs the analytics widgets registered at the panel
-            // level so it can bind their Livewire component aliases —
-            // returning them from AnalyticsPage::getWidgets() alone is not
-            // enough; Livewire would error "component not found" on render.
-            $panel->widgets([
+            // Bind the analytics widgets' Livewire component aliases so
+            // AnalyticsPage::getWidgets() can render them (otherwise Livewire
+            // errors "component not found"). Use livewireComponents() — NOT
+            // widgets() — so they are registered for rendering WITHOUT being
+            // added to the panel's widget pool, which would otherwise leak all
+            // 9 analytics widgets onto the host's default Dashboard.
+            $panel->livewireComponents([
                 VisitorsTodayWidget::class,
                 ErrorRateSparklineWidget::class,
                 VisitorsChartWidget::class,
