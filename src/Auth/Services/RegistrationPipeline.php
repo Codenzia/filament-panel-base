@@ -37,9 +37,23 @@ class RegistrationPipeline
     /**
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $context
+     * @param  \Closure|null  $beforeUserCreation  Optional callback executed
+     *        INSIDE the same DB transaction as user creation, just before
+     *        $userModel::create() runs. Receives the payload array and may
+     *        return a mutated payload array (or null to keep it unchanged).
+     *
+     *        This is the extension point downstream packages use to create
+     *        related rows atomically with the user — e.g. tenant-module's
+     *        TenantSignupService creates a Tenant here and adds `tenant_id`
+     *        to the payload so the new user lands pre-scoped. If this closure
+     *        throws, the user is never created.
      */
-    public function register(string $userModel, array $payload, array $context = []): Authenticatable
-    {
+    public function register(
+        string $userModel,
+        array $payload,
+        array $context = [],
+        ?\Closure $beforeUserCreation = null,
+    ): Authenticatable {
         $event = new UserRegistering($payload, $context);
         event($event);
 
@@ -52,7 +66,15 @@ class RegistrationPipeline
         $this->applyModerationStatus($payload);
 
         /** @var Authenticatable $user */
-        $user = DB::transaction(function () use ($userModel, $payload) {
+        $user = DB::transaction(function () use ($userModel, $payload, $beforeUserCreation) {
+            if ($beforeUserCreation !== null) {
+                $mutated = $beforeUserCreation($payload);
+
+                if (is_array($mutated)) {
+                    $payload = $mutated;
+                }
+            }
+
             /** @var Model $model */
             $model = $userModel::create($payload);
 
