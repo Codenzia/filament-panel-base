@@ -42,6 +42,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 [Unreleased]: https://github.com/Codenzia/filament-panel-base/commits/main
 
+## [0.3.1] - 2026-06-06
+
+### Fixed
+- **`withFilamentTwoFactorChallengePage()` no longer fatals at panel boot.** The plugin used to register `TwoFactorChallengePage` via `$panel->pages([…])`, which invokes `static::registerRoutes()` on every entry. The page extends `SimplePage` (Filament's bare auth-card layout) — which, unlike regular `Page`, does **not** use the `HasRoutes` trait — so the call aborted the panel with `Method TwoFactorChallengePage::registerRoutes does not exist`. The plugin now routes the in-panel challenge through `$panel->routes(...)` instead, mounting it at `/{panel-path}/two-factor-challenge` without touching `Page`'s route machinery. Consumers can opt in with `FilamentPanelBasePlugin::make()->withFilamentTwoFactorChallengePage()` and the panel boots cleanly. The public `/two-factor-challenge` Livewire route registered by `routes/auth.php` is unaffected — both coexist; hosts pick which one their post-credentials redirect targets.
+
 ## [0.1.0] - 2026-05-20
 
 ### Added

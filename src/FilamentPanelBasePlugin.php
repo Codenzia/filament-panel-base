@@ -30,6 +30,7 @@ use Codenzia\FilamentPanelBase\TwoFactor\Filament\Pages\TwoFactorChallengePage;
 use Codenzia\FilamentPanelBase\TwoFactor\TwoFactorPlugin;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
+use Illuminate\Support\Facades\Route;
 
 /**
  * Filament panel plugin that provides shared multi-panel configuration.
@@ -542,7 +543,21 @@ class FilamentPanelBasePlugin implements Plugin
         }
 
         if ($this->twoFactorChallengePageClass !== null) {
-            $panel->pages([$this->twoFactorChallengePageClass]);
+            // Register the in-panel challenge as a direct Laravel route, NOT
+            // via $panel->pages([...]). TwoFactorChallengePage extends
+            // SimplePage (auth-style bare layout), and SimplePage — unlike
+            // Filament's regular Page — skips the HasRoutes trait that
+            // powers registerRoutes(). Going through $panel->pages() would
+            // fatal at panel boot with "Method ...::registerRoutes does not
+            // exist". $panel->routes() runs inside the panel's path-prefix
+            // group BEFORE authMiddleware, which is what the challenge
+            // needs (user has passed credentials but Auth::login() hasn't
+            // been called yet).
+            $pageClass = $this->twoFactorChallengePageClass;
+            $panel->routes(function () use ($pageClass): void {
+                Route::get('/two-factor-challenge', $pageClass)
+                    ->name('pages.two-factor-challenge');
+            });
         }
 
         if ($this->filamentAnalyticsPageClass !== null) {
