@@ -550,9 +550,37 @@ Event::listen(SocialAccountMapping::class, function (SocialAccountMapping $event
 
 For post-persistence side effects (welcome emails, audit logging) use `SocialUserLinked` instead — the `linked` flag is `true` on the first link/signup and `false` on returning sign-in.
 
+### Registration policies
+
+`AuthenticationSettings` controls **who may create an account**. Mix and match — the controls compose:
+
+| Goal | How |
+|---|---|
+| **Open** — anyone can register | `registration_mode = 'open'` (default) |
+| **Moderated** — admin must approve | `registration_mode = 'moderated'` → new users land `pending`; `EnsureUserApproved` blocks login until approved, `AccountApprovedNotification` emails them |
+| **Closed** — no self-signup | Don't enable Filament's `->registration()` page; admins create/invite accounts |
+| **Domain-restricted** — only `@acme.com` (and subdomains) | `allowed_email_domains = ['acme.com']` (empty = any domain) |
+| **No throwaway emails** | `disposable_email_blocking = true` (default) |
+
+The email-domain allowlist is enforced by the `AllowedEmailDomain` validation rule and is look-alike safe (`notacme.com` does **not** satisfy an `acme.com` allowlist). Set it three ways — admin **Authentication** settings page, the fluent API, or an env fallback:
+
+```php
+FilamentPanelBasePlugin::make()
+    ->withAuthentication(fn ($auth) => $auth
+        ->moderation()                          // require admin approval
+        ->allowedEmailDomains(['acme.com'])     // staff-only signup (+ subdomains)
+        ->disposableEmailBlocking()             // reject throwaway providers
+    );
+```
+
+```dotenv
+# config fallback, used before settings are migrated / when the DB is unavailable
+PANEL_ALLOWED_EMAIL_DOMAINS="acme.com,acme.io"
+```
+
 ### Auth settings page (admin UI)
 
-The plugin ships a Filament page that surfaces every `AuthenticationSettings` field — registration mode, identifier, verification, OTP driver/lifetime, social providers, email-linking policy, throttle limits — grouped into sections so admins don't need to edit DB rows directly.
+The plugin ships a Filament page that surfaces every `AuthenticationSettings` field — registration mode, identifier, verification, sign-up email-domain allowlist, OTP driver/lifetime, social providers, email-linking policy, throttle limits — grouped into sections so admins don't need to edit DB rows directly.
 
 #### Authorisation (REQUIRED — fail-closed default)
 
