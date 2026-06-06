@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.3.1] - 2026-06-06
 
 ### Fixed
+- **`extra.branch-alias.dev-main` now tracks `0.3.x-dev`** (was stale at `0.1.x-dev`). Path-linked installs of `dev-main` advertise the alias version to composer, so a consuming app with `"codenzia/filament-panel-base": "^0.3"` could not resolve a `composer plugin:local` symlink under the stale alias and would fall back to the Packagist release. Verifying package fixes locally via the [[codenzia-local-plugin-linking]] toolchain was effectively broken.
 - **`withFilamentTwoFactorChallengePage()` no longer fatals at panel boot.** The plugin used to register `TwoFactorChallengePage` via `$panel->pages([…])`, which invokes `static::registerRoutes()` on every entry. The page extends `SimplePage` (Filament's bare auth-card layout) — which, unlike regular `Page`, does **not** use the `HasRoutes` trait — so the call aborted the panel with `Method TwoFactorChallengePage::registerRoutes does not exist`. The plugin now routes the in-panel challenge through `$panel->routes(...)` instead, mounting it at `/{panel-path}/two-factor-challenge` without touching `Page`'s route machinery. Consumers can opt in with `FilamentPanelBasePlugin::make()->withFilamentTwoFactorChallengePage()` and the panel boots cleanly. The public `/two-factor-challenge` Livewire route registered by `routes/auth.php` is unaffected — both coexist; hosts pick which one their post-credentials redirect targets.
 
 ## [0.1.0] - 2026-05-20
