@@ -43,8 +43,11 @@ it('exposes the expected view + navigation metadata', function (): void {
     expect(ManageAuthenticationSettings::getNavigationLabel())
         ->toBe(__('filament-panel-base::auth.settings_nav_label'));
 
+    // The admin pages live under the configurable shared group (default
+    // "System"), not a hardcoded label — see ManageAuthenticationSettings::
+    // getNavigationGroup() and config('filament-panel-base.admin_navigation_group').
     expect(ManageAuthenticationSettings::getNavigationGroup())
-        ->toBe(__('filament-panel-base::auth.settings_nav_group'));
+        ->toBe(config('filament-panel-base.admin_navigation_group', 'System'));
 });
 
 it('the base page is fail-closed by default (canAccess returns false)', function (): void {

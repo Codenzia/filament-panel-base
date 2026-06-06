@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Validation;
 
+use Codenzia\FilamentPanelBase\Auth\Rules\AllowedEmailDomain;
 use Codenzia\FilamentPanelBase\Auth\Rules\NotDisposableEmail;
 use Codenzia\FilamentPanelBase\Auth\Rules\ValidPhoneFormat;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
@@ -38,7 +39,7 @@ class RegistrationRules
      */
     private static function emailRules(AuthenticationSettings $settings): array
     {
-        $base = ['string', 'email:rfc', 'max:255', 'unique:users,email', new NotDisposableEmail];
+        $base = ['string', 'email:rfc', 'max:255', 'unique:users,email', new NotDisposableEmail, new AllowedEmailDomain];
 
         return match ($settings->credentials_mode) {
             'phone' => array_merge(['nullable'], $base),

@@ -6,6 +6,35 @@ use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 return [
     /*
     |--------------------------------------------------------------------------
+    | Admin navigation group
+    |--------------------------------------------------------------------------
+    |
+    | Sidebar group the package's admin pages (Analytics, Authentication, Demo
+    | settings) live under. Host apps can override this to place them wherever
+    | fits their information architecture.
+    |
+    */
+    'admin_navigation_group' => env('FILAMENT_PANEL_BASE_ADMIN_NAV_GROUP', 'System'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Allowed sign-up email domains (config fallback)
+    |--------------------------------------------------------------------------
+    |
+    | Restrict self-registration to these email domains (e.g. ['acme.com']).
+    | Empty = any domain allowed. This is the fallback used before settings are
+    | migrated / when the DB is unavailable; the admin Authentication settings
+    | page (auth.allowed_email_domains) takes precedence at runtime. Set via
+    | a comma-separated env, e.g. PANEL_ALLOWED_EMAIL_DOMAINS="acme.com,acme.io".
+    |
+    */
+    'allowed_email_domains' => array_values(array_filter(array_map(
+        'trim',
+        explode(',', (string) env('PANEL_ALLOWED_EMAIL_DOMAINS', '')),
+    ))),
+
+    /*
+    |--------------------------------------------------------------------------
     | Branding
     |--------------------------------------------------------------------------
     |

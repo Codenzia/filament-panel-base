@@ -106,6 +106,7 @@ return [
 
     // Validation
     'email_disposable' => 'The :attribute domain is not allowed. Please use a permanent email address.',
+    'email_domain_not_allowed' => 'Sign-ups are restricted to approved email domains. Please use your organisation email.',
     'phone_invalid' => 'The :attribute is not a valid phone number.',
     'phone_format_invalid' => 'The :attribute format is invalid. Use international format, e.g. +14155552671.',
     'throttle_rate_limited' => 'Too many attempts. Try again in :seconds seconds.',
@@ -133,6 +134,8 @@ return [
     'settings_default_country_code' => 'Default country code',
     'settings_disposable_email_blocking' => 'Block disposable email domains',
     'settings_disposable_email_blocking_help' => 'Reject sign-ups using throwaway email providers (e.g. 10minutemail).',
+    'settings_allowed_email_domains' => 'Restrict sign-ups to these email domains',
+    'settings_allowed_email_domains_help' => 'Leave empty to allow any domain. Add e.g. "acme.com" to permit only that domain and its subdomains. Combines with the registration mode above.',
 
     'settings_section_verification' => 'Verification',
     'settings_section_verification_description' => 'Decide which channels must be verified before granting access.',

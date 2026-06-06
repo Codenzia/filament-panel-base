@@ -72,6 +72,16 @@ class AuthenticationSettings extends Settings
     /** Reject signups whose email domain is in the disposable-email blocklist. */
     public bool $disposable_email_blocking = true;
 
+    /**
+     * Allowlist of email domains permitted to self-register (e.g.
+     * ['acme.com']). Empty = any domain allowed. An entry matches its exact
+     * host and any subdomain. Composes with `registration_mode` — a
+     * domain-allowed signup can still require moderation.
+     *
+     * @var array<int, string>
+     */
+    public array $allowed_email_domains = [];
+
     /** Per-minute rate limit for auth endpoints (login, register, OTP send, OTP verify). */
     public int $throttle_per_minute = 5;
 

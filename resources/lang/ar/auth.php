@@ -106,6 +106,7 @@ return [
 
     // Validation
     'email_disposable' => 'نطاق :attribute غير مسموح. يرجى استخدام بريد إلكتروني دائم.',
+    'email_domain_not_allowed' => 'التسجيل مقتصر على نطاقات البريد المعتمدة. يرجى استخدام بريد مؤسستك.',
     'phone_invalid' => ':attribute ليس رقم هاتف صالح.',
     'phone_format_invalid' => 'صيغة :attribute غير صالحة. استخدم الصيغة الدولية، مثل +14155552671.',
     'throttle_rate_limited' => 'محاولات كثيرة. حاول مرة أخرى خلال :seconds ثانية.',
@@ -133,6 +134,8 @@ return [
     'settings_default_country_code' => 'رمز الدولة الافتراضي',
     'settings_disposable_email_blocking' => 'حظر نطاقات البريد المؤقت',
     'settings_disposable_email_blocking_help' => 'رفض التسجيل باستخدام مزودي البريد المؤقت.',
+    'settings_allowed_email_domains' => 'حصر التسجيل في نطاقات البريد التالية',
+    'settings_allowed_email_domains_help' => 'اتركه فارغًا للسماح بأي نطاق. أضف مثلاً "acme.com" للسماح بهذا النطاق ونطاقاته الفرعية فقط. يعمل مع وضع التسجيل أعلاه.',
 
     'settings_section_verification' => 'التحقق',
     'settings_section_verification_description' => 'حدّد القنوات التي يجب التحقق منها قبل منح الوصول.',
