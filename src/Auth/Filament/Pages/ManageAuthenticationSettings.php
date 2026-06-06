@@ -101,6 +101,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
         $this->form->fill([
             'registration_mode' => $settings->registration_mode,
             'disposable_email_blocking' => $settings->disposable_email_blocking,
+            'allowed_email_domains' => $settings->allowed_email_domains,
             'require_email_verification' => $settings->require_email_verification,
             'require_phone_verification' => $settings->require_phone_verification,
             'credentials_mode' => $settings->credentials_mode,
@@ -154,6 +155,11 @@ class ManageAuthenticationSettings extends Page implements HasForms
                         Toggle::make('disposable_email_blocking')
                             ->label(__('filament-panel-base::auth.settings_disposable_email_blocking'))
                             ->helperText(__('filament-panel-base::auth.settings_disposable_email_blocking_help')),
+                        TagsInput::make('allowed_email_domains')
+                            ->label(__('filament-panel-base::auth.settings_allowed_email_domains'))
+                            ->helperText(__('filament-panel-base::auth.settings_allowed_email_domains_help'))
+                            ->placeholder('acme.com')
+                            ->columnSpanFull(),
                     ])
                     ->columns(2),
 
@@ -251,6 +257,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
 
         $settings->registration_mode = $data['registration_mode'];
         $settings->disposable_email_blocking = (bool) $data['disposable_email_blocking'];
+        $settings->allowed_email_domains = $this->normalizeDomains($data['allowed_email_domains'] ?? []);
         $settings->require_email_verification = (bool) $data['require_email_verification'];
         $settings->require_phone_verification = (bool) $data['require_phone_verification'];
         $settings->credentials_mode = $data['credentials_mode'];
@@ -272,5 +279,20 @@ class ManageAuthenticationSettings extends Page implements HasForms
             ->title(__('filament-panel-base::auth.settings_saved'))
             ->success()
             ->send();
+    }
+
+    /**
+     * Clean an admin-entered domain allowlist: strip a leading `@`, lowercase,
+     * trim, and drop blanks/duplicates. `@Acme.com ` → `acme.com`.
+     *
+     * @param  array<int, string>  $domains
+     * @return array<int, string>
+     */
+    private function normalizeDomains(array $domains): array
+    {
+        return array_values(array_filter(array_unique(array_map(
+            static fn (string $domain): string => ltrim(strtolower(trim($domain)), '@'),
+            $domains,
+        ))));
     }
 }

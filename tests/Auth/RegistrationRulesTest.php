@@ -1,5 +1,6 @@
 <?php
 
+use Codenzia\FilamentPanelBase\Auth\Rules\AllowedEmailDomain;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Auth\Validation\RegistrationRules;
 
@@ -44,6 +45,17 @@ it('keeps phone optional when credentials_mode is "both" but phone_required is f
 
     expect($rules['email'])->toContain('required')
         ->and($rules['phone'])->toContain('nullable');
+});
+
+it('wires the email-domain allowlist rule into the email rules', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    $settings->credentials_mode = 'email';
+
+    $rules = RegistrationRules::build($settings);
+
+    $hasAllowlistRule = collect($rules['email'])->contains(fn ($rule): bool => $rule instanceof AllowedEmailDomain);
+
+    expect($hasAllowlistRule)->toBeTrue();
 });
 
 it('always requires name and password', function (): void {

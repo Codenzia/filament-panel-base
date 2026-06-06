@@ -139,6 +139,23 @@ class AuthenticationPlugin
         return $this;
     }
 
+    /**
+     * Restrict self-registration to these email domains (e.g. 'acme.com').
+     * Empty list = any domain allowed. A leading `@` is tolerated. An entry
+     * matches its exact host and any subdomain.
+     *
+     * @param  array<int, string>  $domains
+     */
+    public function allowedEmailDomains(array $domains): static
+    {
+        $this->overrides['allowed_email_domains'] = array_values(array_filter(array_unique(array_map(
+            static fn (string $domain): string => ltrim(strtolower(trim($domain)), '@'),
+            $domains,
+        ))));
+
+        return $this;
+    }
+
     public function throttle(int $perMinute = 5, int $perDay = 50): static
     {
         $this->overrides['throttle_per_minute'] = $perMinute;
