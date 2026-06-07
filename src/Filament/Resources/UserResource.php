@@ -109,7 +109,7 @@ class UserResource extends Resource
         return (string) static::getModel()::query()->count();
     }
 
-    /** Access is the host's decision; default to the protected super-admin when that concept exists. */
+    /** Access is the host's decision; default to the super-admin when that concept exists. */
     public static function canAccess(): bool
     {
         if (static::$authorizeUsing !== null) {
@@ -121,8 +121,20 @@ class UserResource extends Resource
             return false;
         }
 
-        // laravel-superadmin present → restrict to the super-admin by default.
-        return method_exists($user, 'isSuperAdmin') ? (bool) $user->isSuperAdmin() : true;
+        // laravel-superadmin is the fleet authority on "is this a super-admin?"
+        // (the protected account OR the configured super-admin role). Delegate to
+        // it so the definition lives in one place across every panel.
+        if (class_exists(\Codenzia\SuperAdmin\Facades\SuperAdmin::class)) {
+            return \Codenzia\SuperAdmin\Facades\SuperAdmin::isSuperAdmin($user);
+        }
+
+        // Spatie roles without laravel-superadmin → gate on the super-admin role.
+        if (method_exists($user, 'hasRole')) {
+            return (bool) $user->hasRole(config('filament-shield.super_admin.name', 'super_admin'));
+        }
+
+        // No admin concept present → the panel's own auth is the gate.
+        return true;
     }
 
     /** Roles are only offered when spatie/permission is installed and the model uses HasRoles. */

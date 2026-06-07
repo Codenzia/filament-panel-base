@@ -26,6 +26,14 @@ it('gates access through the host-supplied authorize closure', function (): void
     expect(UserResource::canAccess())->toBeTrue();
 });
 
+it('is fail-closed for guests when no authorize closure is set', function (): void {
+    // Default access path (no host closure): a guest is always denied, before
+    // any laravel-superadmin / Spatie-role delegation is considered.
+    UserResource::$authorizeUsing = null;
+
+    expect(UserResource::canAccess())->toBeFalse();
+});
+
 it('applies scalar navigation overrides (e.g. a custom group)', function (): void {
     FilamentPanelBasePlugin::make()->withUserManagement(navigationGroup: 'Users & roles', navigationSort: 7);
 
