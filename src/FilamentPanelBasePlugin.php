@@ -21,9 +21,12 @@ use Codenzia\FilamentPanelBase\Auth\Filament\Pages\ManageAuthenticationSettings;
 use Codenzia\FilamentPanelBase\Auth\Filament\Pages\Register;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\CommandPalette\CommandPalettePlugin;
+use Codenzia\FilamentPanelBase\CommandPalette\CommandPaletteRegistry;
 use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
+use Codenzia\FilamentPanelBase\Filament\Pages\ManageAppearanceSettings;
 use Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings;
 use Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource;
+use Codenzia\FilamentPanelBase\Filament\Resources\UserResource;
 use Codenzia\FilamentPanelBase\Sessions\SessionManagementPlugin;
 use Codenzia\FilamentPanelBase\Support\ThemePresets;
 use Codenzia\FilamentPanelBase\TwoFactor\Filament\Pages\TwoFactorChallengePage;
@@ -42,6 +45,10 @@ class FilamentPanelBasePlugin implements Plugin
     protected ?\Closure $settingsResolver = null;
 
     protected bool $translationsEnabled = false;
+
+    protected bool $userManagementEnabled = false;
+
+    protected ?string $appearanceSettingsPageClass = null;
 
     protected ?AuthenticationPlugin $authentication = null;
 
@@ -110,6 +117,120 @@ class FilamentPanelBasePlugin implements Plugin
     public function isTranslationsEnabled(): bool
     {
         return $this->translationsEnabled;
+    }
+
+    /**
+     * Enable the shared admin Users resource on this panel — opt-in, because not
+     * every panel is an admin panel (a customer dashboard just never calls this).
+     *
+     * Generalized from the fleet's many hand-rolled UserResources so the UI is
+     * consistent and fixed once. Role assignment appears only when
+     * spatie/permission is installed; the protected super-admin can't be deleted.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->withUserManagement(
+     *           authorize: fn () => auth()->user()?->can('Manage:Users'),
+     *           navigationGroup: 'Users & roles',
+     *       );
+     *
+     * @param  \Closure(): bool|null  $authorize  access gate (default: super-admin when laravel-superadmin is present)
+     * @param  \Closure(): array|null  $extraSchema  app-specific form components appended after the built-in tabs
+     * @param  \Closure(array): array|null  $tableColumns  receives the default columns, returns the final set (append/prepend/reorder)
+     * @param  \Closure(array): array|null  $tableFilters  same, for table filters
+     * @param  \Closure(array): array|null  $recordActions  same, for the row actions
+     */
+    public function withUserManagement(
+        ?\Closure $authorize = null,
+        ?\Closure $extraSchema = null,
+        ?\Closure $tableColumns = null,
+        ?\Closure $tableFilters = null,
+        ?\Closure $recordActions = null,
+        ?string $navigationGroup = null,
+        ?string $navigationIcon = null,
+        ?int $navigationSort = null,
+        ?string $model = null,
+    ): static {
+        $this->userManagementEnabled = true;
+
+        // Closures live on the resource (statics), not config — so config:cache stays serializable.
+        UserResource::$authorizeUsing = $authorize;
+        UserResource::$extraSchemaUsing = $extraSchema;
+        UserResource::$columnsUsing = $tableColumns;
+        UserResource::$filtersUsing = $tableFilters;
+        UserResource::$recordActionsUsing = $recordActions;
+
+        // Scalars are safe to push through config for the resource's static getters to read.
+        $overrides = array_filter([
+            'navigation_group' => $navigationGroup,
+            'navigation_icon' => $navigationIcon,
+            'navigation_sort' => $navigationSort,
+            'model' => $model,
+        ], fn ($v) => $v !== null);
+        if ($overrides !== []) {
+            config(['filament-panel-base.user_management' => array_merge(
+                (array) config('filament-panel-base.user_management', []),
+                $overrides,
+            )]);
+        }
+
+        return $this;
+    }
+
+    /**
+     * Whether the Users resource has been activated for this panel.
+     */
+    public function isUserManagementEnabled(): bool
+    {
+        return $this->userManagementEnabled;
+    }
+
+    /**
+     * Enable the shared "Appearance" settings page — opt-in. A UI over the panel's
+     * own settings instance (whatever ->settingsUsing()/->settingsClass() wired):
+     * edit app name, tagline, logo, favicon, theme preset + colors live, instead
+     * of editing the settings row in code/tinker.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()
+     *       ->settingsUsing(fn () => app(AppSettings::class))
+     *       ->withAppearanceSettings(authorize: fn () => auth()->user()?->isSuperAdmin());
+     *
+     * @param  class-string<ManageAppearanceSettings>|null  $page  a host subclass, for custom access/fields
+     * @param  \Closure(): bool|null  $authorize  access gate (default: super-admin when laravel-superadmin is present)
+     */
+    public function withAppearanceSettings(
+        ?string $page = null,
+        ?\Closure $authorize = null,
+        ?string $navigationGroup = null,
+        ?string $navigationIcon = null,
+        ?int $navigationSort = null,
+    ): static {
+        $this->appearanceSettingsPageClass = $page ?? ManageAppearanceSettings::class;
+
+        // Set the gate on the actual page class used (honours a host subclass).
+        ($this->appearanceSettingsPageClass)::$authorizeUsing = $authorize;
+
+        $overrides = array_filter([
+            'navigation_group' => $navigationGroup,
+            'navigation_icon' => $navigationIcon,
+            'navigation_sort' => $navigationSort,
+        ], fn ($v) => $v !== null);
+        if ($overrides !== []) {
+            config(['filament-panel-base.appearance' => array_merge(
+                (array) config('filament-panel-base.appearance', []),
+                $overrides,
+            )]);
+        }
+
+        return $this;
+    }
+
+    public function hasAppearanceSettingsPage(): bool
+    {
+        return $this->appearanceSettingsPageClass !== null;
     }
 
     /**
@@ -282,7 +403,7 @@ class FilamentPanelBasePlugin implements Plugin
      *
      * The palette renders on every Filament panel page via a render hook
      * once this method is called. Host plugins can push extra actions by
-     * resolving the {@see \Codenzia\FilamentPanelBase\CommandPalette\CommandPaletteRegistry}
+     * resolving the {@see CommandPaletteRegistry}
      * singleton and calling `register()`.
      *
      * Example:
@@ -516,6 +637,16 @@ class FilamentPanelBasePlugin implements Plugin
             $panel->resources([
                 TranslationResource::class,
             ]);
+        }
+
+        if ($this->userManagementEnabled) {
+            $panel->resources([
+                UserResource::class,
+            ]);
+        }
+
+        if ($this->appearanceSettingsPageClass !== null) {
+            $panel->pages([$this->appearanceSettingsPageClass]);
         }
 
         // Honour both the top-level fluent API (preferred) and the legacy

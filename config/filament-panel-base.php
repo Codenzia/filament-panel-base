@@ -233,6 +233,40 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | User Management (opt-in)
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for the shared Users resource enabled via
+    | FilamentPanelBasePlugin::make()->withUserManagement(). The fluent API
+    | arguments take precedence over these at runtime. `model` null falls back to
+    | the app's configured auth user model.
+    |
+    */
+    'user_management' => [
+        'navigation_group' => 'User Management',
+        'navigation_sort' => 10,
+        'navigation_icon' => 'heroicon-o-users',
+        'model' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Appearance settings page (opt-in)
+    |--------------------------------------------------------------------------
+    |
+    | Defaults for the shared branding page enabled via
+    | FilamentPanelBasePlugin::make()->withAppearanceSettings(). It edits the
+    | panel's own settings instance (->settingsUsing()/->settingsClass()).
+    |
+    */
+    'appearance' => [
+        'navigation_group' => 'Settings',
+        'navigation_sort' => 90,
+        'navigation_icon' => 'heroicon-o-paint-brush',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Authentication Module
     |--------------------------------------------------------------------------
     |
