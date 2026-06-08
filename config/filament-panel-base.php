@@ -49,6 +49,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Session Expiry (419) Handling
+    |--------------------------------------------------------------------------
+    |
+    | When a session/CSRF token expires, Laravel returns HTTP 419 — showing a
+    | bare "Page Expired" error on full-page submits and Livewire's "This page
+    | has expired" modal on AJAX requests. With this enabled (default), the
+    | package instead redirects the user cleanly to the login screen: a backend
+    | handler catches TokenMismatchException on full-page requests, and an
+    | injected Livewire hook intercepts 419 AJAX responses on every panel.
+    |
+    | Set PANEL_SESSION_EXPIRY=false to opt out (e.g. apps that handle 419
+    | themselves).
+    |
+    | 'redirect_to' overrides the destination. null = smart default:
+    |   current Filament panel login URL → route('login') → '/'.
+    |
+    */
+    'session_expiry' => [
+        'enabled' => env('PANEL_SESSION_EXPIRY', true),
+        'redirect_to' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Panel IDs
     |--------------------------------------------------------------------------
     |

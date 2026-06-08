@@ -29,6 +29,7 @@
 - **Two-Factor Authentication module** — TOTP enrolment via the profile slide-over, post-login challenge flow with intermediate session state, 8 single-use recovery codes hashed at rest, remember-device cookie, optional role-based mandatory enrolment middleware. Pluggable issuer/digits/period/window via fluent API.
 - **Sessions & Devices module** — self-service "Devices & Sessions" tab listing every active session from Laravel's database driver, per-row revoke, "sign out everywhere else", new-device-login event for sending alert emails.
 - **Command Palette (Cmd-K)** — global Cmd-K modal augmenting Filament's chrome with navigation jumps, a "Recent" group auto-populated from record-page views, and an extensible registry where consumer plugins push their own actions.
+- **Session-expiry (419) handling** — turns the jarring "Page Expired" error and Livewire "This page has expired" modal into a clean redirect to login, on by default for every panel (config kill-switch + optional front-of-site component).
 
 ---
 
@@ -1147,6 +1148,39 @@ FilamentView::registerRenderHook(
 ```
 
 The most recently-registered hook wins, so a host override replaces the package default cleanly.
+
+## Session Expiry (419) Handling
+
+When a session/CSRF token expires, Laravel returns HTTP **419** — Filament/Livewire shows a *"This page has expired"* modal on AJAX requests, and a bare *"Page Expired"* error on full-page submits. Both are jarring. This package replaces them with a clean redirect to the login screen, **on by default** for every consuming app — no wiring required.
+
+Two complementary pieces, both gated by `config('filament-panel-base.session_expiry.enabled')`:
+
+- **Backend** — a renderable catches the 419 (`TokenMismatchException`) on full-page requests and redirects to the login URL with a `warning` flash (`__('filament-panel-base::auth.session_expired')`). Livewire/AJAX 419s are deliberately left as 419 for the client-side hook to handle.
+- **Frontend** — a `BODY_END` render hook injects a Livewire `request` hook that intercepts 419 responses on every panel page, stores the current URL in `sessionStorage('redirect_after_login')`, redirects to login, and suppresses the default expiry modal.
+
+### Redirect target
+
+By default the user is sent to the **current Filament panel's own login URL** (e.g. `/admin/login`), falling back to the app's named `login` route, then `/`. Override it explicitly:
+
+```php
+// config/filament-panel-base.php
+'session_expiry' => [
+    'enabled' => env('PANEL_SESSION_EXPIRY', true),
+    'redirect_to' => '/login', // null = smart default (panel login → route('login') → '/')
+],
+```
+
+### Disabling
+
+Set `PANEL_SESSION_EXPIRY=false` in `.env` (or `session_expiry.enabled => false`) to opt out and restore the default Livewire modal / 419 page — useful for apps that handle 419 themselves.
+
+### Front-of-site (non-panel) pages
+
+Filament panel pages get the interceptor automatically. For Livewire pages rendered **outside** a panel (e.g. a custom public login/register layout), drop the bundled component into your layout:
+
+```blade
+<x-filament-panel-base::session-expiry-handler />
+```
 
 ## Translatable Content (Optional)
 

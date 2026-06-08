@@ -34,8 +34,10 @@ use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Codenzia\FilamentPanelBase\Sessions\Listeners\DetectNewDeviceLogin;
 use Codenzia\FilamentPanelBase\Sessions\Livewire\DeviceSessionList;
 use Codenzia\FilamentPanelBase\Sessions\Settings\SessionManagementSettings;
+use Codenzia\FilamentPanelBase\Support\SessionExpiry;
 use Codenzia\FilamentPanelBase\TwoFactor\Livewire\TwoFactorChallenge;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -43,7 +45,10 @@ use Filament\Support\Assets\Css;
 use Filament\Support\Facades\FilamentAsset;
 use Filament\Support\Facades\FilamentView;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Console\Scheduling\Schedule;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -51,6 +56,7 @@ use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 {
@@ -135,6 +141,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         $this->bootCommandPaletteModule();
         $this->bootDemoModule();
         $this->bootBrandingFooter();
+        $this->bootSessionExpiryModule();
 
         // Register settings migration path so spatie/laravel-settings discovers them
         $settingsMigrationsPath = __DIR__.'/../database/settings';
@@ -280,8 +287,8 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             // so we don't resolve the Schedule binding during a normal HTTP
             // request — keeps cold-start cheap.
             $this->app->afterResolving(
-                \Illuminate\Console\Scheduling\Schedule::class,
-                function (\Illuminate\Console\Scheduling\Schedule $schedule): void {
+                Schedule::class,
+                function (Schedule $schedule): void {
                     $schedule->command('filament-panel-base:analytics:rollup')
                         ->hourly()
                         ->withoutOverlapping();
@@ -389,7 +396,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // service provider — not loaded in unit tests.
         if ($this->app->bound('filament')) {
             try {
-                \Filament\Facades\Filament::serving(function (): void {
+                Filament::serving(function (): void {
                     try {
                         $this->app->make(RecordFilamentPageView::class)->handle();
                     } catch (\Throwable) {
@@ -518,6 +525,66 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                        class="font-medium hover:text-primary-500 transition">Codenzia</a>
                 </div>
             BLADE)
+        );
+    }
+
+    /**
+     * Boot the Session Expiry module: turn the bare HTTP 419 "Page Expired"
+     * error and Livewire's "This page has expired" modal into a clean redirect
+     * to the login screen. Two complementary pieces, both gated by
+     * config('filament-panel-base.session_expiry.enabled') (default on):
+     *
+     *   (a) Backend — a renderable handles full-page (non-AJAX) CSRF failures
+     *       with a 302 to the login URL plus a flash warning. Note Laravel's
+     *       handler converts TokenMismatchException to an HttpException(419)
+     *       (preserving it as ->getPrevious()) BEFORE render callbacks run, so
+     *       we match the 419 HttpException — not TokenMismatchException — and
+     *       confirm the original cause. Livewire/AJAX 419s are intentionally
+     *       left untouched here: Livewire would not follow a 302 as a
+     *       navigation, so those are the job of the client-side hook below.
+     *
+     *   (b) Frontend — a BODY_END render hook injects a Livewire `request`
+     *       hook that, on a 419 response, redirects the browser and suppresses
+     *       the default expiry modal. Mirrors the FilamentView render-hook
+     *       pattern already used for the command palette + branding footer.
+     */
+    protected function bootSessionExpiryModule(): void
+    {
+        if (! (bool) config('filament-panel-base.session_expiry.enabled', true)) {
+            return;
+        }
+
+        $this->callAfterResolving(ExceptionHandler::class, function ($handler): void {
+            if (! method_exists($handler, 'renderable')) {
+                return;
+            }
+
+            $handler->renderable(function (HttpExceptionInterface $e, $request) {
+                // Only act on a 419 caused by an expired CSRF/session token,
+                // never on other HttpExceptions (404, 403, deliberate 419s, …).
+                if ($e->getStatusCode() !== 419
+                    || ! ($e->getPrevious() instanceof TokenMismatchException)) {
+                    return null;
+                }
+
+                // Livewire/AJAX 419s are handled client-side by the injected
+                // hook; leave them as 419 so that hook can intercept them.
+                if ($request->hasHeader('X-Livewire') || $request->expectsJson()) {
+                    return null;
+                }
+
+                return redirect()
+                    ->to(SessionExpiry::redirectUrl())
+                    ->with('warning', __('filament-panel-base::auth.session_expired'));
+            });
+        });
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::BODY_END,
+            fn (): string => Blade::render(
+                "@include('filament-panel-base::session-expiry.script', ['redirectUrl' => \$url])",
+                ['url' => SessionExpiry::redirectUrl()],
+            ),
         );
     }
 

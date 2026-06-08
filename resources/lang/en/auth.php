@@ -18,6 +18,9 @@ return [
     'already_have_account' => 'Already have an account?',
     'sign_in' => 'Sign in',
 
+    // Session expiry (419)
+    'session_expired' => 'Your session expired. Please log in again.',
+
     // Login
     'login_title' => 'Welcome back',
     'login_subtitle' => 'Sign in to continue.',
