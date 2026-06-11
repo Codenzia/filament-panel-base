@@ -415,6 +415,29 @@ abstract class BasePanelProvider extends PanelProvider
     }
 
     /**
+     * The gray palette applied to every panel.
+     *
+     * Defaults to Color::Slate — panel-base's standard neutral. Override in a
+     * panel provider to use a custom gray while keeping the rest of panel-base's
+     * chrome, e.g. to pin only the 900 card-background shade:
+     *
+     *   protected function getGrayColor(): array|string
+     *   {
+     *       // array_replace, not spread — spread reindexes the integer shade keys.
+     *       return array_replace(Color::Slate, [900 => '22, 24, 28']); // #16181C
+     *   }
+     *
+     * Returning Color::Slate preserves the original behaviour, so existing
+     * consumers are unaffected.
+     *
+     * @return array<int, string>|string
+     */
+    protected function getGrayColor(): array|string
+    {
+        return Color::Slate;
+    }
+
+    /**
      * Build color array from a settings instance that has color properties.
      *
      * When the settings class implements ProvidesThemeColors, the full theme
@@ -442,7 +465,7 @@ abstract class BasePanelProvider extends PanelProvider
                 }
             }
 
-            $colors['gray'] = Color::Slate;
+            $colors['gray'] = $this->getGrayColor();
 
             return $colors;
         }
@@ -458,7 +481,7 @@ abstract class BasePanelProvider extends PanelProvider
             }
         }
 
-        $colors['gray'] = Color::Slate;
+        $colors['gray'] = $this->getGrayColor();
 
         return $colors;
     }
@@ -475,7 +498,7 @@ abstract class BasePanelProvider extends PanelProvider
             $colors[$name] = Color::hex($hex);
         }
 
-        $colors['gray'] = Color::Slate;
+        $colors['gray'] = $this->getGrayColor();
 
         return $colors;
     }
