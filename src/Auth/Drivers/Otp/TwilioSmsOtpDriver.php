@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  */
 class TwilioSmsOtpDriver implements OtpDriver
 {
+    use MasksOtpCode;
+
     public function __construct(
         private readonly string $sid,
         private readonly string $token,
@@ -28,7 +30,7 @@ class TwilioSmsOtpDriver implements OtpDriver
         if ($this->sid === '' || $this->token === '' || $this->from === '') {
             Log::warning('[fpb-auth] Twilio credentials missing — SMS OTP suppressed.', [
                 'target' => $target,
-                'code' => $code,
+                'code' => self::maskCode($code),
             ]);
 
             return;

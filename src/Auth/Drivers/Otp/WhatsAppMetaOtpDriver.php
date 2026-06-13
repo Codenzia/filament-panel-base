@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Log;
  */
 class WhatsAppMetaOtpDriver implements OtpDriver
 {
+    use MasksOtpCode;
+
     public function __construct(
         private readonly string $apiUrl,
         private readonly string $phoneId,
@@ -30,7 +32,7 @@ class WhatsAppMetaOtpDriver implements OtpDriver
         if ($this->phoneId === '' || $this->accessToken === '') {
             Log::warning('[fpb-auth] WhatsApp Meta credentials missing — OTP suppressed.', [
                 'target' => $target,
-                'code' => $code,
+                'code' => self::maskCode($code),
             ]);
 
             return;

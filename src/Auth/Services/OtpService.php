@@ -40,7 +40,7 @@ class OtpService
      *
      * @param  array<string, mixed>  $context  Forwarded to the driver and the OtpRequested event.
      */
-    public function send(string $target, ?string $driver = null, array $context = []): string
+    public function send(string $target, ?string $driver = null, array $context = [], int|string|null $userId = null): string
     {
         $driverName = $driver ?? $this->settings->otp_driver;
 
@@ -52,6 +52,7 @@ class OtpService
 
         DB::table('otp_codes')->insert([
             'id' => (string) Str::uuid(),
+            'user_id' => $userId,
             'target' => $target,
             'channel' => $driverName,
             'code_hash' => Hash::make($code),
@@ -79,37 +80,48 @@ class OtpService
      * stored record; returns false otherwise. Bumps the attempt counter and
      * deletes the record once max attempts is reached.
      */
-    public function verify(string $target, string $code, ?string $driver = null): bool
+    public function verify(string $target, string $code, ?string $driver = null, int|string|null $userId = null): bool
     {
         $driverName = $driver ?? $this->settings->otp_driver;
 
-        $record = DB::table('otp_codes')
-            ->where('target', $target)
-            ->where('channel', $driverName)
-            ->where('expires_at', '>', now())
-            ->first();
+        // Read + Hash::check + attempt mutation must be atomic so concurrent
+        // requests cannot undercount attempts (check-then-increment race).
+        return DB::transaction(function () use ($target, $driverName, $code, $userId): bool {
+            $query = DB::table('otp_codes')
+                ->where('target', $target)
+                ->where('channel', $driverName)
+                ->where('expires_at', '>', now());
 
-        if (! $record) {
-            return false;
-        }
-
-        if (! Hash::check($code, $record->code_hash)) {
-            $maxAttempts = (int) config('filament-panel-base.auth.otp.max_attempts', 5);
-
-            if (($record->attempts + 1) >= $maxAttempts) {
-                DB::table('otp_codes')->where('id', $record->id)->delete();
-            } else {
-                DB::table('otp_codes')->where('id', $record->id)->increment('attempts');
+            // When an owner is supplied, bind verification to that user so a
+            // code issued for one account can't be consumed by another.
+            if ($userId !== null) {
+                $query->where('user_id', $userId);
             }
 
-            return false;
-        }
+            $record = $query->lockForUpdate()->first();
 
-        DB::table('otp_codes')->where('id', $record->id)->delete();
+            if (! $record) {
+                return false;
+            }
 
-        event(new OtpVerified($target, $driverName));
+            if (! Hash::check($code, $record->code_hash)) {
+                $maxAttempts = (int) config('filament-panel-base.auth.otp.max_attempts', 5);
 
-        return true;
+                if (($record->attempts + 1) >= $maxAttempts) {
+                    DB::table('otp_codes')->where('id', $record->id)->delete();
+                } else {
+                    DB::table('otp_codes')->where('id', $record->id)->increment('attempts');
+                }
+
+                return false;
+            }
+
+            DB::table('otp_codes')->where('id', $record->id)->delete();
+
+            event(new OtpVerified($target, $driverName));
+
+            return true;
+        });
     }
 
     /**

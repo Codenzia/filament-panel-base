@@ -10,6 +10,10 @@ return new class extends Migration
     {
         Schema::create('otp_codes', function (Blueprint $table): void {
             $table->uuid('id')->primary();
+            // Owner of the OTP, when issued for an authenticated user. Binds the
+            // code to a user so verification cannot be satisfied by pointing a
+            // different account's `getOtpTarget` at a pending OTP.
+            $table->unsignedBigInteger('user_id')->nullable()->index();
             $table->string('target')->index();
             $table->string('channel', 32)->index();
             $table->string('code_hash');

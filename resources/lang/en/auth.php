@@ -160,7 +160,7 @@ return [
     'settings_social_email_linking' => 'Email-conflict policy',
     'settings_social_email_linking_require_login' => 'Require login first (safest)',
     'settings_social_email_linking_trust_verified' => 'Auto-link when both sides are verified',
-    'settings_social_email_linking_auto' => 'Auto-link unconditionally (unsafe)',
+    'settings_social_email_linking_auto' => 'Auto-link by email match (unsafe — only the provider-verified email is linked)',
     'settings_social_email_linking_help' => 'What to do when a social sign-in returns an email that already belongs to a local account.',
     'settings_social_trust_verified_email' => 'Trust provider-verified email',
     'settings_social_trust_verified_email_help' => 'When the provider reports the email as verified, skip the in-app email verification flow.',

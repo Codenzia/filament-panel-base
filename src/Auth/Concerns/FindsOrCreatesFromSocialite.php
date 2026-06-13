@@ -68,7 +68,11 @@ trait FindsOrCreatesFromSocialite
                 $policy = static::socialAuthSettings()->social_email_linking;
 
                 $allow = match ($policy) {
-                    'auto' => true,
+                    // Even in the legacy "auto" mode, never link by a bare email
+                    // match unless the provider asserts the email is verified —
+                    // an unverified-email link is a documented account-takeover
+                    // vector.
+                    'auto' => static::providerEmailIsVerified($socialUser),
                     'trust_verified' => static::providerEmailIsVerified($socialUser)
                         && $byEmail->getAttribute('email_verified_at') !== null,
                     default => false,

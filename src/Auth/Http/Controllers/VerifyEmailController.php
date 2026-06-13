@@ -37,6 +37,12 @@ class VerifyEmailController
             return route($route);
         }
 
-        return $route ?? url('/');
+        // Defense-in-depth: only honour an operator-supplied fallback when it
+        // is a relative path, never an absolute/off-origin URL.
+        if (is_string($route) && $route !== '' && str_starts_with($route, '/') && ! str_starts_with($route, '//')) {
+            return url($route);
+        }
+
+        return url('/');
     }
 }

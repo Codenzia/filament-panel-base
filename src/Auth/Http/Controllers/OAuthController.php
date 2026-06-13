@@ -8,6 +8,10 @@ use App\Models\User;
 use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Services\SocialiteService;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
+use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
+use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorChallengeSession;
+use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -50,7 +54,7 @@ class OAuthController
             $request->session()->put(self::LINK_SESSION_KEY, [
                 'provider' => $provider,
                 'user_id' => Auth::id(),
-                'return_to' => $request->query('return_to', url()->previous()),
+                'return_to' => $this->safeReturnTo($request->query('return_to', url()->previous())),
             ]);
         }
 
@@ -132,9 +136,74 @@ class OAuthController
             return redirect()->route('login');
         }
 
-        Auth::login($user, remember: true);
+        // Enforce the same moderation gating the Livewire password path applies.
+        if ($user instanceof HasModerationStatus) {
+            if ($user->isSuspended()) {
+                return $this->redirectWithError('filament-panel-base::auth.account_suspended', null);
+            }
+
+            if ($user->isPending()) {
+                return $this->redirectWithError('filament-panel-base::auth.account_pending', null);
+            }
+        }
+
+        $remember = (bool) config('filament-panel-base.auth.oauth.remember', false);
+
+        // Honour the same 2FA challenge the password path enforces.
+        if ($this->shouldChallengeForTwoFactor($user)) {
+            $challenge = app(TwoFactorChallengeSession::class);
+            $challenge->stash($user, $remember);
+
+            return redirect()->route('two-factor.challenge');
+        }
+
+        Auth::login($user, $remember);
+
+        $request->session()->regenerate();
 
         return redirect()->intended('/');
+    }
+
+    /**
+     * Decide whether to interrupt this social sign-in with a TOTP challenge.
+     * Mirrors the logic in the Livewire Login component.
+     */
+    private function shouldChallengeForTwoFactor(mixed $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        try {
+            $settings = app(TwoFactorSettings::class);
+
+            if (! $settings->enabled) {
+                return false;
+            }
+        } catch (Throwable) {
+            return false;
+        }
+
+        if (! in_array(HasTwoFactorAuthentication::class, class_uses_recursive($user), true)) {
+            return false;
+        }
+
+        if (! method_exists($user, 'hasTwoFactorEnabled') || ! $user->hasTwoFactorEnabled()) {
+            return false;
+        }
+
+        if ($settings->remember_device) {
+            try {
+                $challenge = app(TwoFactorChallengeSession::class);
+                if ($challenge->deviceIsRemembered($user)) {
+                    return false;
+                }
+            } catch (Throwable) {
+                // Fall through to challenge.
+            }
+        }
+
+        return true;
     }
 
     private function guard(string $provider): void
@@ -142,6 +211,27 @@ class OAuthController
         if (! in_array($provider, $this->settings->social_providers_enabled, true)) {
             throw new NotFoundHttpException("Social provider [{$provider}] is not enabled.");
         }
+    }
+
+    /**
+     * Ensure a `return_to` target is same-origin; otherwise fall back to the
+     * app root so the OAuth flow can't be turned into an open redirect.
+     */
+    private function safeReturnTo(mixed $returnTo): string
+    {
+        $returnTo = (string) $returnTo;
+
+        // Same-origin relative path (e.g. "/profile") — safe, and not "//host".
+        if (str_starts_with($returnTo, '/') && ! str_starts_with($returnTo, '//')) {
+            return $returnTo;
+        }
+
+        // Otherwise only accept an absolute URL that is on our own origin.
+        if ($returnTo !== '' && str_starts_with($returnTo, url('/'))) {
+            return $returnTo;
+        }
+
+        return url('/');
     }
 
     /**

@@ -86,7 +86,7 @@ class Register extends Component
                 'brand' => config('app.name'),
                 'ttl_minutes' => $settings->otp_ttl_minutes,
                 'locale' => app()->getLocale(),
-            ]);
+            ], userId: $user->getKey());
 
             $this->redirect(route('verification.otp'), navigate: true);
 

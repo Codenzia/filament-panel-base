@@ -144,6 +144,9 @@ return [
         'default_id' => null,
         'model' => null,
         'geo_api' => 'https://ipapi.co/{ip}/json/',
+        // Allowlist of hosts the geo API may resolve to. The client IP is only
+        // sent to one of these. Set to an empty array to disable the check.
+        'geo_api_hosts' => ['ipapi.co'],
         'cache_ttl' => 1440,
     ],
 
@@ -431,6 +434,18 @@ return [
             'prefix' => '',
             'name' => '',
             'middleware' => ['web'],
+        ],
+
+        /*
+        | OAuth (Socialite) login behaviour.
+        |
+        | `remember` controls whether a successful social sign-in issues a
+        | long-lived "remember me" cookie. Defaults to false so social login
+        | matches the (opt-in) password path rather than silently issuing a
+        | persistent cookie on every flow.
+        */
+        'oauth' => [
+            'remember' => false,
         ],
 
         /*

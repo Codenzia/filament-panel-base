@@ -42,7 +42,7 @@ class VerifyOtp extends Component
 
         $this->ensureNotRateLimited('otp-verify', $target, 'code');
 
-        if (! $otp->verify($target, $this->code, $settings->otp_driver)) {
+        if (! $otp->verify($target, $this->code, $settings->otp_driver, Auth::id())) {
             $this->hitRateLimiter('otp-verify', $target);
             $this->addError('code', __('filament-panel-base::auth.verify_otp_invalid'));
 
@@ -68,12 +68,18 @@ class VerifyOtp extends Component
             return;
         }
 
+        // Resending rotates the code (resetting its per-code attempt counter),
+        // so a resend must consume the same verify budget — otherwise the
+        // effective guess budget becomes attempts × resend rate.
+        $this->ensureNotRateLimited('otp-verify', $target, 'code');
+        $this->hitRateLimiter('otp-verify', $target);
+
         try {
             $otp->send($target, $settings->otp_driver, context: [
                 'brand' => config('app.name'),
                 'ttl_minutes' => $settings->otp_ttl_minutes,
                 'locale' => app()->getLocale(),
-            ]);
+            ], userId: Auth::id());
 
             session()->flash('status', __('filament-panel-base::auth.verify_otp_resent'));
         } catch (\RuntimeException $exception) {

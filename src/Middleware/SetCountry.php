@@ -74,7 +74,14 @@ class SetCountry
     private function detectFromIp(Request $request, string $countryModel): ?int
     {
         try {
-            $ip = $request->ip();
+            $ip = (string) $request->ip();
+
+            // Reject anything that isn't a syntactically valid IP before it
+            // reaches the templated geo URL (defends against header-injected,
+            // unencoded values landing in the outbound request).
+            if (filter_var($ip, FILTER_VALIDATE_IP) === false) {
+                return null;
+            }
 
             // Skip for localhost/development
             if ($ip === '127.0.0.1' || $ip === '::1' || str_starts_with($ip, '192.168.') || str_starts_with($ip, '10.')) {
@@ -88,9 +95,19 @@ class SetCountry
                 return $cachedCountryId;
             }
 
-            // Call geo API for geolocation
+            // Call geo API for geolocation. Encode the IP and confirm the
+            // configured endpoint is one we expect before issuing the request.
             $geoApi = config('filament-panel-base.country.geo_api', 'https://ipapi.co/{ip}/json/');
-            $url = str_replace('{ip}', $ip, $geoApi);
+
+            if (! $this->geoHostIsAllowed($geoApi)) {
+                Log::warning('Country detection skipped: geo API host not allowlisted.', [
+                    'geo_api' => $geoApi,
+                ]);
+
+                return null;
+            }
+
+            $url = str_replace('{ip}', rawurlencode($ip), $geoApi);
             $response = Http::timeout(5)->get($url);
 
             if ($response->successful()) {
@@ -113,5 +130,22 @@ class SetCountry
         }
 
         return null;
+    }
+
+    /**
+     * Confirm the configured geo endpoint resolves to an allowlisted host
+     * before any request is made to it.
+     */
+    private function geoHostIsAllowed(string $geoApi): bool
+    {
+        $allowed = config('filament-panel-base.country.geo_api_hosts', ['ipapi.co']);
+
+        if (! is_array($allowed) || $allowed === []) {
+            return true;
+        }
+
+        $host = parse_url(str_replace('{ip}', '0.0.0.0', $geoApi), PHP_URL_HOST);
+
+        return is_string($host) && in_array(strtolower($host), array_map('strtolower', $allowed), true);
     }
 }

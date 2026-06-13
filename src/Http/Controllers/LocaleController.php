@@ -25,6 +25,14 @@ class LocaleController
             $request->session()->put('locale', $locale);
         }
 
-        return redirect()->back();
+        // back() trusts the (header-controlled) Referer. Pin to a same-origin
+        // target so the switcher can't be used as an open redirect.
+        $back = url()->previous();
+
+        if (! str_starts_with($back, url('/'))) {
+            $back = url('/');
+        }
+
+        return redirect()->to($back);
     }
 }

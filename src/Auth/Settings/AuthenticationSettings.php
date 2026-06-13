@@ -39,7 +39,7 @@ class AuthenticationSettings extends Settings
      *
      * @var array<int, string>
      */
-    public array $allowed_otp_drivers = ['email', 'whatsapp', 'twilio', 'vonage', 'null'];
+    public array $allowed_otp_drivers = ['email', 'whatsapp', 'twilio', 'vonage'];
 
     /**
      * Enabled Socialite providers (e.g. ['google', 'facebook']).
@@ -67,7 +67,7 @@ class AuthenticationSettings extends Settings
      * to mark `users.email_verified_at` at social signup. When `false`,
      * social signups still go through Laravel's email verification flow.
      */
-    public bool $social_trust_verified_email = true;
+    public bool $social_trust_verified_email = false;
 
     /** Reject signups whose email domain is in the disposable-email blocklist. */
     public bool $disposable_email_blocking = true;

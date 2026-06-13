@@ -12,11 +12,13 @@ use Illuminate\Support\Facades\Log;
  */
 class NullOtpDriver implements OtpDriver
 {
+    use MasksOtpCode;
+
     public function send(string $target, string $code, array $context = []): void
     {
         Log::info('[fpb-auth] Null OTP driver — code suppressed in production-style transport', [
             'target' => $target,
-            'code' => $code,
+            'code' => self::maskCode($code),
             'context' => $context,
         ]);
     }

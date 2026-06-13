@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Log;
  */
 class VonageSmsOtpDriver implements OtpDriver
 {
+    use MasksOtpCode;
+
     public function __construct(
         private readonly string $key,
         private readonly string $secret,
@@ -29,7 +31,7 @@ class VonageSmsOtpDriver implements OtpDriver
         if ($this->key === '' || $this->secret === '') {
             Log::warning('[fpb-auth] Vonage credentials missing — SMS OTP suppressed.', [
                 'target' => $target,
-                'code' => $code,
+                'code' => self::maskCode($code),
             ]);
 
             return;

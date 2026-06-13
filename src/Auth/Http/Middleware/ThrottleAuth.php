@@ -35,6 +35,15 @@ use Symfony\Component\HttpFoundation\Response;
  * intentionally do NOT use this middleware — refreshing a login page should
  * never lock a user out, and the actual credential submission is throttled
  * inside the component.
+ *
+ * SECURITY NOTE — trusted proxies:
+ * These buckets are keyed on `$request->ip()`, which honours X-Forwarded-For
+ * when the request comes from a configured trusted proxy. If the app sits
+ * behind a load balancer / CDN, the host MUST configure Laravel's
+ * `TrustProxies` middleware (trustedProxies in bootstrap/app.php) correctly —
+ * otherwise a client can spoof the forwarded IP and trivially evade these
+ * per-IP limits. The same caveat applies to the per-IP buckets in
+ * {@see \Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts}.
  */
 class ThrottleAuth
 {
