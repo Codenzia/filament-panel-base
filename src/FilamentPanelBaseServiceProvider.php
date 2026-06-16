@@ -615,20 +615,23 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             return;
         }
 
-        // Yield to the host app if it already defines `locale.switch` (some
-        // apps need paired-locale logic the package's controller doesn't
-        // ship). Prevents the duplicate-name fatal during route:cache.
-        if (Route::has('locale.switch')) {
-            return;
-        }
+        // Defer registration to after the app's RouteServiceProvider has loaded
+        // web.php so we can yield to a host-defined `locale.switch` (some apps
+        // need paired-locale logic the package's controller doesn't ship).
+        // Without the booted() hook we'd register first and clash at route:cache.
+        $this->app->booted(function (): void {
+            if (Route::has('locale.switch')) {
+                return;
+            }
 
-        $prefix = (string) config('filament-panel-base.locale.routes.prefix', '');
-        /** @var array<int, string> $middleware */
-        $middleware = (array) config('filament-panel-base.locale.routes.middleware', ['web']);
+            $prefix = (string) config('filament-panel-base.locale.routes.prefix', '');
+            /** @var array<int, string> $middleware */
+            $middleware = (array) config('filament-panel-base.locale.routes.middleware', ['web']);
 
-        Route::middleware($middleware)
-            ->prefix($prefix)
-            ->group($routesFile);
+            Route::middleware($middleware)
+                ->prefix($prefix)
+                ->group(__DIR__.'/../routes/locale.php');
+        });
     }
 
     /**
