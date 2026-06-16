@@ -615,6 +615,13 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             return;
         }
 
+        // Yield to the host app if it already defines `locale.switch` (some
+        // apps need paired-locale logic the package's controller doesn't
+        // ship). Prevents the duplicate-name fatal during route:cache.
+        if (Route::has('locale.switch')) {
+            return;
+        }
+
         $prefix = (string) config('filament-panel-base.locale.routes.prefix', '');
         /** @var array<int, string> $middleware */
         $middleware = (array) config('filament-panel-base.locale.routes.middleware', ['web']);
