@@ -5,7 +5,7 @@ All notable changes to `filament-panel-base` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.4.0] - 2026-06-21
 
 ### Security
 - **"Sign out everywhere else" / device revoke now actually invalidates the other devices.** `DeviceSessionList::logoutOtherDevices()` and `revoke()` previously only deleted rows from the `sessions` table — a device holding a remember-me cookie (or a 2FA "remember this device" cookie) would silently re-authenticate on its next request. Both actions now cycle the user's shared `remember_token` and rotate the 2FA remember-device nonce, then re-establish those credentials for the *current* browser only. **Behaviour change:** other browsers the user had "remembered" must sign in again after this action — that is the point.
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auth-page submit buttons (`bg-primary-600`, `hover:bg-primary-700`, `focus:ring-primary-500`) previously rendered with no background on consuming projects because Tailwind v4 doesn't generate utilities for undefined color scales. The new `primary-*` scale in `theme.css` resolves these references.
 - `makeTranslatablePlaceholder()` closure no longer accesses `$component->getLivewire()` on a component whose `$container` is still uninitialized. The inner closure now accepts `$component` as an injected parameter (Filament's `EvaluatesClosures::evaluate()` binds `$this` via `evaluationIdentifier = 'component'`) instead of capturing the definition-time prototype via `use ($component)`. Resolved a 500 error on Filament forms that nest text inputs inside repeater rows (e.g. `MediaSettings` with tabs → repeater → grid → TextInput).
 
-[Unreleased]: https://github.com/Codenzia/filament-panel-base/commits/main
+[0.4.0]: https://github.com/Codenzia/filament-panel-base/compare/v0.3.1...v0.4.0
 
 ## [0.3.1] - 2026-06-06
 
