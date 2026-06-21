@@ -13,6 +13,7 @@ use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Drop into the host's `App\Models\User`:
@@ -161,7 +162,7 @@ trait HasTwoFactorAuthentication
 
         $secret = $this->two_factor_secret;
 
-        if (! empty($secret) && $auth->verify($secret, $code)) {
+        if (! empty($secret) && $auth->verify($secret, $code, guardReplay: true)) {
             return true;
         }
 
@@ -190,6 +191,27 @@ trait HasTwoFactorAuthentication
         return $plaintextCodes;
     }
 
+    /**
+     * Current server-side nonce mixed into the "remember this device, skip
+     * 2FA" cookie. Empty string until first rotated — that's fine, the cookie
+     * is still bound to the secret + APP_KEY.
+     */
+    public function twoFactorRememberToken(): string
+    {
+        return (string) ($this->getAttribute('two_factor_remember_token') ?? '');
+    }
+
+    /**
+     * Rotate the nonce so every outstanding remember-device cookie for this
+     * user stops validating. Called on "log out everywhere", device revoke,
+     * and when 2FA is disabled.
+     */
+    public function rotateTwoFactorRememberToken(): void
+    {
+        $this->two_factor_remember_token = Str::random(64);
+        $this->save();
+    }
+
     public function disableTwoFactor(): void
     {
         $wasEnabled = $this->hasTwoFactorEnabled();
@@ -197,6 +219,7 @@ trait HasTwoFactorAuthentication
         $this->two_factor_secret = null;
         $this->two_factor_recovery_codes = [];
         $this->two_factor_confirmed_at = null;
+        $this->two_factor_remember_token = Str::random(64);
         $this->save();
 
         if ($wasEnabled) {

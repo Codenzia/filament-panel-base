@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **"Sign out everywhere else" / device revoke now actually invalidates the other devices.** `DeviceSessionList::logoutOtherDevices()` and `revoke()` previously only deleted rows from the `sessions` table — a device holding a remember-me cookie (or a 2FA "remember this device" cookie) would silently re-authenticate on its next request. Both actions now cycle the user's shared `remember_token` and rotate the 2FA remember-device nonce, then re-establish those credentials for the *current* browser only. **Behaviour change:** other browsers the user had "remembered" must sign in again after this action — that is the point.
+- **2FA "remember this device" cookies are now server-side revocable.** The cookie is an HMAC that additionally mixes in a new rotatable `two_factor_remember_token` column on `users` (added by an auto-loaded migration — **run `php artisan migrate` after upgrading**). Rotating it (on "sign out everywhere", device revoke, or disabling 2FA) invalidates every outstanding remember-device cookie without a per-cookie lookup table. The cookie lifetime is also now clamped to a hard maximum of 365 days regardless of the `remember_device_days` setting.
+- **TOTP codes can no longer be replayed within the acceptance window.** The login challenge now verifies via `verifyKeyNewer` and caches the accepted timestep (keyed by a hash of the secret), so the same code — or any earlier one still inside the ±`window` — is rejected on a second, parallel login. Cache-based, so no schema change; enrolment confirmation is unaffected (one-shot).
+
 ### Changed
 - **`withUserManagement()` default access now delegates to `laravel-superadmin`.** When no `authorize` closure is supplied, the Users resource's `canAccess()` asks `SuperAdmin::isSuperAdmin()` (the protected account **or** the configured `super_admin` role) when `laravel-superadmin` is installed; falls back to the Spatie `super_admin` role when only `spatie/permission` is present; otherwise stays open to any authenticated panel user. Previously the default only checked a non-existent `isSuperAdmin()` method on the user model and fell open — so role-based super-admins couldn't be gated without a hand-written closure.
 

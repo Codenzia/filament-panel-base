@@ -9,6 +9,7 @@ use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
+use Illuminate\Support\Facades\Cache;
 use PragmaRX\Google2FA\Google2FA;
 use RuntimeException;
 
@@ -39,8 +40,13 @@ class TwoFactorAuthenticator
     /**
      * Verify a 6-digit code against a stored secret. Returns true on match,
      * within the configured acceptance window.
+     *
+     * When $guardReplay is true (login challenge), the accepted timestep is
+     * remembered in the cache so the same code — or any earlier one still
+     * inside the ±window — cannot be replayed in a parallel login. Enrolment
+     * confirmation leaves it false: it is a one-shot, not a bypass vector.
      */
-    public function verify(string $secret, string $code): bool
+    public function verify(string $secret, string $code, bool $guardReplay = false): bool
     {
         $code = preg_replace('/\s+/', '', $code) ?? '';
 
@@ -49,11 +55,35 @@ class TwoFactorAuthenticator
         }
 
         try {
-            return (bool) $this->google2fa()->verifyKey(
+            $g2fa = $this->google2fa();
+
+            if (! $guardReplay) {
+                return (bool) $g2fa->verifyKey($secret, $code, $this->settings->window);
+            }
+
+            $cacheKey = 'fpb_2fa_ts:'.sha1($secret);
+            $old = Cache::get($cacheKey);
+
+            $timestamp = $g2fa->verifyKeyNewer(
                 $secret,
                 $code,
+                $old !== null ? (int) $old : null,
                 $this->settings->window,
             );
+
+            if ($timestamp === false) {
+                return false;
+            }
+
+            // Persist the accepted timestep long enough to cover the full
+            // acceptance window on both sides, then forget it.
+            Cache::put(
+                $cacheKey,
+                $timestamp,
+                now()->addSeconds($this->settings->period * (2 * $this->settings->window + 2)),
+            );
+
+            return true;
         } catch (\Throwable) {
             return false;
         }

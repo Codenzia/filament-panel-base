@@ -22,6 +22,9 @@ class TwoFactorChallengeSession
 
     private const REMEMBER_COOKIE = 'codenzia_2fa_remember';
 
+    /** Hard ceiling on the remember-device cookie lifetime, in days. */
+    private const MAX_REMEMBER_DAYS = 365;
+
     /**
      * Stash the user pending 2FA verification. Caller must NOT also call
      * Auth::login() — that defeats the gate.
@@ -81,6 +84,8 @@ class TwoFactorChallengeSession
      */
     public function rememberDevice(Authenticatable $user, int $days): void
     {
+        $days = max(1, min($days, self::MAX_REMEMBER_DAYS));
+
         Cookie::queue(
             self::REMEMBER_COOKIE,
             $this->deviceToken($user),
@@ -109,9 +114,11 @@ class TwoFactorChallengeSession
     }
 
     /**
-     * Hash combines the user identifier with the raw secret and APP_KEY so
-     * disabling 2FA (or regenerating the secret) invalidates every
-     * remember-device cookie automatically.
+     * Hash combines the user identifier with the raw secret, a rotatable
+     * server-side nonce, and APP_KEY. Disabling 2FA (or regenerating the
+     * secret) invalidates every remember-device cookie automatically; the
+     * nonce additionally lets "log out everywhere" / device revoke kill all
+     * outstanding cookies without changing the secret.
      */
     private function deviceToken(Authenticatable $user): string
     {
@@ -119,9 +126,13 @@ class TwoFactorChallengeSession
             ? (string) $user->getRawOriginal('two_factor_secret')
             : '';
 
+        $nonce = method_exists($user, 'twoFactorRememberToken')
+            ? $user->twoFactorRememberToken()
+            : '';
+
         return hash_hmac(
             'sha256',
-            (string) $user->getAuthIdentifier().'|'.$secret,
+            (string) $user->getAuthIdentifier().'|'.$secret.'|'.$nonce,
             (string) config('app.key'),
         );
     }
