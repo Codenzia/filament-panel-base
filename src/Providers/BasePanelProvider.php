@@ -547,7 +547,11 @@ abstract class BasePanelProvider extends PanelProvider
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url('/'.$adminPanel)
                     ->color('info')
-                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($adminPanel)) ?? false)
+                    ->visible(function () use ($adminPanel): bool {
+                        $target = filament()->getPanel($adminPanel, isStrict: false);
+
+                        return $target && (Auth::user()?->canAccessPanel($target) ?? false);
+                    })
                     ->sort(50);
             } elseif ($panelId === $adminPanel) {
                 $items[] = Action::make('user-dashboard')
@@ -555,7 +559,11 @@ abstract class BasePanelProvider extends PanelProvider
                     ->icon('heroicon-o-squares-2x2')
                     ->url('/'.$dashboardPanel)
                     ->color('primary')
-                    ->visible(fn (): bool => Auth::user()?->canAccessPanel(filament()->getPanel($dashboardPanel)) ?? false)
+                    ->visible(function () use ($dashboardPanel): bool {
+                        $target = filament()->getPanel($dashboardPanel, isStrict: false);
+
+                        return $target && (Auth::user()?->canAccessPanel($target) ?? false);
+                    })
                     ->sort(50);
             }
         }
