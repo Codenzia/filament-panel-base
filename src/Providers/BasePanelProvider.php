@@ -79,10 +79,10 @@ abstract class BasePanelProvider extends PanelProvider
      * 50…950 shade array. Call this before configureSharedSettings(); the color
      * closure reads it at resolve time.
      *
-     * Precedence (low → high): neutral default → config → brandColors() →
-     * settings model. An app that wires a color-providing settings model lets
-     * the admin's live choice win; an app that calls brandColors() opts that
-     * panel out of live theming.
+     * Precedence (low → high): neutral default → config → settings model →
+     * brandColors(). An explicit brandColors()/primaryColor() pin wins over a
+     * ProvidesThemeColors settings model, so calling it opts that panel's
+     * colors out of live theming; omit it to let the settings model drive.
      *
      * @param  array<string, mixed>  $colors
      */
@@ -448,13 +448,18 @@ abstract class BasePanelProvider extends PanelProvider
      *   1. Neutral default (Color::Blue for primary) — so a panel that sets
      *      nothing is never Filament's scaffold amber.
      *   2. config('filament-panel-base.colors') — the app-wide default.
-     *   3. Per-panel brandColors() / primaryColor() declared in the provider.
-     *   4. Settings model (ProvidesThemeColors / legacy *_color props) — the
+     *   3. Settings model (ProvidesThemeColors / legacy *_color props) — the
      *      admin-editable, live source; only the keys it actually provides.
+     *   4. Per-panel brandColors() / primaryColor() declared in the provider —
+     *      an explicit code pin, so it wins over everything (matching the old
+     *      "raw ->colors() applied after configureSharedSettings" behaviour).
      *
      * Each layer overlays the previous per color key, so unset keys always fall
-     * through to a sane value (never amber). Gray is applied last via
-     * getGrayColor() unless a brandColors() override provides its own.
+     * through to a sane value (never amber). A panel that wants live, admin-
+     * editable theming simply omits brandColors() and lets the settings model
+     * (3) drive; calling brandColors() opts that panel's colors out of live
+     * theming. Gray is applied last via getGrayColor() unless brandColors()
+     * (or config) provides its own.
      */
     protected function getColorsFromSettings(): array
     {
@@ -462,14 +467,14 @@ abstract class BasePanelProvider extends PanelProvider
 
         $colors = array_replace($colors, $this->getColorsFromConfig());
 
-        if ($this->brandColors) {
-            $colors = array_replace($colors, $this->brandColors);
-        }
-
         $settings = FilamentPanelBasePlugin::make()->resolveSettings();
 
         if ($settings) {
             $colors = array_replace($colors, $this->getColorsFromSettingsInstance($settings));
+        }
+
+        if ($this->brandColors) {
+            $colors = array_replace($colors, $this->brandColors);
         }
 
         $colors['gray'] ??= $this->getGrayColor();

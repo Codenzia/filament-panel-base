@@ -205,11 +205,14 @@ return [
     | Filament's scaffold amber:
     |   1. Neutral fallback (blue) baked into BasePanelProvider::getDefaultColors()
     |   2. These config values (this is the app-wide brand default)
-    |   3. Per-panel ->primaryColor() / ->brandColors() in the panel provider
-    |   4. A settings class implementing ProvidesThemeColors (admin-editable)
+    |   3. A settings class implementing ProvidesThemeColors (admin-editable, live)
+    |   4. Per-panel ->primaryColor() / ->brandColors() in the panel provider —
+    |      an explicit code pin that wins over the settings model
     |
     | Set the app brand here once for single-panel apps; use ->primaryColor()
     | in the provider when panels need different colors (e.g. admin vs storefront).
+    | Omit ->primaryColor() to let a ProvidesThemeColors settings class theme the
+    | panel live from the admin UI.
     |
     */
     'colors' => [
