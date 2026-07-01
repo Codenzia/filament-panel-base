@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-07-01
+
 ### Added
 - **`->primaryColor()` / `->brandColors()` — the consistent way to brand a panel.** Two new fluent setters on `BasePanelProvider` replace hand-rolled `->colors([...])` calls in host providers: `->primaryColor(Color::Indigo)` (also accepts a `'#hex'` string) for the common single-color case, and `->brandColors([...])` for a full set (primary/danger/gray or a 50…950 palette). Call them **before** `configureSharedSettings()` — the color closure reads them at resolve time — so they work regardless of where in `panel()` you configure colors, and they can't be silently clobbered by a stray `->colors()` later in the chain (the bug pattern across the fleet, where a scaffold `->colors(['primary' => Color::Amber])` overrode panel-base's resolution).
 
