@@ -244,7 +244,7 @@ Abstract panel provider that applies shared configuration to all panels:
 
 - **Brand name** — resolved from settings class or `config('app.name')`
 - **Logo & favicon** — resolved from settings via `getAppLogoUrl()` / `getAppFaviconUrl()`
-- **Dynamic colors** — reads hex colors from settings (or `ProvidesThemeColors` contract) and converts via `Color::hex()`
+- **Layered colors (never Filament-amber)** — every panel's palette resolves by precedence: neutral blue default → `config('filament-panel-base.colors')` → per-panel `->primaryColor()` / `->brandColors()` → `ProvidesThemeColors` settings. Declare a brand with the fluent setters instead of a raw `->colors([...])` (see below); a panel that sets nothing falls back to blue, not Filament's scaffold amber.
 - **User menu** — profile slideOver, role display, phone, email, cross-panel navigation
 - **Panel badge** — "Administration" / "My Account" badge after the logo
 - **Visit Website** button in the topbar
@@ -260,6 +260,7 @@ class AdminPanelProvider extends BasePanelProvider
     public function panel(Panel $panel): Panel
     {
         $this
+            ->primaryColor(Color::Indigo)          // or ->primaryColor('#38b6d9'), or ->brandColors([...])
             ->addTitleBadge('Administration', 'heroicon-o-shield-check', 'primary', showOnAuthForm: true)
             ->showVisitWebsite(label: 'Back to site')
             ->showLanguageDropdown()

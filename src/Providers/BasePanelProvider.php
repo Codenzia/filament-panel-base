@@ -64,6 +64,45 @@ abstract class BasePanelProvider extends PanelProvider
     protected bool $sidebarCollapsibleEnabled = true;
 
     /**
+     * Per-panel color overrides set via primaryColor() / brandColors().
+     *
+     * @var array<string, mixed>|null
+     */
+    protected ?array $brandColors = null;
+
+    /**
+     * Override the panel's color set (primary, danger, gray, …).
+     *
+     * The recommended, consistent way to brand a panel — replaces raw
+     * `->colors([...])` calls in host providers. Values may be Filament color
+     * constants (e.g. Color::Indigo), a hex via Color::hex('#...'), or a full
+     * 50…950 shade array. Call this before configureSharedSettings(); the color
+     * closure reads it at resolve time.
+     *
+     * Precedence (low → high): neutral default → config → brandColors() →
+     * settings model. An app that wires a color-providing settings model lets
+     * the admin's live choice win; an app that calls brandColors() opts that
+     * panel out of live theming.
+     *
+     * @param  array<string, mixed>  $colors
+     */
+    public function brandColors(array $colors): static
+    {
+        $this->brandColors = array_merge($this->brandColors ?? [], $colors);
+
+        return $this;
+    }
+
+    /**
+     * Convenience for the common case: override only the primary color.
+     * Accepts a Filament color constant/array or a '#hex' string.
+     */
+    public function primaryColor(string|array $color): static
+    {
+        return $this->brandColors(['primary' => is_string($color) ? Color::hex($color) : $color]);
+    }
+
+    /**
      * Make the sidebar collapsible on desktop (default true — Filament's standard).
      *
      * Set to false for catalog/guest panels where the sidebar is the primary
@@ -403,15 +442,50 @@ abstract class BasePanelProvider extends PanelProvider
         return null;
     }
 
+    /**
+     * Resolve the panel's colors by layered precedence (low → high):
+     *
+     *   1. Neutral default (Color::Blue for primary) — so a panel that sets
+     *      nothing is never Filament's scaffold amber.
+     *   2. config('filament-panel-base.colors') — the app-wide default.
+     *   3. Per-panel brandColors() / primaryColor() declared in the provider.
+     *   4. Settings model (ProvidesThemeColors / legacy *_color props) — the
+     *      admin-editable, live source; only the keys it actually provides.
+     *
+     * Each layer overlays the previous per color key, so unset keys always fall
+     * through to a sane value (never amber). Gray is applied last via
+     * getGrayColor() unless a brandColors() override provides its own.
+     */
     protected function getColorsFromSettings(): array
     {
+        $colors = $this->getDefaultColors();
+
+        $colors = array_replace($colors, $this->getColorsFromConfig());
+
+        if ($this->brandColors) {
+            $colors = array_replace($colors, $this->brandColors);
+        }
+
         $settings = FilamentPanelBasePlugin::make()->resolveSettings();
 
         if ($settings) {
-            return $this->getColorsFromSettingsInstance($settings);
+            $colors = array_replace($colors, $this->getColorsFromSettingsInstance($settings));
         }
 
-        return $this->getColorsFromConfig();
+        $colors['gray'] ??= $this->getGrayColor();
+
+        return $colors;
+    }
+
+    /**
+     * The neutral fallback palette used when nothing else sets a color.
+     * Deliberately not Filament's amber default.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getDefaultColors(): array
+    {
+        return ['primary' => Color::Blue];
     }
 
     /**
@@ -465,8 +539,6 @@ abstract class BasePanelProvider extends PanelProvider
                 }
             }
 
-            $colors['gray'] = $this->getGrayColor();
-
             return $colors;
         }
 
@@ -481,24 +553,22 @@ abstract class BasePanelProvider extends PanelProvider
             }
         }
 
-        $colors['gray'] = $this->getGrayColor();
-
         return $colors;
     }
 
     /**
-     * Build color array from config values.
+     * Build color array from config values. Returns only the keys present in
+     * config; gray + the neutral default are applied by getColorsFromSettings().
+     *
+     * @return array<string, mixed>
      */
     protected function getColorsFromConfig(): array
     {
-        $configColors = config('filament-panel-base.colors', []);
         $colors = [];
 
-        foreach ($configColors as $name => $hex) {
+        foreach (config('filament-panel-base.colors', []) as $name => $hex) {
             $colors[$name] = Color::hex($hex);
         }
-
-        $colors['gray'] = $this->getGrayColor();
 
         return $colors;
     }
