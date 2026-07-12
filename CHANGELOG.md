@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-07-12
+
+### Added
+- **Language switcher on the `/demo` page.** The demo page now renders the shared locale-switcher dropdown (globe + native language names) whenever more than one locale is active (`filament-panel-base.locale.available`). It reuses the same component as the panel topbar, so adding French, Turkish, etc. later needs only a config entry plus translations — no demo-page changes. Because the demo route runs outside the panels (no `SetLocale` middleware), the component applies the chosen locale itself before rendering, and the demo layout now emits `dir="rtl"` for RTL locales.
+- **Package UI now ships JSON string translations** via a registered `resources/lang/{locale}.json` path (app-level `lang/{locale}.json` still overrides). Arabic strings for the demo chrome are included, and the demo role badges are now translatable through `__()`.
+
 ## [0.4.2] - 2026-07-12
 
 ### Security

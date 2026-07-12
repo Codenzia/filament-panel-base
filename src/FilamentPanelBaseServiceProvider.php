@@ -166,6 +166,13 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             $this->loadTranslationsFrom($filamentPanelsLang, 'filament-panels');
         }
 
+        // JSON string translations for the package's own UI (e.g. the /demo
+        // page chrome). App-level lang/{locale}.json still overrides these.
+        $jsonLang = __DIR__.'/../resources/lang';
+        if (is_dir($jsonLang)) {
+            $this->loadJsonTranslationsFrom($jsonLang);
+        }
+
         // Register flag-icons CSS with Filament's asset system.
         // Auto-injected on Filament panels via @filamentStyles.
         FilamentAsset::register([

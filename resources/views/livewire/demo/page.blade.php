@@ -37,6 +37,10 @@
                         </p>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
+                        @include('filament-panel-base::components.locale-switcher', [
+                            'locales' => \Codenzia\FilamentPanelBase\Middleware\SetLocale::getLocales(),
+                            'currentLocale' => app()->getLocale(),
+                        ])
                         @if ($hasStandardSeeder)
                             <button wire:click="promptSeeder('standard')" wire:loading.attr="disabled"
                                     class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50 transition">
@@ -178,7 +182,7 @@
                                                         @elseif ($role === 'admin') bg-amber-500/10 text-amber-400 border-amber-500/20
                                                         @else bg-gray-500/10 text-gray-300 border-gray-500/20
                                                         @endif">
-                                                        {{ ucfirst(str_replace('_', ' ', $role)) }}
+                                                        {{ __(ucfirst(str_replace('_', ' ', $role))) }}
                                                     </span>
                                                 @empty
                                                     <span class="text-xs text-gray-500">—</span>

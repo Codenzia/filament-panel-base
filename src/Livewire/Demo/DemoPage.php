@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Livewire\Demo;
 
+use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Codenzia\FilamentPanelBase\Models\DemoSetting;
 use Composer\InstalledVersions;
 use Illuminate\Database\Eloquent\Model;
@@ -226,8 +227,26 @@ class DemoPage extends Component
         $this->redirect(url(config('filament-panel-base.demo.app_url', '/admin')));
     }
 
+    /**
+     * Apply the session locale to this request before the view + layout render,
+     * so both the demo body and the surrounding `<html lang/dir>` reflect it.
+     * The header's locale-switcher posts to the `locale.switch` route (which
+     * sessions the choice); the demo route runs outside the panels, so
+     * SetLocale never fires here — this method applies it instead.
+     */
+    protected function applyDemoLocale(): void
+    {
+        $locale = session()->get('locale');
+
+        if (is_string($locale) && array_key_exists($locale, SetLocale::getLocales())) {
+            app()->setLocale($locale);
+        }
+    }
+
     public function render()
     {
+        $this->applyDemoLocale();
+
         $unlocked = (bool) session()->get($this->sessionKey());
 
         $data = [
