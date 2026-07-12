@@ -147,8 +147,7 @@ class ManageDemoSettings extends Page
             return $row->password;
         }
 
-        $env = (string) config('filament-panel-base.demo.password_env', 'APP_DEMO_PAGE_PWD');
-        $value = env($env);
+        $value = config('filament-panel-base.demo.password');
 
         return is_string($value) && $value !== '' ? $value : null;
     }
@@ -159,8 +158,7 @@ class ManageDemoSettings extends Page
         if (is_string($row->password) && $row->password !== '') {
             return 'database';
         }
-        $env = (string) config('filament-panel-base.demo.password_env', 'APP_DEMO_PAGE_PWD');
-        $value = env($env);
+        $value = config('filament-panel-base.demo.password');
         if (is_string($value) && $value !== '') {
             return 'env';
         }

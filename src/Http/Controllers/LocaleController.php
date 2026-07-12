@@ -29,10 +29,21 @@ class LocaleController
         // target so the switcher can't be used as an open redirect.
         $back = url()->previous();
 
-        if (! str_starts_with($back, url('/'))) {
+        if (! $this->isSameOrigin($back)) {
             $back = url('/');
         }
 
         return redirect()->to($back);
+    }
+
+    /**
+     * Determine whether an absolute URL points at this application's own host.
+     */
+    private function isSameOrigin(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return $host !== null && strcasecmp((string) $host, (string) parse_url(url('/'), PHP_URL_HOST)) === 0
+            && in_array(parse_url($url, PHP_URL_SCHEME), [null, 'http', 'https'], true);
     }
 }

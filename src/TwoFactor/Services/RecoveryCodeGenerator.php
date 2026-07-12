@@ -7,10 +7,9 @@ namespace Codenzia\FilamentPanelBase\TwoFactor\Services;
 use Illuminate\Support\Str;
 
 /**
- * Generates printable recovery codes (8 characters, dash-separated halves,
- * lowercase alphanumeric — same shape Fortify uses). Codes are returned in
- * plaintext so the trait can show them to the user once and persist them
- * hashed.
+ * Generates printable recovery codes (two 10-character alphanumeric halves
+ * joined by a dash, ~119 bits of entropy). Codes are returned in plaintext so
+ * the trait can show them to the user once and persist them hashed.
  */
 class RecoveryCodeGenerator
 {

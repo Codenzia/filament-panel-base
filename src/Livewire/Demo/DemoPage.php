@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -64,20 +65,47 @@ class DemoPage extends Component
 
     public function unlock(): void
     {
+        if ($this->tooManyGateAttempts()) {
+            $this->gateError = $this->gateThrottleMessage();
+            $this->gatePassword = '';
+
+            return;
+        }
+
         $expected = (string) $this->expectedPassword();
 
         if ($expected === '' || ! hash_equals($expected, $this->gatePassword)) {
+            RateLimiter::hit($this->gateThrottleKey(), 60);
             $this->gateError = __('Incorrect password.');
             $this->gatePassword = '';
 
             return;
         }
 
+        RateLimiter::clear($this->gateThrottleKey());
+
         session()->put($this->sessionKey(), true);
         $this->gateError = '';
         $this->gatePassword = '';
 
         $this->touchLastUsedAt();
+    }
+
+    protected function gateThrottleKey(): string
+    {
+        return 'fpb-demo-gate:'.request()->ip();
+    }
+
+    protected function tooManyGateAttempts(): bool
+    {
+        return RateLimiter::tooManyAttempts($this->gateThrottleKey(), 5);
+    }
+
+    protected function gateThrottleMessage(): string
+    {
+        $seconds = RateLimiter::availableIn($this->gateThrottleKey());
+
+        return __('Too many attempts. Please try again in :seconds seconds.', ['seconds' => $seconds]);
     }
 
     /**
@@ -127,13 +155,22 @@ class DemoPage extends Component
 
     public function confirmSeeder(): void
     {
+        if ($this->tooManyGateAttempts()) {
+            $this->passwordError = $this->gateThrottleMessage();
+
+            return;
+        }
+
         $expected = (string) $this->expectedPassword();
 
         if ($expected === '' || ! hash_equals($expected, $this->seederPassword)) {
+            RateLimiter::hit($this->gateThrottleKey(), 60);
             $this->passwordError = __('Incorrect password.');
 
             return;
         }
+
+        RateLimiter::clear($this->gateThrottleKey());
 
         $this->showPasswordModal = false;
         $this->seederPassword = '';
@@ -243,8 +280,7 @@ class DemoPage extends Component
             // Schema check or DB read failed — fall through to .env.
         }
 
-        $env = (string) config('filament-panel-base.demo.password_env', 'APP_DEMO_PAGE_PWD');
-        $value = env($env);
+        $value = config('filament-panel-base.demo.password');
 
         return is_string($value) && $value !== '' ? $value : null;
     }
@@ -506,7 +542,7 @@ class DemoPage extends Component
 
     protected function buildDate(): string
     {
-        $explicit = env('APP_BUILD_DATE');
+        $explicit = config('filament-panel-base.demo.build_date');
         if (is_string($explicit) && $explicit !== '') {
             return $explicit;
         }

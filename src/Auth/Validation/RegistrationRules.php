@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Validation;
 
+use App\Models\User;
 use Codenzia\FilamentPanelBase\Auth\Rules\AllowedEmailDomain;
 use Codenzia\FilamentPanelBase\Auth\Rules\NotDisposableEmail;
 use Codenzia\FilamentPanelBase\Auth\Rules\ValidPhoneFormat;
@@ -39,7 +40,8 @@ class RegistrationRules
      */
     private static function emailRules(AuthenticationSettings $settings): array
     {
-        $base = ['string', 'email:rfc', 'max:255', 'unique:users,email', new NotDisposableEmail, new AllowedEmailDomain];
+        $table = self::userTable();
+        $base = ['string', 'email:rfc', 'max:255', "unique:{$table},email", new NotDisposableEmail, new AllowedEmailDomain];
 
         return match ($settings->credentials_mode) {
             'phone' => array_merge(['nullable'], $base),
@@ -53,12 +55,20 @@ class RegistrationRules
      */
     private static function phoneRules(AuthenticationSettings $settings): array
     {
-        $base = ['string', 'max:20', 'unique:users,phone', new ValidPhoneFormat];
+        $table = self::userTable();
+        $base = ['string', 'max:20', "unique:{$table},phone", new ValidPhoneFormat];
 
         return match (true) {
             $settings->credentials_mode === 'phone' => array_merge(['required'], $base),
             $settings->credentials_mode === 'both' && $settings->phone_required => array_merge(['required'], $base),
             default => array_merge(['nullable'], $base),
         };
+    }
+
+    private static function userTable(): string
+    {
+        $model = config('filament-panel-base.user_model', User::class);
+
+        return is_string($model) && class_exists($model) ? (new $model)->getTable() : 'users';
     }
 }

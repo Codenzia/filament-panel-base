@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Drivers\Otp;
 
+use Codenzia\FilamentPanelBase\Auth\Exceptions\OtpDeliveryException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -35,7 +36,11 @@ class WhatsAppMetaOtpDriver implements OtpDriver
                 'code' => self::maskCode($code),
             ]);
 
-            return;
+            if (app()->environment('local', 'testing')) {
+                return;
+            }
+
+            throw new OtpDeliveryException('WhatsApp Meta credentials are not configured.');
         }
 
         try {
@@ -63,6 +68,8 @@ class WhatsAppMetaOtpDriver implements OtpDriver
                 'target' => $target,
                 'exception' => $exception::class,
             ]);
+
+            throw new OtpDeliveryException('WhatsApp OTP delivery failed.', 0, $exception);
         }
     }
 

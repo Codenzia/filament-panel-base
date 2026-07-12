@@ -75,6 +75,7 @@ class Register extends Component
         ]);
 
         Auth::login($user);
+        session()->regenerate();
 
         // Phone OTP next, if the user has a phone and the setting requires it.
         if ($settings->require_phone_verification && filled($fullPhone) && $user instanceof HasPhone && ! $user->hasVerifiedPhone()) {
@@ -82,11 +83,18 @@ class Register extends Component
                 ? ($user->getOtpTarget($settings->otp_driver) ?? $fullPhone)
                 : $fullPhone;
 
-            $otp->send($target, $settings->otp_driver, context: [
-                'brand' => config('app.name'),
-                'ttl_minutes' => $settings->otp_ttl_minutes,
-                'locale' => app()->getLocale(),
-            ], userId: $user->getKey());
+            try {
+                $otp->send($target, $settings->otp_driver, context: [
+                    'brand' => config('app.name'),
+                    'ttl_minutes' => $settings->otp_ttl_minutes,
+                    'locale' => app()->getLocale(),
+                ], userId: $user->getKey());
+            } catch (\RuntimeException $exception) {
+                // The account already exists and the verify page has a Resend
+                // button — surface the delivery/rate-limit error there rather
+                // than bubbling a 500.
+                session()->flash('status', $exception->getMessage());
+            }
 
             $this->redirect(route('verification.otp'), navigate: true);
 

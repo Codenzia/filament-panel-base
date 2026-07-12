@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Concerns;
 
+use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
@@ -41,7 +42,7 @@ trait HasProfileSlideOver
             ->slideOver()
             ->modalWidth('2xl')
             ->fillForm(fn (): array => $this->getProfileFormData())
-            ->form(fn (): array => [
+            ->schema(fn (): array => [
                 Tabs::make('Profile')
                     ->vertical()
                     ->tabs($this->getProfileFormTabs())
@@ -93,9 +94,20 @@ trait HasProfileSlideOver
                 ->email()
                 ->required()
                 ->maxLength(255)
-                ->unique('users', 'email', ignorable: fn () => filament()->auth()->user())
+                ->unique(table: $this->resolveUserTable(), column: 'email', ignorable: fn () => filament()->auth()->user())
                 ->disabled(fn (): bool => ! $this->canEditProfile()),
         ];
+    }
+
+    /**
+     * Resolve the user table from the configured model so uniqueness rules
+     * target the right table for hosts using a custom user table.
+     */
+    protected function resolveUserTable(): string
+    {
+        $model = config('filament-panel-base.user_model', User::class);
+
+        return is_string($model) && class_exists($model) ? (new $model)->getTable() : 'users';
     }
 
     /**

@@ -16,6 +16,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
 
 class TranslationResource extends Resource
 {
@@ -158,7 +159,11 @@ class TranslationResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) (static::getModel()::count() ?: null);
+        return Cache::remember(
+            'fpb.nav-badge.translations',
+            300,
+            fn (): string => (string) (static::getModel()::count() ?: null),
+        );
     }
 
     public static function getPages(): array

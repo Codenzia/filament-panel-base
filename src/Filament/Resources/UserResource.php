@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Filament\Resources;
 
 use Codenzia\FilamentPanelBase\Filament\Resources\UserResource\Pages;
+use Codenzia\SuperAdmin\Facades\SuperAdmin;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -22,6 +23,8 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
 
 /**
@@ -106,7 +109,11 @@ class UserResource extends Resource
 
     public static function getNavigationBadge(): ?string
     {
-        return (string) static::getModel()::query()->count();
+        return Cache::remember(
+            'fpb.nav-badge.users',
+            300,
+            fn (): string => (string) static::getModel()::query()->count(),
+        );
     }
 
     /** Access is the host's decision; default to the super-admin when that concept exists. */
@@ -124,8 +131,8 @@ class UserResource extends Resource
         // laravel-superadmin is the fleet authority on "is this a super-admin?"
         // (the protected account OR the configured super-admin role). Delegate to
         // it so the definition lives in one place across every panel.
-        if (class_exists(\Codenzia\SuperAdmin\Facades\SuperAdmin::class)) {
-            return \Codenzia\SuperAdmin\Facades\SuperAdmin::isSuperAdmin($user);
+        if (class_exists(SuperAdmin::class)) {
+            return SuperAdmin::isSuperAdmin($user);
         }
 
         // Spatie roles without laravel-superadmin → gate on the super-admin role.
@@ -160,6 +167,7 @@ class UserResource extends Resource
                             ->label(__('Password'))->password()->revealable()->maxLength(255)
                             // Kept only when filled, so editing without retyping leaves it unchanged.
                             ->dehydrated(fn (?string $state): bool => filled($state))
+                            ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? Hash::make($state) : null)
                             ->required(fn (string $operation): bool => $operation === 'create')
                             ->helperText(fn (string $operation): ?string => $operation === 'edit' ? __('Leave blank to keep the current password.') : null)
                             ->columnSpanFull(),

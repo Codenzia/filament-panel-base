@@ -37,23 +37,9 @@ class VisitWriter
         try {
             $data = $this->build($request, $response, $startedAt);
 
-            // Drop bot rows entirely when bot_filter is on AND the row is a bot.
-            // Keep the row when bot_filter is off so a "bot pressure" widget is
-            // possible — widgets filter via the `is_bot` flag.
-            if ($data->isBot && ! $this->settings->bot_filter) {
-                $this->dispatch($data);
-
-                return;
-            }
-
-            if ($data->isBot) {
-                // Bot filter on: still record so an admin can see the volume,
-                // but flagged. Default widgets exclude is_bot=true via `humans()`.
-                $this->dispatch($data);
-
-                return;
-            }
-
+            // Bot rows are always stored (flagged via `is_bot`); the `bot_filter`
+            // setting governs their exclusion from default widgets, which
+            // `humans()` already enforces at query time.
             $this->dispatch($data);
         } catch (Throwable) {
             // Never break the request because of analytics. Failures swallowed.

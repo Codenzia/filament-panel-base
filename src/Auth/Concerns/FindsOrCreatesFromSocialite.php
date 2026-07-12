@@ -9,6 +9,8 @@ use Codenzia\FilamentPanelBase\Auth\Events\SocialAccountMapping;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialUserLinked;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
+use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
@@ -134,6 +136,16 @@ trait FindsOrCreatesFromSocialite
             'password' => bcrypt(Str::random(40)),
         ];
 
+        // Mirror RegistrationPipeline's moderation step so social sign-ups honour
+        // `registration_mode` instead of silently taking the DB column default.
+        // Applied before dispatchMapping so a SocialAccountMapping listener can
+        // still override the status.
+        if (is_a(static::class, HasModerationStatus::class, true)) {
+            $userAttributes['status'] = static::socialAuthSettings()->registration_mode === 'moderated'
+                ? 'pending'
+                : 'approved';
+        }
+
         $mapping = static::dispatchMapping(
             userAttributes: $userAttributes,
             socialAccountAttributes: static::baseSocialAttributes($provider, $providerId, $socialUser),
@@ -151,6 +163,7 @@ trait FindsOrCreatesFromSocialite
             return $created;
         });
 
+        event(new Registered($user));
         event(new SocialUserLinked($user, $provider, $socialUser, linked: true));
 
         return $user;
@@ -211,9 +224,7 @@ trait FindsOrCreatesFromSocialite
             'email' => $socialUser->getEmail(),
             'name' => $socialUser->getName() ?? $socialUser->getNickname(),
             'avatar' => $socialUser->getAvatar(),
-            'token' => method_exists($socialUser, 'getAccessTokenResponseBody')
-                ? ($socialUser->token ?? null)
-                : ($socialUser->token ?? null),
+            'token' => $socialUser->token ?? null,
             'refresh_token' => $socialUser->refreshToken ?? null,
             'expires_at' => isset($socialUser->expiresIn) && is_numeric($socialUser->expiresIn)
                 ? now()->addSeconds((int) $socialUser->expiresIn)

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Drivers\Otp;
 
+use Codenzia\FilamentPanelBase\Auth\Exceptions\OtpDeliveryException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -33,7 +34,11 @@ class TwilioSmsOtpDriver implements OtpDriver
                 'code' => self::maskCode($code),
             ]);
 
-            return;
+            if (app()->environment('local', 'testing')) {
+                return;
+            }
+
+            throw new OtpDeliveryException('Twilio credentials are not configured.');
         }
 
         $body = $this->renderBody($code, $context);
@@ -55,6 +60,8 @@ class TwilioSmsOtpDriver implements OtpDriver
                 'target' => $target,
                 'exception' => $exception::class,
             ]);
+
+            throw new OtpDeliveryException('Twilio SMS OTP delivery failed.', 0, $exception);
         }
     }
 

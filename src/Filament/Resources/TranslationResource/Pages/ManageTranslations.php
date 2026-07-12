@@ -113,7 +113,7 @@ class ManageTranslations extends ManageRecords
             ->label(__('Import'))
             ->icon('heroicon-o-arrow-up-tray')
             ->color('info')
-            ->form([
+            ->schema([
                 Forms\Components\FileUpload::make('file')
                     ->label(__('CSV File'))
                     ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])

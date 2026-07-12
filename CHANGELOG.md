@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-07-12
+
+### Security
+- Hardened the same-origin redirect check against domain-prefix open redirects (SEC-01).
+- Regenerate the session on registration to prevent session fixation (SEC-02).
+- Throttle the `/demo` password gate; moved `env()` reads to `config()` (SEC-03/STD-01).
+- Hash the seeded admin password instead of storing it in plaintext (SEC-04).
+- Apply the moderation status on social sign-up, matching credential registration (SEC-05).
+- Require the current password before disabling two-factor authentication (SEC-06).
+- Restrict the Analytics page to the admin role (SEC-07).
+- HMAC OTP targets in analytics meta so raw phone/email are never stored (SEC-08).
+
+### Added
+- Test coverage for `OtpService`, the `ThrottleAuth` middleware, and the demo-page gate.
+
+### Fixed
+- **The `/demo` page now works on Livewire v4.** The demo module registered its full-page Livewire component under the name `filament-panel-base::demo.page`. Livewire v4 treats `::` as a component-namespace separator, so the name registered but failed to resolve on mount — `normalizeName()` mapped the class back to the `::` name, then `resolveClassComponentClassName()` re-parsed the `::` and returned null, throwing `ComponentNotFoundException` (HTTP 500) the moment `/demo` was hit. The component is now registered under the `::`-free name `filament-panel-base-demo-page`, which resolves on both Livewire v3 and v4. The name is internal (only referenced by the route registration), so no host app needs to change anything.
+- Validate `allowed_otp_drivers` on save (QUAL-06); propagate OTP delivery failures instead of swallowing them (QUAL-02/04); route namespaced keys out of JSON translations (QUAL-01); use the safe color palette in the device-session-list blade (STD-02); cache navigation badges (PERF-01).
+
 ## [0.4.1] - 2026-07-01
 
 ### Added

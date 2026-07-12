@@ -492,7 +492,12 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             }
 
             if (class_exists(Livewire::class)) {
-                Livewire::component('filament-panel-base::demo.page', $component);
+                // Name must be `::`-free: Livewire v4 treats `::` as a component
+                // namespace separator, so a name like `filament-panel-base::demo.page`
+                // registers fine but fails to resolve on mount (normalizeName maps the
+                // class back to the `::` name, then resolveClassComponentClassName()
+                // re-parses the `::` and returns null → ComponentNotFoundException).
+                Livewire::component('filament-panel-base-demo-page', $component);
             }
 
             $uri = (string) config('filament-panel-base.demo.route', '/demo');

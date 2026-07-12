@@ -82,8 +82,7 @@ class DemoPasswordCommand extends Command
             }
         }
 
-        $env = (string) config('filament-panel-base.demo.password_env', 'APP_DEMO_PAGE_PWD');
-        $value = env($env);
+        $value = config('filament-panel-base.demo.password');
 
         return is_string($value) && $value !== '' ? $value : null;
     }
@@ -97,8 +96,6 @@ class DemoPasswordCommand extends Command
             }
         }
 
-        $env = (string) config('filament-panel-base.demo.password_env', 'APP_DEMO_PAGE_PWD');
-
-        return $env.' (env)';
+        return 'APP_DEMO_PAGE_PWD (env)';
     }
 }

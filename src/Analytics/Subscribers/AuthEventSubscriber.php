@@ -93,7 +93,10 @@ class AuthEventSubscriber
         $this->record(
             type: AuthEvent::TYPE_OTP_REQUESTED,
             user: null,
-            meta: array_merge(['target' => $event->target], $event->context),
+            meta: array_merge(
+                ['target' => $this->maskTarget($event->target)],
+                array_intersect_key($event->context, array_flip(['brand', 'locale'])),
+            ),
             channel: $event->channel,
         );
     }
@@ -103,9 +106,18 @@ class AuthEventSubscriber
         $this->record(
             type: AuthEvent::TYPE_OTP_VERIFIED,
             user: null,
-            meta: ['target' => $event->target],
+            meta: ['target' => $this->maskTarget($event->target)],
             channel: $event->channel,
         );
+    }
+
+    /**
+     * HMAC the OTP target (email/phone) before persisting so the analytics
+     * table never stores raw PII while remaining correlatable for funnels.
+     */
+    private function maskTarget(string $target): string
+    {
+        return hash_hmac('sha256', $target, (string) config('app.key'));
     }
 
     public function onSocialLinked(SocialUserLinked $event): void

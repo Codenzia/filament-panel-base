@@ -120,6 +120,7 @@ return [
     'settings_title' => 'Authentication settings',
     'settings_save' => 'Save changes',
     'settings_saved' => 'Authentication settings saved.',
+    'settings_unknown_otp_drivers' => 'Unknown OTP drivers were ignored: :drivers',
 
     'settings_section_registration' => 'Registration & sign-in',
     'settings_section_registration_description' => 'Control how new users join and what identifier they sign in with.',

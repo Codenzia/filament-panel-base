@@ -14,6 +14,7 @@ return [
 
     'confirm_button' => 'Confirm code',
     'confirmation_code_label' => 'Authenticator code',
+    'current_password_label' => 'Current password',
     'confirmed_notification' => 'Two-factor authentication is now active on your account.',
 
     'invalid_code' => 'That code is not valid. Try again or use a recovery code.',

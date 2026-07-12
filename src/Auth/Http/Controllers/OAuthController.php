@@ -227,11 +227,22 @@ class OAuthController
         }
 
         // Otherwise only accept an absolute URL that is on our own origin.
-        if ($returnTo !== '' && str_starts_with($returnTo, url('/'))) {
+        if ($returnTo !== '' && $this->isSameOrigin($returnTo)) {
             return $returnTo;
         }
 
         return url('/');
+    }
+
+    /**
+     * Determine whether an absolute URL points at this application's own host.
+     */
+    private function isSameOrigin(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        return $host !== null && strcasecmp((string) $host, (string) parse_url(url('/'), PHP_URL_HOST)) === 0
+            && in_array(parse_url($url, PHP_URL_SCHEME), [null, 'http', 'https'], true);
     }
 
     /**

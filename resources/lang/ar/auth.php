@@ -120,6 +120,7 @@ return [
     'settings_title' => 'إعدادات المصادقة',
     'settings_save' => 'حفظ التغييرات',
     'settings_saved' => 'تم حفظ إعدادات المصادقة.',
+    'settings_unknown_otp_drivers' => 'تم تجاهل برامج تشغيل OTP غير المعروفة: :drivers',
 
     'settings_section_registration' => 'التسجيل وتسجيل الدخول',
     'settings_section_registration_description' => 'تحكم في كيفية انضمام المستخدمين الجدد وبأي معرف يسجّلون الدخول.',

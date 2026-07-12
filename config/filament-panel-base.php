@@ -344,9 +344,14 @@ return [
         | the host app's CSS build state. */
         'layout' => 'filament-panel-base::layouts.demo',
 
-        /* env() key holding the demo page password. The same value gates
-        | both opening the page and confirming seed buttons. */
-        'password_env' => 'APP_DEMO_PAGE_PWD',
+        /* The demo page password. The same value gates both opening the page
+        | and confirming seed buttons. Falls back to .env before the demo_settings
+        | DB row is created. */
+        'password' => env('APP_DEMO_PAGE_PWD'),
+
+        /* Explicit build date shown in the demo footer. Falls back to the
+        | composer.lock mtime when unset. */
+        'build_date' => env('APP_BUILD_DATE'),
 
         /* When true, /demo auto-unlocks if no password is configured
         | (preserves the "don't brick a fresh install" convenience). When

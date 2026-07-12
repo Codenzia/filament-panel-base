@@ -14,6 +14,7 @@ return [
 
     'confirm_button' => 'تأكيد الرمز',
     'confirmation_code_label' => 'رمز المصادقة',
+    'current_password_label' => 'كلمة المرور الحالية',
     'confirmed_notification' => 'تم تفعيل المصادقة الثنائية على حسابك.',
 
     'invalid_code' => 'الرمز غير صالح. حاول مرة أخرى أو استخدم رمز استرداد.',

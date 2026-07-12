@@ -66,7 +66,7 @@ trait HasTwoFactorProfileTab
                     ->icon('heroicon-o-check')
                     ->color('success')
                     ->visible(fn (): bool => $this->currentUserHasTwoFactorPending())
-                    ->form([
+                    ->schema([
                         TextInput::make('code')
                             ->label(__('filament-panel-base::two-factor.confirmation_code_label'))
                             ->required()
@@ -79,7 +79,13 @@ trait HasTwoFactorProfileTab
                     ->icon('heroicon-o-arrow-path')
                     ->color('warning')
                     ->visible(fn (): bool => $this->currentUserHasTwoFactor())
-                    ->requiresConfirmation()
+                    ->schema([
+                        TextInput::make('current_password')
+                            ->label(__('filament-panel-base::two-factor.current_password_label'))
+                            ->password()
+                            ->required()
+                            ->currentPassword(),
+                    ])
                     ->action(fn () => $this->regenerateRecoveryCodes()),
 
                 Action::make('disable-two-factor')
@@ -87,8 +93,14 @@ trait HasTwoFactorProfileTab
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
                     ->visible(fn (): bool => $this->currentUserHasTwoFactor() || $this->currentUserHasTwoFactorPending())
-                    ->requiresConfirmation()
                     ->modalDescription(__('filament-panel-base::two-factor.disable_description'))
+                    ->schema([
+                        TextInput::make('current_password')
+                            ->label(__('filament-panel-base::two-factor.current_password_label'))
+                            ->password()
+                            ->required()
+                            ->currentPassword(),
+                    ])
                     ->action(fn () => $this->disableTwoFactor()),
             ]);
     }

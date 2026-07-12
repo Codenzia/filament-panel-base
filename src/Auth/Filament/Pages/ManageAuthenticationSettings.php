@@ -263,8 +263,28 @@ class ManageAuthenticationSettings extends Page implements HasForms
         $settings->credentials_mode = $data['credentials_mode'];
         $settings->phone_required = (bool) $data['phone_required'];
         $settings->default_country_code = $data['default_country_code'];
+        $knownDrivers = ['email', 'whatsapp', 'twilio', 'vonage', 'null'];
+        $allowedDrivers = array_values(array_intersect(
+            array_unique($data['allowed_otp_drivers'] ?? []),
+            $knownDrivers,
+        ));
+
+        $rejected = array_diff(array_unique($data['allowed_otp_drivers'] ?? []), $knownDrivers);
+        if ($rejected !== []) {
+            Notification::make()
+                ->title(__('filament-panel-base::auth.settings_unknown_otp_drivers', ['drivers' => implode(', ', $rejected)]))
+                ->warning()
+                ->send();
+        }
+
+        // Ensure the active driver stays a member of the allowed list so it
+        // can't be orphaned (which would break OTP delivery on the next send).
+        if (! in_array($data['otp_driver'], $allowedDrivers, true) && in_array($data['otp_driver'], $knownDrivers, true)) {
+            $allowedDrivers[] = $data['otp_driver'];
+        }
+
         $settings->otp_driver = $data['otp_driver'];
-        $settings->allowed_otp_drivers = array_values(array_unique($data['allowed_otp_drivers'] ?? []));
+        $settings->allowed_otp_drivers = $allowedDrivers;
         $settings->otp_code_length = (int) $data['otp_code_length'];
         $settings->otp_ttl_minutes = (int) $data['otp_ttl_minutes'];
         $settings->social_providers_enabled = array_values(array_unique($data['social_providers_enabled'] ?? []));

@@ -129,12 +129,20 @@ class TranslationScanner
         // Sanitise: reject keys that contain HTML or Blade syntax (false positives)
         $isClean = fn (string $key): bool => ! preg_match('/<[a-zA-Z\/!]|{{|}}/', $key);
 
+        // A __() argument that matches the grouped-key shape (e.g. "pkg::group.key"
+        // or "group.key") is a grouped/namespaced key, not a JSON key. Route it to
+        // the grouped collection so namespaced package keys don't shadow real
+        // package translations via the JSON-first lookup.
+        $groupedKeyShape = '/^[a-zA-Z0-9_\-\/]+(?:::[a-zA-Z0-9_\-\/]+)?(?:\.[a-zA-Z0-9_\-\/]+)+$/';
+        [$jsonAsGrouped, $json] = $json->partition(fn (string $key): bool => (bool) preg_match($groupedKeyShape, $key));
+        $grouped = $grouped->merge($jsonAsGrouped);
+
         $grouped = $grouped->unique()
             ->filter(fn (string $key): bool => strlen($key) <= 200 && str_contains($key, '.') && $isClean($key))
             ->values();
 
         $json = $json->unique()
-            ->filter(fn (string $key): bool => strlen($key) > 0 && strlen($key) <= 500 && $isClean($key))
+            ->filter(fn (string $key): bool => strlen($key) > 0 && strlen($key) <= 500 && ! str_contains($key, '::') && $isClean($key))
             ->values();
 
         return [$grouped, $json];

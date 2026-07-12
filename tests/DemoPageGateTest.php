@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
 use Codenzia\FilamentPanelBase\Models\DemoSetting;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Schema;
 
@@ -24,6 +25,12 @@ function setDemoEnv(?string $key, ?string $value): void
     } else {
         Env::getRepository()->set($key, $value);
     }
+
+    // The demo password is now resolved from config (env() is forbidden in app
+    // logic and would be null under config:cache). Mirror the value into the
+    // config key the code reads so the DB-first / fallback tests still exercise
+    // the real resolution path.
+    config(['filament-panel-base.demo.password' => $value]);
 }
 
 beforeEach(function () {
@@ -35,13 +42,11 @@ beforeEach(function () {
         $table->timestamps();
     });
     setDemoEnv('APP_DEMO_PAGE_PWD', null);
-    config(['filament-panel-base.demo.password_env' => 'APP_DEMO_PAGE_PWD']);
 });
 
 afterEach(function () {
     Schema::dropIfExists('demo_settings');
     setDemoEnv('APP_DEMO_PAGE_PWD', null);
-    setDemoEnv('MY_CUSTOM_DEMO_PWD', null);
 });
 
 // A test-double that exposes the protected hooks we need to assert against.
@@ -118,14 +123,11 @@ it('returns null when neither DB nor env has a value (gate disabled)', function 
     expect($page->callExpectedPassword())->toBeNull();
 });
 
-it('honors a custom password_env config key', function () {
-    config(['filament-panel-base.demo.password_env' => 'MY_CUSTOM_DEMO_PWD']);
-    setDemoEnv('MY_CUSTOM_DEMO_PWD', 'custom-env-key');
+it('reads the demo password from config when the DB row is empty', function () {
+    config(['filament-panel-base.demo.password' => 'config-value']);
 
     $page = new DemoPageTestDouble;
-    expect($page->callExpectedPassword())->toBe('custom-env-key');
-
-    setDemoEnv('MY_CUSTOM_DEMO_PWD', null); // cleanup
+    expect($page->callExpectedPassword())->toBe('config-value');
 });
 
 // ---------------------------------------------------------------------------
@@ -260,3 +262,51 @@ it('canLogInAs() treats a hasRole() exception as not-super-admin', function () {
     expect($page->callIsSuperAdmin($user))->toBeFalse()
         ->and($page->callCanLogInAs($user))->toBeTrue();
 });
+
+// ---------------------------------------------------------------------------
+// loginAs(): gate flag + super-admin authorization boundary
+// ---------------------------------------------------------------------------
+
+it('loginAs() refuses to authenticate when the gate session flag is absent', function () {
+    session()->forget('filament-panel-base.demo.unlocked');
+
+    $page = new DemoPageTestDouble;
+    $page->loginAs(1);
+
+    expect(auth()->check())->toBeFalse();
+});
+
+it('loginAs() refuses a super_admin target even when the gate is unlocked', function () {
+    Schema::create('demo_login_users', function ($table) {
+        $table->id();
+        $table->string('name')->nullable();
+        $table->string('role')->nullable();
+        $table->timestamps();
+    });
+
+    config(['filament-panel-base.user_model' => DemoLoginTestUser::class]);
+    config(['filament-panel-base.admin_role' => 'super_admin']);
+
+    $admin = DemoLoginTestUser::create(['name' => 'Root', 'role' => 'super_admin']);
+
+    session(['filament-panel-base.demo.unlocked' => true]);
+
+    $page = new DemoPageTestDouble;
+    $page->loginAs($admin->getKey());
+
+    expect(auth()->check())->toBeFalse();
+
+    Schema::dropIfExists('demo_login_users');
+});
+
+class DemoLoginTestUser extends User
+{
+    protected $table = 'demo_login_users';
+
+    protected $guarded = [];
+
+    public function hasRole(string $role): bool
+    {
+        return $this->role === $role;
+    }
+}

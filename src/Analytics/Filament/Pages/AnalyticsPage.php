@@ -54,12 +54,26 @@ class AnalyticsPage extends Dashboard
     }
 
     /**
-     * Default: visible to any authenticated user. Tighten via subclass +
-     * Shield (`HasPageShield`) or a host-side role check.
+     * Default: restricted to the configured admin role (fails closed). When
+     * the host has no role system the page is available to any authenticated
+     * user. Tighten further via subclass + Shield (`HasPageShield`).
      */
     public static function canAccess(): bool
     {
-        return filament()->auth()->check();
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+        $role = (string) config('filament-panel-base.admin_role', 'super_admin');
+        if (method_exists($user, 'hasRole')) {
+            try {
+                return (bool) $user->hasRole($role);
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**
