@@ -531,13 +531,16 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                     abort_if($user === null, 404);
 
                     $adminRole = (string) config('filament-panel-base.admin_role', 'super_admin');
+                    $isAdmin = false;
                     if (method_exists($user, 'hasRole')) {
                         try {
-                            abort_if((bool) $user->hasRole($adminRole), 403);
+                            $isAdmin = (bool) $user->hasRole($adminRole);
                         } catch (\Throwable) {
-                            // No role system available — fall through.
+                            // No role system available — treat as not-admin.
+                            $isAdmin = false;
                         }
                     }
+                    abort_if($isAdmin, 403);
 
                     \Illuminate\Support\Facades\Auth::login($user);
                     session()->regenerate();
