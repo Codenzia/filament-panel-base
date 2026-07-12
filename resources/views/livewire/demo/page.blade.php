@@ -1,4 +1,15 @@
-<div class="min-h-screen bg-bg-page text-gray-200">
+<div class="min-h-screen bg-bg-page text-gray-200" x-data="{ navigating: false }">
+    {{-- Full-page overlay shown while switching user, so the page can't queue
+         multiple clicks. --}}
+    <div x-show="navigating" x-cloak
+         class="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-3 bg-gray-950/80">
+        <svg class="w-10 h-10 animate-spin text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z"></path>
+        </svg>
+        <span class="text-sm font-medium text-white">{{ __('Signing in…') }}</span>
+    </div>
+
     @if (! $unlocked)
         {{-- Password gate --}}
         <div class="min-h-screen flex items-center justify-center p-4">
@@ -65,7 +76,8 @@
                                 <strong class="text-white">{{ Auth::user()->name ?? Auth::user()->email }}</strong>
                             </span>
                             <a href="{{ $appUrl }}"
-                               class="px-4 py-2 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition">
+                               @click="navigating = true"
+                               class="px-4 py-2 text-sm font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition cursor-pointer">
                                 {{ __('Go to App') }} →
                             </a>
                         @endauth
@@ -192,20 +204,22 @@
                                         <td class="px-4 py-3 text-right">
                                             @if ($user['is_current'])
                                                 <a href="{{ $appUrl }}"
-                                                   class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition">
+                                                   @click="navigating = true"
+                                                   class="inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-green-600 hover:bg-green-700 text-white transition">
                                                     {{ __('Go to App') }}
                                                 </a>
                                             @elseif ($user['is_super'])
                                                 <span class="text-xs text-gray-500">—</span>
                                             @else
-                                                <button wire:click="loginAs('{{ $user['id'] }}')"
-                                                        wire:loading.attr="disabled"
-                                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
+                                                <a href="{{ route('filament-panel-base.demo.login-as', $user['id']) }}"
+                                                   @click.stop="navigating = true"
+                                                   x-bind:class="navigating ? 'pointer-events-none opacity-60' : ''"
+                                                   class="inline-flex cursor-pointer items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-700 hover:bg-gray-600 text-white transition">
                                                     <svg class="w-3.5 h-3.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                                                         <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75"/>
                                                     </svg>
                                                     {{ __('Login') }}
-                                                </button>
+                                                </a>
                                             @endif
                                         </td>
                                     </tr>

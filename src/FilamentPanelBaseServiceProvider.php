@@ -514,6 +514,38 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             Route::middleware($middleware)
                 ->get($uri, $component)
                 ->name('filament-panel-base.demo');
+
+            // Full-page user switcher. The demo "Login" links point here instead
+            // of a Livewire action: rotating the session inside a Livewire request
+            // makes Livewire drop the redirect (clicks appear to do nothing), so
+            // the switch happens on a normal request. Gated by the unlocked demo
+            // session; never switches into the admin role.
+            Route::middleware(array_merge($middleware, ['throttle:30,1']))
+                ->get(rtrim($uri, '/').'/login-as/{userId}', function (string $userId) {
+                    abort_unless(session()->get('filament-panel-base.demo.unlocked') === true, 403);
+
+                    $userModelClass = config('filament-panel-base.user_model');
+                    abort_unless(is_string($userModelClass) && class_exists($userModelClass), 404);
+
+                    $user = $userModelClass::query()->find($userId);
+                    abort_if($user === null, 404);
+
+                    $adminRole = (string) config('filament-panel-base.admin_role', 'super_admin');
+                    if (method_exists($user, 'hasRole')) {
+                        try {
+                            abort_if((bool) $user->hasRole($adminRole), 403);
+                        } catch (\Throwable) {
+                            // No role system available — fall through.
+                        }
+                    }
+
+                    \Illuminate\Support\Facades\Auth::login($user);
+                    session()->regenerate();
+                    session()->put('filament-panel-base.demo.unlocked', true);
+
+                    return redirect(url(config('filament-panel-base.demo.app_url', '/admin')));
+                })
+                ->name('filament-panel-base.demo.login-as');
         });
     }
 

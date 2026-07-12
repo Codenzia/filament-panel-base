@@ -217,14 +217,12 @@ class DemoPage extends Component
             return;
         }
 
-        Auth::logout();
-        session()->invalidate();
-        session()->regenerateToken();
-        Auth::login($user);
-        session()->regenerate();
-        session()->put($this->sessionKey(), true);
-
-        $this->redirect(url(config('filament-panel-base.demo.app_url', '/admin')));
+        // Hand off to the full-page login-as route. Performing the auth switch
+        // here (Auth::login + session rotation) inside the Livewire request makes
+        // Livewire drop the follow-up redirect, so the click intermittently does
+        // nothing. Redirecting to a plain GET route does the switch reliably. The
+        // canLogInAs() check above is still honoured before the hand-off.
+        $this->redirect(route('filament-panel-base.demo.login-as', $user->getKey()));
     }
 
     /**
