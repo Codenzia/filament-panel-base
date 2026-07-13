@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \Codenzia\FilamentPanelBase\Middleware\SetLocale::isRtlLocale(app()->getLocale()) ? 'rtl' : 'ltr' }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" dir="{{ \Codenzia\FilamentPanelBase\Middleware\SetLocale::isRtlLocale(app()->getLocale()) ? 'rtl' : 'ltr' }}" translate="no" class="notranslate dark">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="robots" content="noindex, nofollow">
+    {{-- The demo page is a fixed internal sales/QA tool — don't let Chrome offer to
+         auto-translate it (brand names like "DARI" trip its content language detector). --}}
+    <meta name="google" content="notranslate">
     <title>{{ config('app.name') }} — {{ __('Demo') }}</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script>

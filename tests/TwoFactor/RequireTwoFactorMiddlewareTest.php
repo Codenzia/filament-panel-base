@@ -1,11 +1,12 @@
 <?php
 
+use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
 use Codenzia\FilamentPanelBase\TwoFactor\Http\Middleware\RequireTwoFactor;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
-use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
+use PragmaRX\Google2FA\Google2FA;
 
 /**
  * Test user with a stub `hasAnyRole()` so we don't need spatie/laravel-permission.
@@ -54,7 +55,10 @@ it('allows users without a required role through', function (): void {
     expect($response->getContent())->toBe('ok');
 });
 
-it('redirects users in a required role who lack 2FA enrolment', function (): void {
+it('redirects unenrolled required-role users to the configured enrolment route, never the challenge (PNB-002)', function (): void {
+    Route::get('/enrol-2fa', fn () => 'enrol')->name('profile.security');
+    config()->set('filament-panel-base.two_factor.enrolment_route', 'profile.security');
+
     $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
     $user->roles = ['admin'];
     Auth::setUser($user);
@@ -63,7 +67,57 @@ it('redirects users in a required role who lack 2FA enrolment', function (): voi
     $response = $this->middleware->handle($request, fn () => response('ok'));
 
     expect($response->isRedirect())->toBeTrue();
-    expect($response->getTargetUrl())->toContain('two-factor-challenge');
+    // The enrolment destination — NOT the challenge page (which would loop).
+    expect($response->getTargetUrl())->toContain('enrol-2fa');
+    expect($response->getTargetUrl())->not->toContain('two-factor-challenge');
+});
+
+it('lets the enrolment route itself through so it is reachable (no loop) (PNB-002)', function (): void {
+    Route::get('/enrol-2fa', fn () => 'enrol')->name('profile.security');
+    config()->set('filament-panel-base.two_factor.enrolment_route', 'profile.security');
+
+    $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
+    $user->roles = ['admin'];
+    Auth::setUser($user);
+
+    $request = Request::create('/enrol-2fa');
+    // Refresh name lookups so getByName resolves the just-registered route.
+    Route::getRoutes()->refreshNameLookups();
+    $request->setRouteResolver(fn () => Route::getRoutes()->getByName('profile.security'));
+
+    $response = $this->middleware->handle($request, fn () => response('ok'));
+
+    // The unenrolled admin can actually reach the enrolment page.
+    expect($response->getContent())->toBe('ok');
+});
+
+it('fails open (no lockout loop) when no enrolment route is configured (PNB-002)', function (): void {
+    config()->set('filament-panel-base.two_factor.enrolment_route', null);
+
+    $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
+    $user->roles = ['admin'];
+    Auth::setUser($user);
+
+    $request = Request::create('/dashboard');
+    $response = $this->middleware->handle($request, fn () => response('ok'));
+
+    // No reachable enrolment target => let the request through rather than
+    // trap the user in an infinite redirect. Better a temporary enforcement
+    // gap than a total lockout.
+    expect($response->getContent())->toBe('ok');
+});
+
+it('fails open when the configured enrolment route name does not resolve (PNB-002)', function (): void {
+    config()->set('filament-panel-base.two_factor.enrolment_route', 'does.not.exist');
+
+    $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
+    $user->roles = ['admin'];
+    Auth::setUser($user);
+
+    $request = Request::create('/dashboard');
+    $response = $this->middleware->handle($request, fn () => response('ok'));
+
+    expect($response->getContent())->toBe('ok');
 });
 
 it('allows users with confirmed 2FA through', function (): void {
@@ -79,7 +133,7 @@ it('allows users with confirmed 2FA through', function (): void {
     $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
     $user->roles = ['admin'];
     $user->generateTwoFactorSecret();
-    $g = new \PragmaRX\Google2FA\Google2FA;
+    $g = new Google2FA;
     $user->confirmTwoFactor($g->getCurrentOtp($user->two_factor_secret));
     Auth::setUser($user);
 
@@ -89,19 +143,27 @@ it('allows users with confirmed 2FA through', function (): void {
     expect($response->getContent())->toBe('ok');
 });
 
-it('allows the challenge route itself through (no redirect loop)', function (): void {
+it('never redirects an unenrolled admin back onto the challenge route', function (): void {
+    // The challenge page bounces authenticated-but-unpending users to login,
+    // which bounces them home — the loop PNB-002 fixed. The middleware must
+    // no longer treat the challenge as an enrolment destination.
+    Route::get('/enrol-2fa', fn () => 'enrol')->name('profile.security');
+    config()->set('filament-panel-base.two_factor.enrolment_route', 'profile.security');
+
     $user = RoleAwareTwoFactorUser::create(['email' => 'a@b.com', 'password' => 'x']);
     $user->roles = ['admin'];
     Auth::setUser($user);
 
     $request = Request::create('/two-factor-challenge');
-    // Force the route to be matched so name() resolves.
     Route::dispatch($request);
     $request->setRouteResolver(fn () => Route::getRoutes()->getByName('two-factor.challenge'));
 
     $response = $this->middleware->handle($request, fn () => response('ok'));
 
-    expect($response->getContent())->toBe('ok');
+    // On the challenge route the unenrolled admin is redirected to enrolment,
+    // not left on (or bounced around) the challenge page.
+    expect($response->isRedirect())->toBeTrue();
+    expect($response->getTargetUrl())->toContain('enrol-2fa');
 });
 
 it('allows through when settings module is disabled', function (): void {

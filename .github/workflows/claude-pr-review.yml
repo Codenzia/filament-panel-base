@@ -1,0 +1,62 @@
+# Codenzia fleet — Claude automated PR review (gated variant).
+# Identical to claude-pr-review.yml but skips gracefully when the repo secret
+# is not yet set, so the check stays green until ANTHROPIC_API_KEY is added:
+#   gh secret set ANTHROPIC_API_KEY --repo Codenzia/<repo> --body <key>
+name: Claude PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: claude-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    env:
+      HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+    steps:
+      - name: Warn when review is skipped (secret missing)
+        if: env.HAS_KEY != 'true'
+        run: echo "::warning::ANTHROPIC_API_KEY secret not set — Claude review skipped. Set it with gh secret set."
+
+      - uses: actions/checkout@v4
+        if: env.HAS_KEY == 'true'
+        with:
+          fetch-depth: 0
+
+      - name: Claude review
+        if: env.HAS_KEY == 'true'
+        uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        with:
+          prompt: |
+            You are reviewing a pull request for a Codenzia Laravel/Filament project.
+            Review the diff against the repo's standards: read CLAUDE.md and (if present)
+            laravel_general_guidelines.md / laravel_code_conventions.md and review against them.
+            Focus, in priority order:
+              1. Security & data integrity — auth/authorization (Policies, not UI hiding), PII
+                 handling (encryption + blind index, no plaintext, no PII in logs), mass-assignment,
+                 injection, secrets in code, signed URLs.
+              2. Money correctness — no floats; brick/money; minor-units/decimal per convention.
+              3. Correctness & domain invariants — state machines, immutability of legal records,
+                 N+1 queries, transactions for multi-table writes.
+              4. Duplication — flag any new code that duplicates an existing implementation in this
+                 repo or in the shared Codenzia packages (panel-base, project-essentials,
+                 filament-cart-payments); reuse is a merge requirement for this program.
+              5. Tests — is the change covered (unit/feature)? are critical paths tested?
+              6. Convention adherence — strict types, return types, Form Requests, thin controllers,
+                 Actions/Services, no external API calls sprinkled inline, header docblocks, no meta/AI
+                 comments, no Co-Authored-By.
+            Be concise and actionable. Use inline comments for specific issues; a short summary at the
+            end with a clear verdict (approve-worthy / changes-needed) and the top issues.
+            Do NOT nitpick code style that Pint/PHPStan already enforce. This review is advisory —
+            a human approver remains accountable.

@@ -276,7 +276,7 @@ class FilamentPanelBasePlugin implements Plugin
 
     /**
      * Configure the Analytics module — visitor tracking, auth-event recording,
-     * resource-usage stats, plus the rollup/prune schedule. The closure
+     * resource-usage stats, plus the nightly retention prune. The closure
      * receives an {@see AnalyticsPlugin} for fluent overrides; values applied
      * via the fluent API override AnalyticsSettings for the request lifecycle.
      *

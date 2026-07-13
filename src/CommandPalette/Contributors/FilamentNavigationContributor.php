@@ -7,6 +7,7 @@ namespace Codenzia\FilamentPanelBase\CommandPalette\Contributors;
 use Codenzia\FilamentPanelBase\CommandPalette\Contracts\CommandPaletteContributor;
 use Codenzia\FilamentPanelBase\CommandPalette\Data\CommandPaletteAction;
 use Filament\Facades\Filament;
+use Filament\Panel;
 
 /**
  * Walks the current panel's resources + pages and exposes each as a
@@ -28,6 +29,13 @@ class FilamentNavigationContributor implements CommandPaletteContributor
         $actions = [];
 
         foreach ($panel->getResources() as $resource) {
+            // Never surface a resource the user cannot access — the palette
+            // would otherwise leak every resource name + URL to low-priv users
+            // (PNB-022). Default to hidden if the check throws.
+            if (! $this->canAccess($resource)) {
+                continue;
+            }
+
             $url = $this->safeRoute(fn (): string => $resource::getUrl('index'));
 
             if ($url === null) {
@@ -46,6 +54,10 @@ class FilamentNavigationContributor implements CommandPaletteContributor
         }
 
         foreach ($panel->getPages() as $page) {
+            if (! $this->canAccess($page)) {
+                continue;
+            }
+
             $url = $this->safeRoute(fn (): string => $page::getUrl());
 
             if ($url === null) {
@@ -67,7 +79,7 @@ class FilamentNavigationContributor implements CommandPaletteContributor
         return $actions;
     }
 
-    private function currentPanel(): ?\Filament\Panel
+    private function currentPanel(): ?Panel
     {
         if (! class_exists(Filament::class)) {
             return null;
@@ -85,6 +97,19 @@ class FilamentNavigationContributor implements CommandPaletteContributor
         return (string) ($this->safeCall(fn () => $resource::getNavigationLabel())
             ?? $this->safeCall(fn () => $resource::getPluralModelLabel())
             ?? class_basename($resource));
+    }
+
+    /**
+     * Whether the current user may access this Filament resource/page. Filament
+     * exposes a static canAccess() on both. Fails closed (hidden) on error.
+     */
+    private function canAccess(string $target): bool
+    {
+        try {
+            return method_exists($target, 'canAccess') ? (bool) $target::canAccess() : true;
+        } catch (\Throwable) {
+            return false;
+        }
     }
 
     private function safeRoute(callable $fn): ?string

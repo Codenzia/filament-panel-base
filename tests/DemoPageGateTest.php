@@ -299,6 +299,43 @@ it('loginAs() refuses a super_admin target even when the gate is unlocked', func
     Schema::dropIfExists('demo_login_users');
 });
 
+// ---------------------------------------------------------------------------
+// confirmSeeder(): migrate:fresh guard (PNB-006)
+// ---------------------------------------------------------------------------
+
+it('confirmSeeder() refuses to reseed when allow_reseed is disabled (secure default)', function () {
+    config(['filament-panel-base.demo.password' => 'secret']);
+    config(['filament-panel-base.demo.allow_reseed' => false]);
+
+    $page = new DemoPageTestDouble;
+    $page->seederPassword = 'secret';   // correct password — gate passes
+    $page->seederAction = 'demo';
+    $page->showPasswordModal = true;
+
+    $page->confirmSeeder();
+
+    // The destructive migrate:fresh is refused: modal stays open with an error
+    // rather than wiping the database.
+    expect($page->passwordError)->toBe('Database reseeding is disabled.')
+        ->and($page->showPasswordModal)->toBeTrue();
+});
+
+it('confirmSeeder() refuses to reseed in production even when allow_reseed is enabled', function () {
+    app()->detectEnvironment(fn () => 'production');
+    config(['filament-panel-base.demo.password' => 'secret']);
+    config(['filament-panel-base.demo.allow_reseed' => true]);
+
+    $page = new DemoPageTestDouble;
+    $page->seederPassword = 'secret';
+    $page->seederAction = 'demo';
+
+    $page->confirmSeeder();
+
+    expect($page->passwordError)->toBe('Database reseeding is disabled.');
+
+    app()->detectEnvironment(fn () => 'testing');
+});
+
 class DemoLoginTestUser extends User
 {
     protected $table = 'demo_login_users';

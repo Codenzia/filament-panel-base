@@ -29,7 +29,8 @@ use Symfony\Component\HttpFoundation\Response;
  *  - require_for_roles is empty
  *  - the user is already enrolled
  *  - the user doesn't hold any required role
- *  - the user is on the enrolment/profile page already (avoids redirect loops)
+ *  - the user is on the configured enrolment route already (avoids loops)
+ *  - no enrolment route is configured (fails open rather than looping)
  *
  * Role check requires spatie/laravel-permission's `hasRole()` method on
  * the user model. Without it, the middleware short-circuits — no error.
@@ -37,7 +38,7 @@ use Symfony\Component\HttpFoundation\Response;
 class RequireTwoFactor
 {
     /**
-     * @param  array<int, string>  $exemptRoutes Route names that should be allowed
+     * @param  array<int, string>  $exemptRoutes  Route names that should be allowed
      *                                            through even when 2FA is missing
      *                                            (e.g. logout, profile, the
      *                                            challenge page itself).
@@ -73,8 +74,21 @@ class RequireTwoFactor
             return $next($request);
         }
 
+        // Where an unenrolled user is sent to actually complete enrolment.
+        // The challenge page is NOT a valid target: for an authenticated user
+        // with no pending challenge it bounces to login, which the guest
+        // middleware bounces back to home — an infinite redirect loop with no
+        // way to reach the enrolment UI (PNB-002).
+        $enrolmentRoute = config('filament-panel-base.two_factor.enrolment_route');
+
         $currentRoute = $request->route()?->getName() ?? '';
-        $defaultExempt = ['logout', 'two-factor.challenge'];
+        $defaultExempt = ['logout'];
+
+        if (is_string($enrolmentRoute) && $enrolmentRoute !== '') {
+            // The enrolment destination must be reachable, so it is always
+            // exempt from this middleware.
+            $defaultExempt[] = $enrolmentRoute;
+        }
 
         foreach (array_merge($defaultExempt, $exemptRoutes) as $exempt) {
             if ($currentRoute === $exempt || str_ends_with($currentRoute, '.'.$exempt)) {
@@ -82,7 +96,22 @@ class RequireTwoFactor
             }
         }
 
-        return redirect()->route('two-factor.challenge')->with(
+        // No enrolment route configured: fail open rather than trap the user in
+        // a loop. Enforcement resumes once a reachable enrolment route is set —
+        // see the two_factor config block.
+        if (! is_string($enrolmentRoute) || $enrolmentRoute === '') {
+            return $next($request);
+        }
+
+        // Configured but undefined (typo, route not registered): also fail open
+        // instead of throwing a 500 on every request.
+        try {
+            $target = route($enrolmentRoute);
+        } catch (\Throwable) {
+            return $next($request);
+        }
+
+        return redirect()->to($target)->with(
             'status',
             __('filament-panel-base::two-factor.enrolment_required'),
         );

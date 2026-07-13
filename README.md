@@ -25,7 +25,7 @@
 - **Translation loader** — DB-backed translations via `spatie/laravel-translation-loader`.
 - **`/demo` page** — drop-in Livewire landing page for sales demos and QA: password gate, auto-discovered model count tiles, one-click "login as" for every user, optional Standard/Demo seed buttons, footer with build date + dependency versions. Four levels of customization (config, view, section slots, full subclass).
 - **Demo Settings admin page** — view/rotate/share the `/demo` password from the panel without touching `.env`. Singleton `demo_settings` table with encrypted password cast.
-- **Analytics module** — visitor tracking middleware, auth-event recording, AnalyticsPage with 9 widgets (visitors today, 30-day chart, top pages, slowest pages, error-rate sparkline, geo breakdown, device types, auth funnel, failed-login chart), date-range filter, tenant scoping, hourly rollup + nightly prune commands.
+- **Analytics module** — visitor tracking middleware, auth-event recording, AnalyticsPage with 9 widgets (visitors today, 30-day chart, top pages, slowest pages, error-rate sparkline, geo breakdown, device types, auth funnel, failed-login chart), date-range filter, tenant scoping, nightly retention-prune command.
 - **Two-Factor Authentication module** — TOTP enrolment via the profile slide-over, post-login challenge flow with intermediate session state, 8 single-use recovery codes hashed at rest, remember-device cookie, optional role-based mandatory enrolment middleware. Pluggable issuer/digits/period/window via fluent API.
 - **Sessions & Devices module** — self-service "Devices & Sessions" tab listing every active session from Laravel's database driver, per-row revoke, "sign out everywhere else", new-device-login event for sending alert emails.
 - **Command Palette (Cmd-K)** — global Cmd-K modal augmenting Filament's chrome with navigation jumps, a "Recent" group auto-populated from record-page views, and an extensible registry where consumer plugins push their own actions.
@@ -1632,7 +1632,7 @@ FilamentPanelBasePlugin::make()
 php artisan migrate
 ```
 
-That's it. The three analytics tables (`visits`, `visits_daily`, `auth_events`) and the settings rows are auto-loaded — no `vendor:publish` required. Visit `/admin/analytics` to see the dashboard.
+That's it. The two analytics tables (`visits`, `auth_events`) and the settings rows are auto-loaded — no `vendor:publish` required. Visit `/admin/analytics` to see the dashboard.
 
 ### Plugin API
 
@@ -1642,7 +1642,7 @@ That's it. The three analytics tables (`visits`, `visits_daily`, `auth_events`) 
     ->trackAuthEvents()              // default true
     ->ipAnonymization('truncate')    // 'none' | 'truncate' | 'hash'
     ->retainRawDays(30)              // raw visits pruned after N days
-    ->retainAggregatedDays(365)      // visits_daily kept N days
+    ->retainAggregatedDays(365)      // auth_events kept N days
     ->botFilter()                    // tag bot UAs is_bot=true (excluded from widgets)
     ->writeQueue('analytics')        // dispatch RecordVisitJob to this queue (null = sync)
 )
@@ -1662,12 +1662,11 @@ Boot automatically when `runningInConsole()`:
 
 | Command | Cadence | Job |
 |---|---|---|
-| `filament-panel-base:analytics:rollup` | Hourly, no overlap | Rebuild `visits_daily` buckets for the affected dates. |
-| `filament-panel-base:analytics:prune` | Daily at 03:15, no overlap | Chunk-delete `visits` rows older than `retain_raw_days`, `visits_daily` + `auth_events` older than `retain_aggregated_days`. |
+| `filament-panel-base:analytics:prune` | Daily at 03:15, no overlap | Chunk-delete `visits` rows older than `retain_raw_days` and `auth_events` older than `retain_aggregated_days`. |
 
 ### Tenant scoping
 
-Widgets and the rollup are tenant-scoped via `filament()->getTenant()`. If your panel uses Filament tenancy, each tenant's admins see only their own visits/auth events.
+Widgets are tenant-scoped via `filament()->getTenant()`. If your panel uses Filament tenancy, each tenant's admins see only their own visits/auth events.
 
 ### Subclassing the page for Shield / custom access
 

@@ -6,7 +6,6 @@ namespace Codenzia\FilamentPanelBase\Analytics\Console;
 
 use Codenzia\FilamentPanelBase\Analytics\Models\AuthEvent;
 use Codenzia\FilamentPanelBase\Analytics\Models\Visit;
-use Codenzia\FilamentPanelBase\Analytics\Models\VisitDaily;
 use Codenzia\FilamentPanelBase\Analytics\Settings\AnalyticsSettings;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
@@ -41,16 +40,10 @@ class PruneAnalyticsCommand extends Command
             $chunk,
         );
 
-        $dailyDeleted = $this->chunkedDelete(
-            fn () => VisitDaily::query()->where('date', '<', $aggCutoff->toDateString()),
-            $chunk,
-        );
-
         $this->info(sprintf(
-            'Pruned: %d visits, %d auth_events, %d visits_daily.',
+            'Pruned: %d visits, %d auth_events.',
             $rawDeleted,
             $authDeleted,
-            $dailyDeleted,
         ));
 
         return self::SUCCESS;

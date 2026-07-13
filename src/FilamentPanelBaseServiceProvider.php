@@ -6,7 +6,6 @@ namespace Codenzia\FilamentPanelBase;
 
 use Closure;
 use Codenzia\FilamentPanelBase\Analytics\Console\PruneAnalyticsCommand;
-use Codenzia\FilamentPanelBase\Analytics\Console\RollupAnalyticsCommand;
 use Codenzia\FilamentPanelBase\Analytics\Settings\AnalyticsSettings;
 use Codenzia\FilamentPanelBase\Analytics\Subscribers\AuthEventSubscriber;
 use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\OtpDriverManager;
@@ -75,7 +74,6 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 ScaffoldValidationLangCommand::class,
                 InstallAuthCommand::class,
                 DemoPasswordCommand::class,
-                RollupAnalyticsCommand::class,
                 PruneAnalyticsCommand::class,
             ])
             ->hasInstallCommand(function (InstallCommand $command) {
@@ -265,9 +263,9 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     /**
      * Boot the Analytics module: subscribe the AuthEventSubscriber so package
      * + Laravel auth events get persisted as auth_events rows, publish the
-     * three table migrations under a feature-scoped tag, and schedule the
-     * hourly rollup + nightly prune. Everything stays a cheap no-op when the
-     * host hasn't opted in via FilamentPanelBasePlugin::withAnalytics().
+     * table migrations under a feature-scoped tag, and schedule the nightly
+     * retention prune. Everything stays a cheap no-op when the host hasn't
+     * opted in via FilamentPanelBasePlugin::withAnalytics().
      *
      * The subscriber itself reads AnalyticsSettings on every call, so the
      * runtime kill-switch (settings.analytics.enabled=false) takes effect
@@ -290,16 +288,12 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations/analytics');
 
         if ($this->app->runningInConsole()) {
-            // Schedule the rollup + prune commands. Gated on runningInConsole
-            // so we don't resolve the Schedule binding during a normal HTTP
-            // request — keeps cold-start cheap.
+            // Schedule the nightly prune. Gated on runningInConsole so we don't
+            // resolve the Schedule binding during a normal HTTP request — keeps
+            // cold-start cheap.
             $this->app->afterResolving(
                 Schedule::class,
                 function (Schedule $schedule): void {
-                    $schedule->command('filament-panel-base:analytics:rollup')
-                        ->hourly()
-                        ->withoutOverlapping();
-
                     $schedule->command('filament-panel-base:analytics:prune')
                         ->dailyAt('03:15')
                         ->withoutOverlapping();
@@ -667,6 +661,13 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // need paired-locale logic the package's controller doesn't ship).
         // Without the booted() hook we'd register first and clash at route:cache.
         $this->app->booted(function (): void {
+            // Routes named via a chained `->name(...)` after `Route::get(...)`
+            // are not present in the RouteCollection's name-lookup table until
+            // it is refreshed, so a bare `Route::has()` here can miss a
+            // host-defined `locale.switch` and clobber it with the same URI.
+            // Refresh the lookups first so the yield-to-app guard is reliable.
+            Route::getRoutes()->refreshNameLookups();
+
             if (Route::has('locale.switch')) {
                 return;
             }

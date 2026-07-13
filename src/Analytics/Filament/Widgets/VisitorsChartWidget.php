@@ -13,8 +13,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * Rolling line chart of human page views per day for the selected date range.
- * Reads from the raw `visits` table rather than `visits_daily` so the chart
- * is correct even when the rollup command hasn't run yet.
+ * Queries the raw `visits` table directly and buckets in-query.
  *
  * For 24h ranges we bucket by hour; for multi-day ranges we bucket by day.
  */

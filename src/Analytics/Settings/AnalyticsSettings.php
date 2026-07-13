@@ -38,7 +38,7 @@ class AnalyticsSettings extends Settings
     /** Number of days to retain raw `visits` rows before pruning. */
     public int $retain_raw_days = 30;
 
-    /** Number of days to retain aggregated `visits_daily` + `auth_events`. */
+    /** Number of days to retain `auth_events` rows before pruning. */
     public int $retain_aggregated_days = 365;
 
     /** When true, bot user agents are recorded with is_bot=true (excluded from default widgets). */

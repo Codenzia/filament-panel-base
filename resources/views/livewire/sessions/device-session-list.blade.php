@@ -21,7 +21,7 @@
             </div>
         @endif
 
-        <ul class="divide-y divide-gray-100 dark:divide-white/10">
+        <ul class="divide-y divide-gray-100 dark:divide-gray-800">
             @foreach ($sessions as $session)
                 @php
                     $minutesIdle = $session->lastActivity->diffInMinutes(now());

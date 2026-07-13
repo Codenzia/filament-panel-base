@@ -20,7 +20,7 @@
             @php
                 $max = $rows->max('views') ?: 1;
             @endphp
-            <ul class="divide-y divide-gray-100 dark:divide-white/10">
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                 @foreach ($rows as $row)
                     <li class="py-2">
                         <div class="flex items-center justify-between gap-3 text-sm">
@@ -36,7 +36,7 @@
                                 {{ number_format($row->views) }}
                             </span>
                         </div>
-                        <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
+                        <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                             <div
                                 class="h-full rounded-full bg-primary-500"
                                 style="width: {{ (int) round(($row->views / $max) * 100) }}%"

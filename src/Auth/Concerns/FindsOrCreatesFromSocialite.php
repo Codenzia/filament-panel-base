@@ -70,12 +70,19 @@ trait FindsOrCreatesFromSocialite
                 $policy = static::socialAuthSettings()->social_email_linking;
 
                 $allow = match ($policy) {
-                    // Even in the legacy "auto" mode, never link by a bare email
-                    // match unless the provider asserts the email is verified —
-                    // an unverified-email link is a documented account-takeover
-                    // vector.
-                    'auto' => static::providerEmailIsVerified($socialUser),
-                    'trust_verified' => static::providerEmailIsVerified($socialUser)
+                    // Linking a provider identity into a *pre-existing* local
+                    // account requires BOTH sides to have proven ownership of
+                    // the address, otherwise it is an account-fixation takeover
+                    // (PNB-003): an attacker pre-registers victim@x.com locally
+                    // (unverified, attacker's password), the victim later "Sign
+                    // in with Google" for a provider-verified victim@x.com, and
+                    // without the local-verified check that Google identity is
+                    // linked into the attacker's account. Requiring the local
+                    // email_verified_at closes it — the attacker can't verify an
+                    // inbox they don't control. 'auto' therefore matches
+                    // 'trust_verified' for linking; it only differs on new-user
+                    // creation trust (social_trust_verified_email).
+                    'auto', 'trust_verified' => static::providerEmailIsVerified($socialUser)
                         && $byEmail->getAttribute('email_verified_at') !== null,
                     default => false,
                 };

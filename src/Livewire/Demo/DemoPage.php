@@ -173,6 +173,15 @@ class DemoPage extends Component
 
         RateLimiter::clear($this->gateThrottleKey());
 
+        // `migrate:fresh` wipes the whole database. Refuse it in production and
+        // unless the host has explicitly opted in — even behind the password
+        // gate this is a DB-destruction primitive reachable over HTTP (PNB-006).
+        if (app()->isProduction() || ! (bool) config('filament-panel-base.demo.allow_reseed', false)) {
+            $this->passwordError = __('Database reseeding is disabled.');
+
+            return;
+        }
+
         $this->showPasswordModal = false;
         $this->seederPassword = '';
         $this->passwordError = '';

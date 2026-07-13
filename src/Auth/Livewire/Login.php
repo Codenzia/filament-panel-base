@@ -39,25 +39,32 @@ class Login extends Component
 
         $field = $this->resolveAuthField($settings);
 
-        if (! Auth::attempt([$field => $this->identifier, 'password' => $this->password], $this->remember)) {
+        // Validate credentials WITHOUT logging in. The old flow called
+        // Auth::attempt() (a full login → fires the Login event, runs the
+        // new-device listener, and cycles the remember_token on every device)
+        // and then Auth::logout() for the 2FA/moderation paths — so a
+        // password-only attacker could spam new-device emails and invalidate
+        // everyone's remember-me. We only call Auth::login() once every gate
+        // (moderation + 2FA) has passed. (PNB-001)
+        $provider = Auth::getProvider();
+        $credentials = [$field => $this->identifier, 'password' => $this->password];
+        $user = $provider->retrieveByCredentials($credentials);
+
+        if ($user === null || ! $provider->validateCredentials($user, $credentials)) {
             $this->hitRateLimiter('login', $this->identifier);
             $this->addError('identifier', __('filament-panel-base::auth.credentials_mismatch'));
 
             return;
         }
 
-        $user = Auth::user();
-
         if ($user instanceof HasModerationStatus) {
             if ($user->isSuspended()) {
-                Auth::logout();
                 $this->addError('identifier', __('filament-panel-base::auth.account_suspended'));
 
                 return;
             }
 
             if ($user->isPending()) {
-                Auth::logout();
                 $this->addError('identifier', __('filament-panel-base::auth.account_pending'));
 
                 return;
@@ -67,15 +74,16 @@ class Login extends Component
         $this->clearRateLimiter('login', $this->identifier);
 
         if ($this->shouldChallengeForTwoFactor($user)) {
+            // No login yet — just stash the pending user for the challenge.
             $challenge = app(TwoFactorChallengeSession::class);
             $challenge->stash($user, $this->remember);
-            Auth::logout();
 
             $this->redirect(route('two-factor.challenge'), navigate: true);
 
             return;
         }
 
+        Auth::login($user, $this->remember);
         session()->regenerate();
 
         $this->redirect(session()->pull('url.intended', route('home')), navigate: true);

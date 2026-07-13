@@ -370,6 +370,12 @@ return [
         | first user (orderBy id) if empty or not found. */
         'admin_email' => env('FILAMENT_PANEL_BASE_DEMO_ADMIN_EMAIL', ''),
 
+        /* The seed buttons run `migrate:fresh` — a full DB wipe over HTTP.
+        | It stays OFF unless explicitly enabled here AND the app is not in
+        | production. Even a password-gated, rate-limited demo box should not
+        | expose a database-destruction primitive by default. */
+        'allow_reseed' => env('FILAMENT_PANEL_BASE_DEMO_ALLOW_RESEED', false),
+
         /* Seeder classes. Only renders the corresponding button if the
         | class exists in the host application. */
         'seeders' => [
@@ -518,5 +524,24 @@ return [
                 'from_name' => env('MAIL_FROM_NAME'),
             ],
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Two-factor authentication
+    |--------------------------------------------------------------------------
+    |
+    | `enrolment_route` is the route name that RequireTwoFactor sends a user
+    | to when their role mandates 2FA but they have not enrolled yet. It must
+    | point at a page where the user can actually complete enrolment (the 2FA
+    | tab of the profile slide-over, a dedicated setup page, etc.). The
+    | middleware auto-exempts this route so it is reachable without looping.
+    |
+    | Leave it null if no such page exists yet: the middleware then fails open
+    | (lets the request through) rather than trapping the user in a redirect
+    | loop. Enforcement only kicks in once a reachable enrolment route is set.
+    */
+    'two_factor' => [
+        'enrolment_route' => env('FILAMENT_PANEL_BASE_2FA_ENROLMENT_ROUTE'),
     ],
 ];

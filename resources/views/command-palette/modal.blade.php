@@ -20,7 +20,7 @@
                 x-transition:enter="transition ease-out duration-150"
                 x-transition:enter-start="opacity-0 -translate-y-2 scale-95"
                 x-transition:enter-end="opacity-100 translate-y-0 scale-100"
-                class="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
+                class="w-full max-w-xl overflow-hidden rounded-lg bg-white shadow-2xl ring-1 ring-black/5 dark:bg-gray-900 dark:ring-gray-700">
                 @livewire('filament-panel-base::command-palette')
             </div>
         </div>

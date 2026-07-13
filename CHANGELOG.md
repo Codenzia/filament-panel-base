@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-07-13
+
+### Fixed
+- **Locale route no longer clobbers a host-defined `locale.switch` (yield guard).** The package defers its `locale.switch` registration to `app->booted()` and yields when the host already declares that route, so apps can ship their own paired-locale switcher. The guard checked `Route::has('locale.switch')`, but a host route named via a chained `->name(...)` is absent from the RouteCollection name-lookup table until it is refreshed — so the check missed it and the package silently replaced the host route on the same URI (e.g. invalid locales 302-redirected instead of the app's 404). The guard now calls `Route::getRoutes()->refreshNameLookups()` before the check, so it reliably detects a chained-name host route and yields. (Found by the serveeta migration, which had worked around it via `locale.routes.enabled=false`.)
+
+## [0.5.1] - 2026-07-13
+
+### Changed
+- Sidebar collapse/expand chevron toggles are now circular, primary-tinted buttons with a subtle brand-adaptive ring and glow (light + dark, Filament v4/v5).
+
+## [0.5.0] - 2026-07-13
+
+### Security
+- **Login no longer authenticates the session before the 2FA challenge (PNB-001).** For a user with two-factor enabled, `Login` previously called `Filament::auth()->login()` and *then* redirected to the challenge — leaving a fully authenticated session that a stopped/replayed request could ride past 2FA. The credentials are now verified without logging in; the user id is stashed in an intermediate `two_factor:*` session state and login only completes after the TOTP/recovery-code challenge passes. **Behaviour change:** the post-password step for 2FA users is now a true pre-auth gate, not a post-auth redirect.
+- **Command palette no longer leaks navigation the user can't access (PNB-022).** `FilamentNavigationContributor` now filters palette results through each item's Filament visibility/authorization instead of surfacing every registered navigation item, closing an authz-leak where restricted pages showed up as Cmd-K jump targets.
+- **Closed the `'auto'` social-link account-fixation takeover (PNB-003).** `FindsOrCreatesFromSocialite` no longer auto-links an incoming OAuth identity to a pre-existing local account purely by matching email, which allowed an attacker who pre-registered a victim's email to have the victim's later social sign-in attach to the attacker-controlled row. Linking is now gated rather than implicit.
+- **2FA enrolment redirect loop fixed (PNB-002).** `RequireTwoFactor` sent role-mandated-but-not-yet-enrolled users to an enrolment page that the same middleware then re-guarded, trapping them in a loop. The target is now the configurable `filament-panel-base.two_factor.enrolment_route` (auto-exempted from the guard); when it is unset the middleware fails open instead of looping.
+- **Demo re-seed (`migrate:fresh` over HTTP) is now opt-in and production-refused (PNB-006).** The `/demo` seed buttons wipe and rebuild the database. That primitive is now off unless `filament-panel-base.demo.allow_reseed` (env `FILAMENT_PANEL_BASE_DEMO_ALLOW_RESEED`) is explicitly true *and* the app is not in production. **Behaviour change:** existing demo boxes must set the flag to keep the seed buttons working.
+
+### Added
+- **Claude PR-review CI workflow** (`.github/workflows/claude-pr-review.yml`) — advisory automated review on pull requests.
+- Extensive analytics test coverage: IP anonymizer, bot detector, user-agent parser, visit writer, prune command, auth-event subscriber, analytics-page access, plus a login 2FA-gate suite and OAuth-flow tests.
+
+### Changed
+- **Analytics dropped the `visits_daily` hourly-rollup pipeline (PNB-004).** The rollup command, `VisitDaily` model, and `create_visits_daily_table` migration are removed; widgets read from `visits`/`auth_events` directly. Only two analytics tables ship now (`visits`, `auth_events`). Retention config `retainAggregatedDays()` now governs `auth_events` retention. **Upgrade note:** an existing `visits_daily` table is left in place (no drop migration) — you may drop it manually once on this version.
+
+### Fixed
+- **Sidebar collapsed-icon pill no longer clipped; icons centred** in the collapsed rail.
+- **Demo page:** suppress browser auto-translate (`translate="no"`/`notranslate`) so machine translation doesn't mangle the demo chrome; the RTL `dir` attribute is preserved alongside it.
+- **Demo "login as" super-admin bypass closed** and user switching made reliable (spinner overlay), with route tests.
+- Dropped semi-transparent surface tints from in-panel blades (analytics widgets, 2FA partials, command palette, device-session list) for solid surfaces (PNB-023).
+
 ## [0.4.3] - 2026-07-12
 
 ### Added

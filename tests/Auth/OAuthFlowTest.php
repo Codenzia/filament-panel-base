@@ -203,6 +203,57 @@ it('rejects under trust_verified policy when provider email is not verified', fu
     expect(SocialAccount::query()->count())->toBe(0);
 });
 
+it('auto policy refuses to link into an UNVERIFIED local account (PNB-003 fixation guard)', function (): void {
+    /** @var AuthenticationSettings $settings */
+    $settings = app(AuthenticationSettings::class);
+    $settings->social_email_linking = 'auto';
+
+    // Attacker pre-registers the victim's address locally, unverified.
+    TestUser::create([
+        'name' => 'Attacker',
+        'email' => 'victim@example.test',
+        'email_verified_at' => null,
+        'password' => bcrypt('attacker-password'),
+    ]);
+
+    // Victim signs in with a provider-verified Google account for that address.
+    mockSocialiteUser(new SocialiteFake(
+        id: 'g_auto_1',
+        email: 'victim@example.test',
+        raw: ['email_verified' => true],
+    ));
+
+    $this->get('/oauth/google/callback');
+
+    // The provider identity must NOT be linked into the attacker's account.
+    expect(SocialAccount::query()->count())->toBe(0);
+    Event::assertNotDispatched(SocialUserLinked::class);
+});
+
+it('auto policy links into a VERIFIED local account when the provider email is verified', function (): void {
+    /** @var AuthenticationSettings $settings */
+    $settings = app(AuthenticationSettings::class);
+    $settings->social_email_linking = 'auto';
+
+    TestUser::create([
+        'name' => 'Owner',
+        'email' => 'owner@example.test',
+        'email_verified_at' => now(),
+        'password' => bcrypt('whatever'),
+    ]);
+
+    mockSocialiteUser(new SocialiteFake(
+        id: 'g_auto_2',
+        email: 'owner@example.test',
+        raw: ['email_verified' => true],
+    ));
+
+    $this->get('/oauth/google/callback');
+
+    expect(SocialAccount::query()->count())->toBe(1);
+    expect(TestUser::query()->count())->toBe(1);
+});
+
 it('rejects missing-email sign-in when credentials_mode requires email', function (): void {
     mockSocialiteUser(new SocialiteFake(id: 'g_6', email: null));
 

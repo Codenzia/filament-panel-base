@@ -20,7 +20,7 @@
             @php
                 $max = $rows->max('avgMs') ?: 1;
             @endphp
-            <ul class="divide-y divide-gray-100 dark:divide-white/10">
+            <ul class="divide-y divide-gray-100 dark:divide-gray-800">
                 @foreach ($rows as $row)
                     <li class="py-2">
                         <div class="flex items-center justify-between gap-3 text-sm">
@@ -32,7 +32,7 @@
                             </span>
                         </div>
                         <div class="mt-1 flex items-center gap-2">
-                            <div class="h-1 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-white/5">
+                            <div class="h-1 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                                 <div
                                     class="h-full rounded-full {{ $row->avgMs > 1000 ? 'bg-danger-500' : ($row->avgMs > 500 ? 'bg-warning-500' : 'bg-success-500') }}"
                                     style="width: {{ (int) round(($row->avgMs / $max) * 100) }}%"

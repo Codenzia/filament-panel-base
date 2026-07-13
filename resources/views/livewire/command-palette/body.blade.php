@@ -1,5 +1,5 @@
 <div class="flex max-h-[70vh] flex-col" x-data="{ activeIndex: 0 }" x-init="$watch('$wire.query', () => activeIndex = 0)">
-    <div class="border-b border-gray-200 px-4 py-3 dark:border-white/10">
+    <div class="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
         <input
             type="text"
             wire:model.live.debounce.150ms="query"
@@ -29,8 +29,8 @@
                                 data-cmd-item
                                 data-cmd-index="{{ $flatIndex }}"
                                 @click="$dispatch('cmd-palette-close')"
-                                :class="activeIndex === {{ $flatIndex }} ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
-                                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5">
+                                :class="activeIndex === {{ $flatIndex }} ? 'bg-primary-50 dark:bg-primary-900' : ''"
+                                class="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-gray-800 hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800">
                                 @if ($item->icon)
                                     <x-filament::icon :icon="$item->icon" class="h-5 w-5 shrink-0 text-gray-500" />
                                 @endif
@@ -41,7 +41,7 @@
                                     @endif
                                 </span>
                                 @if ($item->shortcut)
-                                    <kbd class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-white/10 dark:text-gray-400">{{ $item->shortcut }}</kbd>
+                                    <kbd class="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:bg-gray-800 dark:text-gray-400">{{ $item->shortcut }}</kbd>
                                 @endif
                             </a>
                         </li>
