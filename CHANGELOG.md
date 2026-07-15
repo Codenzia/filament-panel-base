@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-07-15
+
+### Added
+- **Branded, fleet-wide error pages (500/503/404/403/419/429).** Every consuming app now gets a deep-navy, bilingual (EN + AR) branded error page in place of Laravel's default — with **no per-app files required**. The pages are **database-independent by design** (no `__()`/`@lang`, no Eloquent/queries, no auth, no host layout) so they render even during a full DB outage — the outage that motivates them. Branding is config-driven: `config('app.name')`, `filament-panel-base.colors.primary` (code number + button), new `filament-panel-base.errors.logo` (public asset path; `null` → styled app-name wordmark), new `filament-panel-base.errors.tagline` (footer line; `null` → app name), and new `filament-panel-base.support_email` (env `SUPPORT_EMAIL`; drives the 500 "Report this issue" mailto, hidden when unset). On a **500** the page shows a short reference ID with a Copy button and logs it to the default (file) log channel with the request URL + status for grep-by-reference support triage. Resolution: the per-code views live in a dedicated `resources/error-pages/errors/{code}.blade.php` directory that the provider **appends** as a view location (lower priority than the app), so a bare `errors.{code}` resolves to the package page when the app ships none, while an app's own `resources/views/errors/{code}.blade.php` still overrides that single code. The shared chrome is the namespaced `filament-panel-base::errors.layout` (never a bare `errors.layout` an app could shadow), so there is no layout collision.
+
 ## [0.5.2] - 2026-07-13
 
 ### Fixed

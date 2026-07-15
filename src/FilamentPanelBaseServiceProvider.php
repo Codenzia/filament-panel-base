@@ -48,6 +48,7 @@ use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Session\TokenMismatchException;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
@@ -140,6 +141,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         $this->bootDemoModule();
         $this->bootBrandingFooter();
         $this->bootSessionExpiryModule();
+        $this->bootErrorPages();
 
         // Register settings migration path so spatie/laravel-settings discovers them
         $settingsMigrationsPath = __DIR__.'/../database/settings';
@@ -536,7 +538,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                     }
                     abort_if($isAdmin, 403);
 
-                    \Illuminate\Support\Facades\Auth::login($user);
+                    Auth::login($user);
                     session()->regenerate();
                     session()->put('filament-panel-base.demo.unlocked', true);
 
@@ -627,6 +629,37 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 ['url' => SessionExpiry::redirectUrl()],
             ),
         );
+    }
+
+    /**
+     * Register the branded, fleet-wide error pages (500/503/404/403/419/429).
+     *
+     * The per-code views live in a DEDICATED directory
+     * (resources/error-pages/errors/{code}.blade.php) that is appended as a
+     * view location — appended, so it sits BELOW the host app's own
+     * resources/views in the finder's search order. Result: a bare
+     * `errors.{code}` resolves to the package page only when the app ships
+     * none, and an app's own resources/views/errors/{code}.blade.php still
+     * wins. The shared chrome they @extends is the namespaced
+     * `filament-panel-base::errors.layout` (registered via the package's
+     * existing loadViewsFrom), never a bare `errors.layout` an app could
+     * shadow — so there is no layout collision.
+     *
+     * The whole resources/views tree is intentionally NOT dumped into the
+     * default namespace (that would pollute/collide with app view names);
+     * only this one errors directory is exposed as a low-priority location.
+     */
+    protected function bootErrorPages(): void
+    {
+        $dir = __DIR__.'/../resources/error-pages';
+
+        if (! is_dir($dir)) {
+            return;
+        }
+
+        $this->callAfterResolving('view', function ($factory) use ($dir): void {
+            $factory->getFinder()->addLocation($dir);
+        });
     }
 
     protected function loadAuthRoutes(): void

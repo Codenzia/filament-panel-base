@@ -49,6 +49,48 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Support email
+    |--------------------------------------------------------------------------
+    |
+    | Address the branded error pages point their "Report this issue" button
+    | at (a prefilled mailto: on the 500 page). Null hides the button. Read
+    | from the SUPPORT_EMAIL env by default so no code change is needed per
+    | app. DB-free — safe to read while the database is down.
+    |
+    */
+    'support_email' => env('SUPPORT_EMAIL'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Branded error pages
+    |--------------------------------------------------------------------------
+    |
+    | Fleet-wide branded pages for 500 / 503 / 404 / 403 / 419 / 429, shown
+    | when APP_DEBUG=false. They are deliberately database-independent: no
+    | __()/@lang (the spatie translation-loader would query the DB — the very
+    | thing that may be down), no Eloquent, no auth, no app layout. Branding
+    | comes only from cached config() reads and static assets, so the pages
+    | render even during a full database outage.
+    |
+    | Any app can still override a single code by shipping its own
+    | resources/views/errors/{code}.blade.php — the app's view wins.
+    |
+    |   logo    — public asset path passed to asset() for the wordmark image
+    |             (e.g. 'brand/logo-light.png'). Null renders the app name as
+    |             a styled text wordmark instead.
+    |   tagline — small footer line under the buttons. Null falls back to the
+    |             app name (config('app.name')).
+    |
+    | The code number + primary button reuse config('filament-panel-base.colors.primary').
+    |
+    */
+    'errors' => [
+        'logo' => null,
+        'tagline' => null,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Session Expiry (419) Handling
     |--------------------------------------------------------------------------
     |

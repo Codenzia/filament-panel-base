@@ -30,6 +30,7 @@
 - **Sessions & Devices module** — self-service "Devices & Sessions" tab listing every active session from Laravel's database driver, per-row revoke, "sign out everywhere else", new-device-login event for sending alert emails.
 - **Command Palette (Cmd-K)** — global Cmd-K modal augmenting Filament's chrome with navigation jumps, a "Recent" group auto-populated from record-page views, and an extensible registry where consumer plugins push their own actions.
 - **Session-expiry (419) handling** — turns the jarring "Page Expired" error and Livewire "This page has expired" modal into a clean redirect to login, on by default for every panel (config kill-switch + optional front-of-site component).
+- **Branded error pages** — fleet-wide, **database-independent** pages for 500 / 503 / 404 / 403 / 419 / 429 (deep-navy, bilingual EN + AR, logo + primary from config). Rendered when `APP_DEBUG=false`, with **zero DB access** so they survive a database outage. 500 adds a logged reference ID + a prefilled "Report this issue" mailto. Apps brand via config; any single code stays overridable by the app's own `resources/views/errors/{code}.blade.php`.
 
 ---
 
@@ -1182,6 +1183,49 @@ Filament panel pages get the interceptor automatically. For Livewire pages rende
 ```blade
 <x-filament-panel-base::session-expiry-handler />
 ```
+
+## Branded Error Pages
+
+Every consuming app gets branded pages for **500 / 503 / 404 / 403 / 419 / 429**, replacing Laravel's bland defaults — **without each app creating any files**. They are shown when `APP_DEBUG=false` (locally you still get the full Ignition trace).
+
+### The database-independence guarantee
+
+The motivating outage is a **database failure**, so the pages are built to render with **zero database access**. The views deliberately avoid everything that would touch the DB or app runtime:
+
+- no `__()` / `@lang` — the spatie translation-loader queries the `language_lines` table (the very thing that may be down);
+- no Eloquent / no queries, no auth, no host-app layout (`@extends`).
+
+Branding comes only from **cached `config()` reads** and a **static `asset()`**. The bilingual copy (English + a smaller Arabic line, `dir="rtl"`) is baked into the per-code views. An arch-style test asserts no `__(`/DB tokens ever creep into these views.
+
+### Branding via config
+
+```php
+// config/filament-panel-base.php
+'support_email' => env('SUPPORT_EMAIL'), // 500 "Report this issue" mailto; null hides it
+
+'errors' => [
+    'logo'    => 'brand/logo-light.png', // public asset path (asset()); null → app-name wordmark
+    'tagline' => 'Acme — your tagline',  // footer line; null → config('app.name')
+],
+```
+
+- **App name** — `config('app.name')`.
+- **Primary colour** (code number + button) — reuses `config('filament-panel-base.colors.primary')` (fallback `#0787F8`).
+- **Logo** — `errors.logo`; when `null` the app name renders as a styled text wordmark instead of an `<img>`.
+- **Support email** — `support_email` (defaults to the `SUPPORT_EMAIL` env). When `null`, the "Report this issue" button is hidden.
+
+### Reference ID + report (500 only)
+
+On a **500**, the page shows a short reference (e.g. `ACME-K3M9PQ2Z`) with a **Copy** button, and **logs it to the default (file) log channel** together with the request URL and status — so support can grep the log by the reference. (The framework already logged the underlying exception on the same request/timestamp, so the reference correlates.) The **Report this issue** button is a `mailto:` prefilled with the reference, the page URL, and an ISO timestamp — no backend needed. Other codes show only **Back to home**.
+
+### How view resolution works (app-overridable)
+
+The per-code pages live in a **dedicated directory** (`resources/error-pages/errors/{code}.blade.php`) that the service provider **appends** as a view location. Appended = *lower* priority than the host app's `resources/views`, so:
+
+- an app with **no** error views renders panel-base's branded pages for a bare `errors.{code}`;
+- an app that ships its **own** `resources/views/errors/404.blade.php` still overrides that single code — the app's view wins.
+
+The whole `resources/views` tree is **not** dumped into the default namespace (that would collide with app view names). The shared chrome the code pages `@extends` is the **namespaced** `filament-panel-base::errors.layout` — never a bare `errors.layout` an app could accidentally shadow, so there is no layout collision.
 
 ## Translatable Content (Optional)
 
