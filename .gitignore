@@ -9,3 +9,8 @@
 .DS_Store
 Thumbs.db
 composer.lock
+
+# Internal review docs (never publish)
+fable-*
+*full-review*
+*-full-review.md
