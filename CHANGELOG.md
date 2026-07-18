@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-07-18
+
+### Added
+- **Reveal-password (eye) toggle on the /demo password gate.** The demo unlock screen and the seed-confirmation prompt now render an eye / eye-slash button inside the password field (end-aligned, RTL-safe) so users can verify what they typed instead of assuming a wrong password. The toggle is pure Alpine.js (`x-data="{ show: false }"`, flips the input's `:type` between `password` and `text`) with no Livewire round-trip; the `wire:model.defer` binding is preserved. Accessible: `type="button"`, a `Show password`/`Hide password` aria-label that flips, and a focus-visible ring. New `Show password` / `Hide password` strings added to the Arabic (`ar.json`) translation.
+
 ## [0.5.3] - 2026-07-15
 
 ### Added

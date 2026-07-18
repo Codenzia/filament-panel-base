@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Env;
 use Illuminate\Support\Facades\Schema;
+use Livewire\Livewire;
 
 /**
  * Set the env variable everywhere Laravel's env() helper might read it.
@@ -297,6 +298,20 @@ it('loginAs() refuses a super_admin target even when the gate is unlocked', func
     expect(auth()->check())->toBeFalse();
 
     Schema::dropIfExists('demo_login_users');
+});
+
+// ---------------------------------------------------------------------------
+// render(): reveal-password toggle on the locked gate
+// ---------------------------------------------------------------------------
+
+it('renders the reveal-password toggle on the locked gate', function () {
+    config(['filament-panel-base.demo.password' => 'secret']); // gate stays locked
+    config(['filament-panel-base.demo.allow_empty_password' => false]);
+    session()->forget('filament-panel-base.demo.unlocked');
+
+    Livewire::test(DemoPage::class)
+        ->assertSee('Show password')
+        ->assertSee('Hide password');
 });
 
 // ---------------------------------------------------------------------------
