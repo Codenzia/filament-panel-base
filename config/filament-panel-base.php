@@ -585,5 +585,15 @@ return [
     */
     'two_factor' => [
         'enrolment_route' => env('FILAMENT_PANEL_BASE_2FA_ENROLMENT_ROUTE'),
+
+        /*
+        | DB-free fallback for the server-side "remember this device, skip 2FA"
+        | cookie TTL, in days. TwoFactorSettings::remember_device_days is the
+        | authoritative admin-editable value; this config is only consulted when
+        | the settings table is unavailable. A remember-device cookie older than
+        | this is rejected server-side and the user is re-challenged, regardless
+        | of the browser-side cookie lifetime.
+        */
+        'remember_device_days' => 30,
     ],
 ];

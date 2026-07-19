@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\TwoFactor\Services;
 
+use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 
 /**
  * Stashes the intermediate "passed credentials, awaiting 2FA" state in
@@ -79,16 +81,25 @@ class TwoFactorChallengeSession
 
     /**
      * Issue a long-lived "remember this device, skip 2FA next time" cookie.
-     * Value is `sha256(userId + secret + appKey)` so it can be verified
-     * server-side without a DB lookup.
+     *
+     * Value is `issuedAt.rand.hmac(userId|secret|nonce|issuedAt|rand)`:
+     *   - `issuedAt` is a server-checked issue time so the cookie can be
+     *     rejected past a TTL even if the browser keeps sending it.
+     *   - `rand` is a per-issue random component so no two devices ever hold
+     *     the same value (the old cookie was identical across all of a user's
+     *     browsers).
+     * It is still verifiable server-side without a DB lookup.
      */
     public function rememberDevice(Authenticatable $user, int $days): void
     {
         $days = max(1, min($days, self::MAX_REMEMBER_DAYS));
 
+        $issuedAt = (string) now()->getTimestamp();
+        $rand = Str::random(24);
+
         Cookie::queue(
             self::REMEMBER_COOKIE,
-            $this->deviceToken($user),
+            $issuedAt.'.'.$rand.'.'.$this->deviceToken($user, $issuedAt, $rand),
             $days * 24 * 60,
             null,
             null,
@@ -105,7 +116,30 @@ class TwoFactorChallengeSession
             return false;
         }
 
-        return hash_equals($this->deviceToken($user), $cookie);
+        // New format: issuedAt.rand.hmac. Legacy (bare-HMAC) cookies split
+        // into a single part and simply fail closed here — the user is
+        // re-challenged once and re-issued a current-format cookie.
+        $parts = explode('.', $cookie, 3);
+
+        if (count($parts) !== 3) {
+            return false;
+        }
+
+        [$issuedAt, $rand, $hmac] = $parts;
+
+        if (! ctype_digit($issuedAt) || $rand === '' || $hmac === '') {
+            return false;
+        }
+
+        // Server-side expiry: reject past the configured TTL regardless of the
+        // browser-side cookie lifetime.
+        $ageSeconds = now()->getTimestamp() - (int) $issuedAt;
+
+        if ($ageSeconds < 0 || $ageSeconds > $this->rememberDeviceTtlDays() * 86_400) {
+            return false;
+        }
+
+        return hash_equals($this->deviceToken($user, $issuedAt, $rand), $hmac);
     }
 
     public function forgetDevice(): void
@@ -115,12 +149,14 @@ class TwoFactorChallengeSession
 
     /**
      * Hash combines the user identifier with the raw secret, a rotatable
-     * server-side nonce, and APP_KEY. Disabling 2FA (or regenerating the
-     * secret) invalidates every remember-device cookie automatically; the
-     * nonce additionally lets "log out everywhere" / device revoke kill all
-     * outstanding cookies without changing the secret.
+     * server-side nonce, the cookie issue-time, a per-issue random component,
+     * and APP_KEY. Disabling 2FA (or regenerating the secret) invalidates every
+     * remember-device cookie automatically; the nonce additionally lets "log
+     * out everywhere" / device revoke kill all outstanding cookies without
+     * changing the secret. `$issuedAt`/`$rand` bind the HMAC to one specific
+     * cookie so it cannot be forged or shared across devices.
      */
-    private function deviceToken(Authenticatable $user): string
+    private function deviceToken(Authenticatable $user, string $issuedAt = '', string $rand = ''): string
     {
         $secret = method_exists($user, 'getRawOriginal')
             ? (string) $user->getRawOriginal('two_factor_secret')
@@ -132,8 +168,24 @@ class TwoFactorChallengeSession
 
         return hash_hmac(
             'sha256',
-            (string) $user->getAuthIdentifier().'|'.$secret.'|'.$nonce,
+            (string) $user->getAuthIdentifier().'|'.$secret.'|'.$nonce.'|'.$issuedAt.'|'.$rand,
             (string) config('app.key'),
         );
+    }
+
+    /**
+     * Configured server-side TTL (days) for remember-device cookies. Prefers
+     * the admin-editable setting; falls back to the DB-free config default so
+     * the check still works when the settings table is unavailable.
+     */
+    private function rememberDeviceTtlDays(): int
+    {
+        try {
+            $days = app(TwoFactorSettings::class)->remember_device_days;
+        } catch (\Throwable) {
+            $days = (int) config('filament-panel-base.two_factor.remember_device_days', 30);
+        }
+
+        return max(1, min($days, self::MAX_REMEMBER_DAYS));
     }
 }

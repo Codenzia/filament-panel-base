@@ -56,6 +56,13 @@ class ResetPassword extends Component
                     'remember_token' => Str::random(60),
                 ])->save();
 
+                // Rotate the 2FA "remember this device" nonce too, so a stolen
+                // remember-device cookie cannot keep skipping the 2FA challenge
+                // after a password reset the attacker didn't initiate.
+                if (method_exists($user, 'rotateTwoFactorRememberToken')) {
+                    $user->rotateTwoFactorRememberToken();
+                }
+
                 event(new PasswordReset($user));
             }
         );

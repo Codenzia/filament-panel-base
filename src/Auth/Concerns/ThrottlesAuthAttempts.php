@@ -109,7 +109,10 @@ trait ThrottlesAuthAttempts
      */
     private function rateKey(string $action, string $window, string $scope, string $value): string
     {
-        $digest = hash_hmac('sha256', $value, (string) config('app.key'));
+        // Normalise before hashing so `Victim@x.com`, `VICTIM@x.com` and
+        // `victim@x.com ` all land in the same bucket — otherwise an attacker
+        // sidesteps the per-identifier limit just by varying case/whitespace.
+        $digest = hash_hmac('sha256', mb_strtolower(trim($value)), (string) config('app.key'));
 
         return "fpb-auth:{$action}:{$window}:{$scope}:{$digest}";
     }

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-07-19
+
+### Security
+- **TOTP codes can no longer be replayed during a login challenge (PNB-007).** `TwoFactorAuthenticator::verify()` previously used a `get → verifyKeyNewer → put` sequence with a TOCTOU window in which the same still-valid code could be accepted by two parallel logins. The accepted code is now consumed atomically with `Cache::add` (single-use, keyed by `sha1(secret|code)`), so the first submission wins and any concurrent replay of the same code fails closed. The replay guard is armed only for the login challenge, not enrolment confirmation.
+- **Recovery codes are now consumed exactly once under a row lock (PNB-008).** `consumeRecoveryCode()` read-modify-wrote the hashed list without serialisation, so two concurrent challenges submitting the same recovery code could both read the pre-consumption list and both succeed. Consumption now runs inside a `DB::transaction` with `lockForUpdate`, so racing consumers queue and only one succeeds.
+- **Remember-device cookies now carry an issue-time, per-device entropy, and a server-side TTL (PNB-009).** The "skip 2FA on this device" cookie was a bare `sha256(userId+secret+appKey)` — identical across all of a user's browsers and valid for as long as the browser kept sending it. The value is now `issuedAt.rand.hmac(userId|secret|nonce|issuedAt|rand)`: bound to one device via random entropy and rejected server-side once older than the configured TTL, regardless of the browser cookie lifetime. Legacy bare-HMAC cookies fail closed and are re-issued in the new format after one re-challenge. New `filament-panel-base.two_factor.remember_device_days` config as the DB-free TTL fallback.
+- **Password reset and profile credential changes now rotate the 2FA remember-device nonce (PNB-010).** A stolen remember-device cookie previously kept skipping the 2FA challenge even after a password reset the attacker did not initiate. `ResetPassword` and the profile slide-over now call `rotateTwoFactorRememberToken()` on a password/email change, invalidating every outstanding remember-device cookie for that user.
+- **Auth throttle buckets can no longer be bypassed via case/whitespace (PNB-011).** `ThrottlesAuthAttempts::rateKey()` and `OtpService::rateLimitKey()` hashed the raw identifier, so `Victim@x.com`, `VICTIM@x.com` and `victim@x.com ` each opened a fresh bucket. Identifiers are now normalised with `mb_strtolower(trim(...))` before hashing, so all variants share one bucket.
+- **Appearance settings page no longer fails open (PNB-035).** `ManageAppearanceSettings::canAccess()` returned `true` for any authenticated user whenever the host model lacked an `isSuperAdmin()` method. It now mirrors the fail-closed admin-role cascade used elsewhere: super-admin check when available, otherwise the configured `admin_role` (denying users who lack it and failing closed on role-backend errors), only falling through to "any authenticated user" when the host has no role system at all.
+- **OTP notification is no longer queued, keeping the cleartext code out of job payloads (PNB-036).** `OtpCodeNotification` implemented `ShouldQueue`, which serialised the raw OTP into the queued job payload where it sat in the jobs table / redis in the clear until a worker ran. The notification now sends synchronously so the code only ever lives in memory.
+
+### Fixed
+- **OTP length setting can no longer brick verification (PNB-012).** The settings UI allowed an `otp_code_length` up to 10 while generation clamps to 8, so codes 9–10 could never round-trip. The field now caps at 8 to match the generator.
+- **Registration no longer force-injects `status` on non-moderated user models (PNB-016).** `RegistrationPipeline` unconditionally set `status` on the payload, throwing on host user models whose table has no such column. It now injects the moderation status only when the user model implements `HasModerationStatus`.
+- **2FA verification failures are no longer silently swallowed (PNB-019).** `TwoFactorAuthenticator::verify()` caught every `\Throwable` and returned "invalid code", masking outages (missing `pragmarx/google2fa`, `APP_KEY` rotation breaking secret decryption) that lock out every 2FA user. Genuine Google2FA exceptions are still treated as an invalid code; all other throwables are now `report()`ed to the error tracker before returning false.
+
 ## [0.5.4] - 2026-07-18
 
 ### Added

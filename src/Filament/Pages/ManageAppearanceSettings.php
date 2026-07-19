@@ -58,7 +58,24 @@ class ManageAppearanceSettings extends Page implements HasForms
             return false;
         }
 
-        return method_exists($user, 'isSuperAdmin') ? (bool) $user->isSuperAdmin() : true;
+        // Prefer an explicit super-admin check when the host model exposes one.
+        if (method_exists($user, 'isSuperAdmin')) {
+            return (bool) $user->isSuperAdmin();
+        }
+
+        // Otherwise gate on the configured admin role — failing closed if the
+        // role backend errors. Previously this fell OPEN (returned true) for
+        // any authenticated user whenever `isSuperAdmin()` was absent.
+        $role = (string) config('filament-panel-base.admin_role', 'super_admin');
+        if (method_exists($user, 'hasRole')) {
+            try {
+                return (bool) $user->hasRole($role);
+            } catch (\Throwable) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     public static function getNavigationGroup(): ?string

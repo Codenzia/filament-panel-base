@@ -38,9 +38,9 @@ class RegistrationPipeline
      * @param  array<string, mixed>  $payload
      * @param  array<string, mixed>  $context
      * @param  \Closure|null  $beforeUserCreation  Optional callback executed
-     *        INSIDE the same DB transaction as user creation, just before
-     *        $userModel::create() runs. Receives the payload array and may
-     *        return a mutated payload array (or null to keep it unchanged).
+     *                                             INSIDE the same DB transaction as user creation, just before
+     *                                             $userModel::create() runs. Receives the payload array and may
+     *                                             return a mutated payload array (or null to keep it unchanged).
      *
      *        This is the extension point downstream packages use to create
      *        related rows atomically with the user — e.g. tenant-module's
@@ -63,7 +63,7 @@ class RegistrationPipeline
 
         $payload = $event->payload; // listeners may have mutated by reference
 
-        $this->applyModerationStatus($payload);
+        $this->applyModerationStatus($userModel, $payload);
 
         /** @var Authenticatable $user */
         $user = DB::transaction(function () use ($userModel, $payload, $beforeUserCreation) {
@@ -92,10 +92,19 @@ class RegistrationPipeline
     }
 
     /**
+     * @param  class-string  $userModel
      * @param  array<string, mixed>  $payload
      */
-    private function applyModerationStatus(array &$payload): void
+    private function applyModerationStatus(string $userModel, array &$payload): void
     {
+        // Only inject `status` when the host's user model actually opts into
+        // moderation. On models without a `status` column this would otherwise
+        // throw MassAssignmentException (or write an unknown attribute) the
+        // moment a user registers.
+        if (! is_a($userModel, HasModerationStatus::class, true)) {
+            return;
+        }
+
         // Don't override callers that explicitly passed `status`.
         if (array_key_exists('status', $payload)) {
             return;

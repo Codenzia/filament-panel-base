@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Notifications;
 
-use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -13,11 +11,14 @@ use Illuminate\Notifications\Notification;
  * Email-channel OTP notification. Subject and body are translated via
  * the `filament-panel-base::auth.*` translation keys so hosts can override the
  * wording per locale.
+ *
+ * Deliberately NOT queued: queueing serialises the cleartext OTP into the
+ * job payload, which then sits in the queue backend (database/redis) in the
+ * clear until the worker picks it up. Sending synchronously keeps the code in
+ * memory only. The mail transport itself may still be queued by the host.
  */
-class OtpCodeNotification extends Notification implements ShouldQueue
+class OtpCodeNotification extends Notification
 {
-    use Queueable;
-
     /**
      * @param  array<string, mixed>  $context
      */

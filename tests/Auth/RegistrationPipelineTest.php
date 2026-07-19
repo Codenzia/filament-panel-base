@@ -6,6 +6,7 @@ namespace Codenzia\FilamentPanelBase\Tests\Auth;
 
 use Codenzia\FilamentPanelBase\Auth\Services\RegistrationPipeline;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Tests\TestCase;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User as AuthUser;
@@ -27,6 +28,72 @@ class RegistrationPipelineTest extends TestCase
             $table->unsignedBigInteger('tenant_id')->nullable();
             $table->timestamps();
         });
+
+        // A host user table WITHOUT a `status` column — the common case for
+        // apps that never opted into moderation.
+        Schema::create('pipeline_plain_users', function (Blueprint $table): void {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->string('password')->default('secret');
+            $table->timestamps();
+        });
+    }
+
+    public function test_does_not_inject_status_for_models_without_the_moderation_contract(): void
+    {
+        // PNB-016: forcing `status` onto a model whose table has no such column
+        // (and which does not implement HasModerationStatus) previously blew up
+        // registration. The pipeline must now skip the injection entirely.
+        $pipeline = new RegistrationPipeline(
+            $this->moderatedSettings('moderated'),
+        );
+
+        $user = $pipeline->register(
+            PipelinePlainUser::class,
+            ['name' => 'Nia', 'email' => 'nia@test'],
+        );
+
+        $this->assertInstanceOf(PipelinePlainUser::class, $user);
+        $this->assertSame('nia@test', $user->email);
+        $this->assertFalse(array_key_exists('status', $user->getAttributes()));
+    }
+
+    public function test_injects_pending_status_for_moderated_contract_models(): void
+    {
+        // PNB-016: models that DO opt into moderation still get their status set.
+        $pipeline = new RegistrationPipeline(
+            $this->moderatedSettings('moderated'),
+        );
+
+        $user = $pipeline->register(
+            PipelineModeratedUser::class,
+            ['name' => 'Omar', 'email' => 'omar@test'],
+        );
+
+        $this->assertSame('pending', $user->status);
+    }
+
+    public function test_injects_approved_status_for_moderated_contract_models_in_open_mode(): void
+    {
+        $pipeline = new RegistrationPipeline(
+            $this->moderatedSettings('open'),
+        );
+
+        $user = $pipeline->register(
+            PipelineModeratedUser::class,
+            ['name' => 'Pia', 'email' => 'pia@test'],
+        );
+
+        $this->assertSame('approved', $user->status);
+    }
+
+    private function moderatedSettings(string $mode): AuthenticationSettings
+    {
+        $settings = $this->settingsStub(AuthenticationSettings::class);
+        $settings->registration_mode = $mode;
+
+        return $settings;
     }
 
     public function test_register_creates_user_without_closure(): void
@@ -105,4 +172,28 @@ class PipelineTestUser extends AuthUser
     protected $table = 'pipeline_test_users';
 
     protected $guarded = [];
+}
+
+class PipelinePlainUser extends AuthUser
+{
+    protected $table = 'pipeline_plain_users';
+
+    protected $guarded = [];
+}
+
+class PipelineModeratedUser extends AuthUser implements HasModerationStatus
+{
+    protected $table = 'pipeline_test_users';
+
+    protected $guarded = [];
+
+    public function isSuspended(): bool
+    {
+        return $this->status === 'suspended';
+    }
+
+    public function isPending(): bool
+    {
+        return $this->status === 'pending';
+    }
 }

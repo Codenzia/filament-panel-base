@@ -1,11 +1,10 @@
 <?php
 
+use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
 use Codenzia\FilamentPanelBase\TwoFactor\Events\RecoveryCodeUsed;
 use Codenzia\FilamentPanelBase\TwoFactor\Events\TwoFactorDisabled;
 use Codenzia\FilamentPanelBase\TwoFactor\Events\TwoFactorEnabled;
-use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorAuthenticator;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
-use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use PragmaRX\Google2FA\Google2FA;
@@ -115,6 +114,25 @@ it('consumes a recovery code on use', function (): void {
     expect($this->user->verifyTwoFactorCode($codes[0]))->toBeFalse();
 
     Event::assertDispatched(RecoveryCodeUsed::class);
+});
+
+it('consumes a recovery code exactly once under the row lock (PNB-008)', function (): void {
+    Event::fake();
+
+    $codes = $this->user->generateTwoFactorSecret();
+
+    // Two consumptions of the same code: the first succeeds and removes exactly
+    // one hash from the list; the second finds nothing left to match and fails.
+    // The transaction + lockForUpdate is what stops two racing consumers from
+    // both reading the pre-consumption list and both succeeding.
+    expect($this->user->verifyTwoFactorCode($codes[0]))->toBeTrue();
+    expect($this->user->verifyTwoFactorCode($codes[0]))->toBeFalse();
+
+    $this->user->refresh();
+    expect($this->user->two_factor_recovery_codes)->toHaveCount(7);
+
+    // Exactly one RecoveryCodeUsed event — not two.
+    Event::assertDispatchedTimes(RecoveryCodeUsed::class, 1);
 });
 
 it('replaces recovery codes on regenerate', function (): void {

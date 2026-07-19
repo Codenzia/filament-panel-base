@@ -194,7 +194,10 @@ class ManageAuthenticationSettings extends Page implements HasForms
                             ->label(__('filament-panel-base::auth.settings_otp_code_length'))
                             ->numeric()
                             ->minValue(4)
-                            ->maxValue(10)
+                            // OtpService clamps generation to a max of 8 digits;
+                            // allowing 9–10 here would let an admin store a length
+                            // that can never round-trip through verify.
+                            ->maxValue(8)
                             ->required(),
                         TextInput::make('otp_ttl_minutes')
                             ->label(__('filament-panel-base::auth.settings_otp_ttl_minutes'))

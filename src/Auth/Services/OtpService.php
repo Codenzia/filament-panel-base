@@ -129,7 +129,11 @@ class OtpService
      */
     private function rateLimitKey(string $target, string $driver): string
     {
-        return 'fpb-otp:'.hash_hmac('sha256', $target.'|'.$driver, (string) config('app.key'));
+        // Normalise the target (email/phone) so case/whitespace variants can't
+        // each open a fresh issuance bucket for the same recipient.
+        $normalizedTarget = mb_strtolower(trim($target));
+
+        return 'fpb-otp:'.hash_hmac('sha256', $normalizedTarget.'|'.$driver, (string) config('app.key'));
     }
 
     private function ensureNotRateLimited(string $target, string $driver): void

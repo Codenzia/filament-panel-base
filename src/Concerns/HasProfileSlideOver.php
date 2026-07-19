@@ -161,7 +161,17 @@ trait HasProfileSlideOver
         }
         unset($data['passwordConfirmation']);
 
+        $emailChanged = array_key_exists('email', $data) && $data['email'] !== $user->getAttribute('email');
+        $passwordChanged = isset($data['password']);
+
         $user->update($data);
+
+        // A credential change (password or email) must invalidate any
+        // outstanding 2FA "remember this device" cookies, so a device the
+        // attacker had marked as trusted can no longer skip the challenge.
+        if (($passwordChanged || $emailChanged) && method_exists($user, 'rotateTwoFactorRememberToken')) {
+            $user->rotateTwoFactorRememberToken();
+        }
 
         if (request()->hasSession() && isset($data['password'])) {
             request()->session()->put([

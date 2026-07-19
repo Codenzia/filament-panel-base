@@ -4,12 +4,13 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\TwoFactor\Services;
 
-use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
+use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
 use BaconQrCode\Writer;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Support\Facades\Cache;
+use PragmaRX\Google2FA\Exceptions\Google2FAException;
 use PragmaRX\Google2FA\Google2FA;
 use RuntimeException;
 
@@ -61,30 +62,33 @@ class TwoFactorAuthenticator
                 return (bool) $g2fa->verifyKey($secret, $code, $this->settings->window);
             }
 
-            $cacheKey = 'fpb_2fa_ts:'.sha1($secret);
-            $old = Cache::get($cacheKey);
-
-            $timestamp = $g2fa->verifyKeyNewer(
-                $secret,
-                $code,
-                $old !== null ? (int) $old : null,
-                $this->settings->window,
-            );
-
-            if ($timestamp === false) {
+            if ($g2fa->verifyKey($secret, $code, $this->settings->window) === false) {
                 return false;
             }
 
-            // Persist the accepted timestep long enough to cover the full
-            // acceptance window on both sides, then forget it.
-            Cache::put(
-                $cacheKey,
-                $timestamp,
+            // Single-use replay guard. Cache::add is atomic on real drivers
+            // (redis/memcached/database): the first request to submit this
+            // exact code for this secret wins, and any parallel replay of the
+            // same code gets a false return — closing the get→verify→put TOCTOU
+            // window. NOTE: on the `array` cache driver this is effectively a
+            // no-op (per-process, no cross-request state) so it cannot
+            // serialise concurrent logins there.
+            $replayKey = 'fpb_2fa_used:'.sha1($secret.'|'.$code);
+
+            return Cache::add(
+                $replayKey,
+                1,
                 now()->addSeconds($this->settings->period * (2 * $this->settings->window + 2)),
             );
+        } catch (Google2FAException) {
+            // Malformed secret/code — a genuine "invalid code", not an outage.
+            return false;
+        } catch (\Throwable $e) {
+            // Missing pragmarx/google2fa, or APP_KEY rotation breaking secret
+            // decryption upstream: these lock EVERY 2FA user out as "invalid
+            // code". Surface them to the error tracker instead of swallowing.
+            report($e);
 
-            return true;
-        } catch (\Throwable) {
             return false;
         }
     }
@@ -123,7 +127,7 @@ class TwoFactorAuthenticator
 
         $renderer = new ImageRenderer(
             new RendererStyle($size, 0),
-            new SvgImageBackEnd(),
+            new SvgImageBackEnd,
         );
 
         return (new Writer($renderer))->writeString($provisioningUri);
@@ -138,7 +142,7 @@ class TwoFactorAuthenticator
             );
         }
 
-        $g2fa = new Google2FA();
+        $g2fa = new Google2FA;
         $g2fa->setOneTimePasswordLength($this->settings->digits);
         $g2fa->setKeyRegeneration($this->settings->period);
 

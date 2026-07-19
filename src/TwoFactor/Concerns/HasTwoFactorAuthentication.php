@@ -12,6 +12,7 @@ use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorAuthenticator;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
@@ -239,28 +240,49 @@ trait HasTwoFactorAuthentication
             return false;
         }
 
-        $remaining = [];
-        $matched = false;
+        // Serialise the read-modify-write of the hashed list: two parallel
+        // challenges submitting the same recovery code would otherwise both
+        // read the pre-consumption list and both succeed. Re-fetch this row
+        // FOR UPDATE inside a transaction so concurrent consumers queue.
+        return DB::transaction(function () use ($code): bool {
+            /** @var static|null $locked */
+            $locked = static::query()
+                ->whereKey($this->getKey())
+                ->lockForUpdate()
+                ->first();
 
-        foreach ($this->two_factor_recovery_codes as $hash) {
-            if (! $matched && Hash::check($code, $hash)) {
-                $matched = true;
-
-                continue;
+            if ($locked === null) {
+                return false;
             }
 
-            $remaining[] = $hash;
-        }
+            $remaining = [];
+            $matched = false;
 
-        if (! $matched) {
-            return false;
-        }
+            foreach ($locked->two_factor_recovery_codes as $hash) {
+                if (! $matched && Hash::check($code, $hash)) {
+                    $matched = true;
 
-        $this->two_factor_recovery_codes = $remaining;
-        $this->save();
+                    continue;
+                }
 
-        event(new RecoveryCodeUsed($this));
+                $remaining[] = $hash;
+            }
 
-        return true;
+            if (! $matched) {
+                return false;
+            }
+
+            $locked->two_factor_recovery_codes = $remaining;
+            $locked->save();
+
+            // Keep the in-memory instance the caller holds consistent with
+            // the row we just persisted under the lock.
+            $this->two_factor_recovery_codes = $remaining;
+            $this->syncOriginalAttribute('two_factor_recovery_codes');
+
+            event(new RecoveryCodeUsed($this));
+
+            return true;
+        });
     }
 }

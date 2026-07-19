@@ -127,6 +127,20 @@ it('clears per-minute buckets on success but keeps the per-day bucket', function
         ->toThrow(ValidationException::class);
 });
 
+it('shares one bucket across case/whitespace variants of an identifier (PNB-011)', function (): void {
+    $fixture = new ThrottlesAuthAttemptsFixture;
+
+    // Three "different" spellings of the same identifier — an attacker's trick
+    // to sidestep the per-identifier limit. Normalisation (lowercase + trim)
+    // means they all land in one bucket, so the third check trips the limit=3.
+    $fixture->hitRateLimiter('login', 'Victim@Example.com');
+    $fixture->hitRateLimiter('login', 'VICTIM@EXAMPLE.COM');
+    $fixture->hitRateLimiter('login', '  victim@example.com  ');
+
+    expect(fn () => $fixture->ensureNotRateLimited('login', 'victim@example.com', 'identifier'))
+        ->toThrow(ValidationException::class);
+});
+
 it('does not leak raw identifiers into cache keys', function (): void {
     $fixture = new ThrottlesAuthAttemptsFixture;
 

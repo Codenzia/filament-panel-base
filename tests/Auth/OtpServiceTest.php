@@ -103,6 +103,38 @@ it('does not verify a code bound to one user with a different user id', function
         ->and($service->verify('+962501234567', $code, 'null', userId: 1))->toBeTrue();
 });
 
+it('round-trips every admin-allowed OTP length (PNB-012)', function (): void {
+    // The settings UI now caps otp_code_length at 8; generation clamps to the
+    // same ceiling. Each allowed length must generate a code of exactly that
+    // many digits that then verifies — no length can brick the verify step.
+    foreach (range(4, 8) as $length) {
+        $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+        $settings->otp_code_length = $length;
+        $service = makeOtpService($settings);
+
+        $target = "+96250000000{$length}";
+        $code = $service->send($target, 'null');
+
+        expect(strlen($code))->toBe($length)
+            ->and(ctype_digit($code))->toBeTrue()
+            ->and($service->verify($target, $code, 'null'))->toBeTrue();
+    }
+});
+
+it('normalises the target so case/whitespace variants share one issuance bucket (PNB-011)', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    $settings->throttle_per_minute = 2;
+    $service = makeOtpService($settings);
+
+    // Two spellings of the same email plus a trimmed variant. Without target
+    // normalisation each would open its own bucket; with it, the third send
+    // trips the per-minute limit.
+    $service->send('User@Example.com', 'null');
+    $service->send('USER@EXAMPLE.COM', 'null');
+
+    expect(fn () => $service->send('  user@example.com  ', 'null'))->toThrow(RuntimeException::class);
+});
+
 it('throws once issuance exceeds throttle_per_minute', function (): void {
     $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
     $settings->throttle_per_minute = 2;

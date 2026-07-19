@@ -46,6 +46,38 @@ it('rejects an empty code', function (): void {
     expect($this->auth->verify($secret, '   '))->toBeFalse();
 });
 
+it('accepts a TOTP once but rejects the same code on replay when the guard is on (PNB-007)', function (): void {
+    $secret = $this->auth->generateSecret();
+    $google2fa = new Google2FA;
+    $google2fa->setOneTimePasswordLength(6);
+    $code = $google2fa->getCurrentOtp($secret);
+
+    // First submission wins.
+    expect($this->auth->verify($secret, $code, guardReplay: true))->toBeTrue();
+
+    // Replaying the exact same still-valid code is rejected by the single-use
+    // cache guard, even though the TOTP itself is still within the window.
+    expect($this->auth->verify($secret, $code, guardReplay: true))->toBeFalse();
+});
+
+it('does not arm the replay guard during enrolment confirmation (PNB-007)', function (): void {
+    $secret = $this->auth->generateSecret();
+    $google2fa = new Google2FA;
+    $google2fa->setOneTimePasswordLength(6);
+    $code = $google2fa->getCurrentOtp($secret);
+
+    // guardReplay defaults to false — confirming twice is fine (one-shot flow).
+    expect($this->auth->verify($secret, $code))->toBeTrue();
+    expect($this->auth->verify($secret, $code))->toBeTrue();
+});
+
+it('returns false without throwing on a malformed secret (PNB-019)', function (): void {
+    // A secret with non-base32 characters makes Google2FA throw an
+    // InvalidCharactersException; the typed catch turns that into a plain
+    // "invalid code" false rather than bubbling the exception out of verify().
+    expect($this->auth->verify('!!!not-base32!!!', '123456', guardReplay: true))->toBeFalse();
+});
+
 it('builds a provisioning URI including the configured issuer', function (): void {
     $secret = $this->auth->generateSecret();
     $uri = $this->auth->provisioningUri($secret, 'alice@example.com');
