@@ -23,4 +23,10 @@ return [
     'logout_others_button' => 'تسجيل الخروج من كل مكان آخر',
     'logout_others_confirm' => 'تسجيل الخروج من كل جهاز آخر باستثناء هذا؟',
     'logout_others_notification' => 'تم إلغاء :count جلسة.',
+
+    'confirm_password_intro' => 'أدخل كلمة المرور الحالية لتأكيد هذا الإجراء.',
+    'confirm_password_label' => 'كلمة المرور الحالية',
+    'password_incorrect' => 'كلمة المرور التي أدخلتها غير صحيحة.',
+    'confirm' => 'تأكيد',
+    'cancel' => 'إلغاء',
 ];

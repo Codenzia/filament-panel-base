@@ -52,6 +52,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Validation\Rules\Password;
 use Livewire\Livewire;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
@@ -239,6 +240,8 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 
         Event::subscribe(AuthUserObserver::class);
 
+        $this->registerDefaultPasswordRules();
+
         if ($this->app->runningInConsole()) {
             $stamp = date('Y_m_d_His');
 
@@ -259,6 +262,41 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                     "migrations/{$stamp}_create_demo_settings_table.php"
                 ),
             ], 'filament-panel-base-demo-migrations');
+        }
+    }
+
+    /**
+     * Register a fleet-baseline password policy for `Password::defaults()`,
+     * which the auth flows (registration + password reset) consume. Only set
+     * it when the host has not already registered its own default, so an app
+     * that calls `Password::defaults(...)` in its own provider keeps full
+     * control. `uncompromised()` is deliberately not applied here — it makes a
+     * network call to the HIBP API and is left for hosts to opt into.
+     */
+    protected function registerDefaultPasswordRules(): void
+    {
+        if ($this->hostDefinedPasswordDefaults()) {
+            return;
+        }
+
+        Password::defaults(static fn (): Password => Password::min(8)->letters()->numbers());
+    }
+
+    /**
+     * Whether a Password default callback has already been registered (by the
+     * host or an earlier boot), so we never clobber it.
+     */
+    private function hostDefinedPasswordDefaults(): bool
+    {
+        try {
+            $property = new \ReflectionProperty(Password::class, 'defaultCallback');
+            $property->setAccessible(true);
+
+            return $property->getValue() !== null;
+        } catch (\ReflectionException) {
+            // Property shape changed upstream — fail safe by not registering,
+            // so we can never override a host default we can't detect.
+            return true;
         }
     }
 

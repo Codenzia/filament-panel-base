@@ -515,29 +515,17 @@ return [
         ],
 
         /*
-        | OTP service.
+        | OTP service. `default` is the DB-free fallback driver consulted by
+        | OtpDriverManager when AuthenticationSettings is unavailable (fresh
+        | install before the settings table is seeded). `ttl_minutes` and
+        | `max_attempts` back the OtpService / OtpCodeNotification when the
+        | settings row is absent. The live code length is owned solely by
+        | AuthenticationSettings::otp_code_length.
         */
         'otp' => [
-            'code_length' => 6,
+            'default' => 'email',
             'ttl_minutes' => 10,
             'max_attempts' => 5,
-        ],
-
-        /*
-        | Throttle limits for auth flows. AuthenticationSettings overrides
-        | these per-deployment. Both windows are consumed by two layers:
-        |
-        |   - The ThrottlesAuthAttempts trait used by the Livewire auth
-        |     components (Login, Register, ForgotPassword, ResetPassword,
-        |     VerifyOtp, VerifyEmailNotice) — keyed on IP + identifier.
-        |   - The ThrottleAuth middleware on the OAuth redirect/callback
-        |     routes — keyed on IP only.
-        |
-        | Defaults match Laravel Fortify's login rate-limiter (5/min).
-        */
-        'throttle' => [
-            'per_minute' => 5,
-            'per_day' => 50,
         ],
 
         /*

@@ -45,19 +45,22 @@ class Register extends Component
 
     public function register(AuthenticationSettings $settings, RegistrationPipeline $pipeline, OtpService $otp): void
     {
+        $this->email = $this->normaliseEmail();
         $fullPhone = $this->normalisePhone();
 
         // Identifier for throttle: prefer email, fall back to phone, fall back
-        // to name. Burning budget on form spam is fine — register attempts
-        // create persistent rows in the users table, so even valid floods are
-        // worth rate-limiting before the validator runs.
+        // to name.
         $identifier = $this->email !== '' ? $this->email : ($fullPhone ?? $this->name);
         $attribute = $this->email !== '' ? 'email' : ($fullPhone !== null ? 'phone' : 'name');
 
         $this->ensureNotRateLimited('register', $identifier, $attribute);
-        $this->hitRateLimiter('register', $identifier);
 
         $this->validate(RegistrationRules::build($settings));
+
+        // Only spend the rate-limit budget on submissions that actually clear
+        // validation, so a stream of malformed attempts can't lock the bucket
+        // for a legitimate signup (PNB-037).
+        $this->hitRateLimiter('register', $identifier);
 
         $userModel = config('filament-panel-base.user_model', User::class);
 
@@ -129,6 +132,16 @@ class Register extends Component
         ])
             ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
             ->title(__('filament-panel-base::auth.register_title'));
+    }
+
+    /**
+     * Lower-case and trim the email once at intake so a case/whitespace
+     * variant can't create a second account (and so the DB unique check and
+     * later login lookups line up on case-sensitive stores like PostgreSQL).
+     */
+    private function normaliseEmail(): string
+    {
+        return $this->email === '' ? '' : mb_strtolower(trim($this->email));
     }
 
     /**

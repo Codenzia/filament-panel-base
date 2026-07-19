@@ -42,7 +42,12 @@ trait FindsOrCreatesFromSocialite
     public static function findOrCreateFromSocialite(string $provider, SocialiteUser $socialUser): ?Model
     {
         $providerId = (string) $socialUser->getId();
+
+        // Lower-case + trim once at intake so the email-match lookup and any
+        // newly-created user row line up with the normalised address stored by
+        // the local registration path (case-sensitive on PostgreSQL).
         $email = $socialUser->getEmail();
+        $email = is_string($email) && $email !== '' ? mb_strtolower(trim($email)) : $email;
 
         $existingLink = SocialAccount::query()
             ->where('provider', $provider)

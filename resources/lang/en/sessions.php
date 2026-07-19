@@ -23,4 +23,10 @@ return [
     'logout_others_button' => 'Sign out everywhere else',
     'logout_others_confirm' => 'Sign out of every other device except this one?',
     'logout_others_notification' => ':count session(s) revoked.',
+
+    'confirm_password_intro' => 'Enter your current password to confirm this action.',
+    'confirm_password_label' => 'Current password',
+    'password_incorrect' => 'The password you entered is incorrect.',
+    'confirm' => 'Confirm',
+    'cancel' => 'Cancel',
 ];

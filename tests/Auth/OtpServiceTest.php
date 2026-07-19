@@ -103,6 +103,33 @@ it('does not verify a code bound to one user with a different user id', function
         ->and($service->verify('+962501234567', $code, 'null', userId: 1))->toBeTrue();
 });
 
+it('does not let a caller omitting the user id consume a user-bound code (PNB-032)', function (): void {
+    $service = makeOtpService();
+
+    $code = $service->send('+962501234567', 'null', userId: 7);
+
+    // A verify() with no user id must not match a code bound to a user, and
+    // must leave the record intact so the rightful owner can still redeem it.
+    expect($service->verify('+962501234567', $code, 'null'))->toBeFalse()
+        ->and(DB::table('otp_codes')->where('target', '+962501234567')->count())->toBe(1)
+        ->and($service->verify('+962501234567', $code, 'null', userId: 7))->toBeTrue();
+});
+
+it('replaces an existing code without a unique-constraint error on rapid re-send (PNB-030)', function (): void {
+    $service = makeOtpService();
+
+    // Back-to-back sends for the same (target, channel) must upsert in place —
+    // the old delete()+insert() left a window that tripped the unique index.
+    $service->send('+962501234567', 'null', userId: 1);
+    $latest = $service->send('+962501234567', 'null', userId: 2);
+
+    $rows = DB::table('otp_codes')->where('target', '+962501234567')->get();
+
+    expect($rows)->toHaveCount(1)
+        ->and((int) $rows->first()->user_id)->toBe(2)
+        ->and($service->verify('+962501234567', $latest, 'null', userId: 2))->toBeTrue();
+});
+
 it('round-trips every admin-allowed OTP length (PNB-012)', function (): void {
     // The settings UI now caps otp_code_length at 8; generation clamps to the
     // same ceiling. Each allowed length must generate a code of exactly that

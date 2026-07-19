@@ -35,9 +35,14 @@ class Login extends Component
             'password' => ['required', 'string'],
         ]);
 
-        $this->ensureNotRateLimited('login', $this->identifier);
-
         $field = $this->resolveAuthField($settings);
+
+        // Normalise the identifier the same way registration stored it, so a
+        // mixed-case email (PNB-013) or a locally-typed phone number (PNB-014)
+        // still resolves to the persisted account.
+        $this->identifier = $this->normaliseIdentifier($field, $settings);
+
+        $this->ensureNotRateLimited('login', $this->identifier);
 
         // Validate credentials WITHOUT logging in. The old flow called
         // Auth::attempt() (a full login → fires the Login event, runs the
@@ -152,5 +157,36 @@ class Login extends Component
             'both' => str_contains($this->identifier, '@') ? 'email' : 'phone',
             default => 'email',
         };
+    }
+
+    /**
+     * Normalise the submitted identifier into the form registration persisted:
+     * lower-cased email, or an E.164 phone number.
+     */
+    private function normaliseIdentifier(string $field, AuthenticationSettings $settings): string
+    {
+        return $field === 'email'
+            ? mb_strtolower(trim($this->identifier))
+            : $this->normalisePhoneIdentifier($settings);
+    }
+
+    /**
+     * Turn a locally-typed phone number into the same E.164 string that
+     * registration stored. Registration prepends the default country code to a
+     * national number, so a login submission of `0791234567` (or `791234567`)
+     * must resolve to `<dial code>791234567` — the leading national-trunk zero
+     * is dropped. A value already in `+` international form is used verbatim.
+     */
+    private function normalisePhoneIdentifier(AuthenticationSettings $settings): string
+    {
+        $candidate = trim($this->identifier);
+
+        if ($candidate === '' || str_starts_with($candidate, '+')) {
+            return $candidate;
+        }
+
+        $national = ltrim(preg_replace('/\D/', '', $candidate) ?? '', '0');
+
+        return $settings->default_country_code.$national;
     }
 }

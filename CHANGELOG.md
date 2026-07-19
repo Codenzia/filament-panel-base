@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-07-19
+
+### Security
+- **Email is now lower-cased once at intake, closing case-variant duplicate accounts (PNB-013).** Registration (`Register`), social sign-in (`FindsOrCreatesFromSocialite`) and the login lookup (`Login`) normalise the email with `mb_strtolower(trim(...))` before it is stored, matched, or uniqueness-checked. On case-sensitive stores (PostgreSQL) `User@x.com` and `user@x.com` previously created two separate accounts and a mixed-case login could miss the row; all variants now resolve to one account.
+- **Phone login now normalises to the same E.164 form registration stored (PNB-014).** `Login` prepended nothing to the typed identifier while `Register` stored `<dial code><national number>`, so a locally-typed number (`0791234567`) could never match. The phone branch now strips the national-trunk zero and prepends the default country code, so a local-format login resolves the E.164 account.
+- **The super-admin role can no longer be assigned by a non-super-admin (PNB-021).** `UserResource`'s Roles select offered every role, including `super_admin`, to anyone who could reach the form. The option is now filtered out unless the actor is themselves a super-admin (`SuperAdmin::isSuperAdmin`, else the configured `super_admin` role), removing a privilege-escalation path if a host widens `canAccess()`.
+- **OTP issuance is now a single atomic upsert instead of delete-then-insert (PNB-030).** Two concurrent sends for the same `(target, channel)` could both delete then both insert, tripping the unique index into a 500. `OtpService::send()` now issues one `upsert()` so the database serialises the race and the latest code always wins.
+- **A user-bound OTP can no longer be consumed by a caller that omits the user id (PNB-032).** `OtpService::verify()` only added the `user_id` predicate when an id was supplied; a `null`-id verify matched any row for the target. It now adds `whereNull('user_id')` when no id is given, so a code issued for a specific user is only redeemable with that id.
+- **OTP verification no longer leaks code existence through response timing (PNB-031).** The miss path returned immediately while the hit path spent time in `Hash::check`. A dummy `Hash::check` now runs on the miss path so "no active OTP" and "wrong code" take a comparable amount of time.
+- **Password reset and registration now adopt `Password::defaults()` (PNB-018).** Both previously hard-coded `min:8`. They now defer to the framework default rule, and the service provider registers a fleet baseline (`min(8)->letters()->numbers()`) — but only when the host has not already registered its own `Password::defaults()`, which it never overrides. `uncompromised()` (an HIBP network call) is intentionally left for hosts to opt into.
+- **Device-session revocation now re-confirms the current password (PNB-025).** "Revoke this device" and "sign out everywhere else" rotate remember-me and 2FA remember-device credentials, so — mirroring the 2FA-disable action — they now require the current password before running, behind a modal, instead of a bare `wire:confirm`. Signing the current browser out is unprivileged and still skips the prompt.
+- **A silent 2FA plaintext-secret fallback is now logged (PNB-024).** When `two_factor_secret` / `two_factor_recovery_codes` cannot be decrypted, the accessor still falls back to the raw value (covering legacy plaintext seeders) but now logs a one-time warning per column per request, so an APP_KEY rotation that breaks decryption for every 2FA user is surfaced rather than masked.
+- **Register throttle budget is only spent on submissions that pass validation (PNB-037).** `Register` hit the rate limiter before validation, so a stream of malformed submissions could exhaust the bucket for a legitimate signup. The `hit()` now runs only after validation succeeds; the pre-validation `ensureNotRateLimited()` check is unchanged.
+
+### Fixed
+- **Email-channel OTP no longer stamps `phone_verified_at` (PNB-017).** `VerifyOtp` marked the phone verified on every successful OTP regardless of channel. It now marks the channel that was actually verified — email verification for the email driver, phone verification otherwise.
+- **The bundled fallback auth layout now ships a minimal self-contained stylesheet (PNB-020).** `layouts/auth.blade.php` never loads the host's compiled Tailwind, so it previously rendered with effectively no CSS. It now inlines a small, dark-mode-aware stylesheet (centred card, system font stack, styled inputs/buttons) so the fallback is presentable on its own.
+- **Dead auth config keys cleaned up and the missing OTP default added (PNB-015).** `OtpDriverManager` read `filament-panel-base.auth.otp.default`, which did not exist; that key is now defined (`'email'`). The never-read `auth.otp.code_length` and `auth.throttle.*` keys (superseded entirely by `AuthenticationSettings`) were removed to stop implying they configure anything.
+
 ## [0.5.5] - 2026-07-19
 
 ### Security

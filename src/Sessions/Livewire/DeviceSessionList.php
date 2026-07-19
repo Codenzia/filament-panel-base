@@ -12,6 +12,7 @@ use Filament\Notifications\Notification;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Component;
 
@@ -24,32 +25,125 @@ use Livewire\Component;
  * Gracefully degrades when the session driver isn't database — shows a
  * friendly "configure database sessions to see this" notice rather than
  * crashing.
+ *
+ * Revoking another device and "sign out everywhere else" both rotate the
+ * user's remember-me and 2FA remember-device credentials, so — mirroring the
+ * 2FA-disable action — they require the current password to be re-entered
+ * before they run. Signing the current browser out is not privileged and
+ * skips the prompt.
  */
 class DeviceSessionList extends Component
 {
-    public bool $confirmingRevoke = false;
+    public bool $confirmingAction = false;
 
-    public ?string $sessionToRevoke = null;
+    /** @var 'revoke'|'logout-others'|null */
+    public ?string $pendingAction = null;
 
-    public function revoke(DeviceSessionRepository $repo, string $sessionId): void
+    public ?string $pendingSessionId = null;
+
+    public string $password = '';
+
+    /**
+     * Open the password-confirmation modal for revoking another device, or
+     * immediately sign out when the target is the current browser (not a
+     * privileged action, so no re-authentication).
+     */
+    public function promptRevoke(string $sessionId): void
+    {
+        if ($sessionId === session()->getId()) {
+            $this->signOutCurrentDevice();
+
+            return;
+        }
+
+        $this->openConfirmation('revoke', $sessionId);
+    }
+
+    /**
+     * Open the password-confirmation modal for "sign out everywhere else".
+     */
+    public function promptLogoutOtherDevices(SessionManagementSettings $settings): void
+    {
+        if (! $settings->allow_logout_other_devices) {
+            return;
+        }
+
+        $this->openConfirmation('logout-others', null);
+    }
+
+    /**
+     * Re-authenticate with the current password, then run the pending action.
+     * The privileged work never runs unless the password check passes.
+     */
+    public function confirmAction(DeviceSessionRepository $repo, SessionManagementSettings $settings): void
+    {
+        if (! $this->confirmingAction) {
+            return;
+        }
+
+        $this->validate(['password' => ['required', 'string']]);
+
+        if (! $this->passwordConfirmed()) {
+            $this->addError('password', __('filament-panel-base::sessions.password_incorrect'));
+
+            return;
+        }
+
+        $action = $this->pendingAction;
+        $sessionId = $this->pendingSessionId;
+
+        $this->cancelConfirmation();
+
+        if ($action === 'revoke' && $sessionId !== null) {
+            $this->revokeOtherDevice($repo, $sessionId);
+        } elseif ($action === 'logout-others') {
+            $this->performLogoutOtherDevices($repo, $settings);
+        }
+    }
+
+    public function cancelConfirmation(): void
+    {
+        $this->reset('confirmingAction', 'pendingAction', 'pendingSessionId', 'password');
+        $this->resetErrorBag('password');
+    }
+
+    private function openConfirmation(string $action, ?string $sessionId): void
+    {
+        $this->pendingAction = $action;
+        $this->pendingSessionId = $sessionId;
+        $this->password = '';
+        $this->resetErrorBag('password');
+        $this->confirmingAction = true;
+    }
+
+    private function passwordConfirmed(): bool
+    {
+        $user = Auth::user();
+        $hash = $user?->getAuthPassword();
+
+        return is_string($hash) && $hash !== '' && Hash::check($this->password, $hash);
+    }
+
+    private function signOutCurrentDevice(): void
+    {
+        if (Auth::user() === null) {
+            return;
+        }
+
+        // Revoking the current session = log yourself out. Use the standard
+        // Auth logout instead so the chrome refreshes.
+        Auth::logout();
+        session()->invalidate();
+        session()->regenerateToken();
+
+        $this->redirect(route('login'), navigate: false);
+    }
+
+    private function revokeOtherDevice(DeviceSessionRepository $repo, string $sessionId): void
     {
         $user = Auth::user();
 
         if ($user === null) {
-            return;
-        }
-
-        $currentId = session()->getId();
-
-        if ($sessionId === $currentId) {
-            // Revoking the current session = log yourself out. Use the
-            // standard Auth logout instead so the chrome refreshes.
-            Auth::logout();
-            session()->invalidate();
-            session()->regenerateToken();
-
-            $this->redirect(route('login'), navigate: false);
-
             return;
         }
 
@@ -66,7 +160,7 @@ class DeviceSessionList extends Component
         }
     }
 
-    public function logoutOtherDevices(
+    private function performLogoutOtherDevices(
         DeviceSessionRepository $repo,
         SessionManagementSettings $settings,
     ): void {

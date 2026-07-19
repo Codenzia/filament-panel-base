@@ -53,7 +53,18 @@ class VerifyOtp extends Component
 
         $user = Auth::user();
 
-        if ($user instanceof HasPhone) {
+        // Mark the channel that was actually verified. An email-channel OTP
+        // must not stamp phone_verified_at (and vice-versa) — the target was
+        // resolved from the driver, so key the verification off the same driver
+        // rather than blindly marking the phone verified (PNB-017).
+        if ($settings->otp_driver === 'email') {
+            if ($user !== null
+                && method_exists($user, 'hasVerifiedEmail')
+                && method_exists($user, 'markEmailAsVerified')
+                && ! $user->hasVerifiedEmail()) {
+                $user->markEmailAsVerified();
+            }
+        } elseif ($user instanceof HasPhone) {
             $user->markPhoneVerified();
         }
 

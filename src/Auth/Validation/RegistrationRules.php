@@ -9,6 +9,7 @@ use Codenzia\FilamentPanelBase\Auth\Rules\AllowedEmailDomain;
 use Codenzia\FilamentPanelBase\Auth\Rules\NotDisposableEmail;
 use Codenzia\FilamentPanelBase\Auth\Rules\ValidPhoneFormat;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Illuminate\Validation\Rules\Password;
 
 /**
  * Builds the validation rule set for the Livewire Register component. The
@@ -26,7 +27,7 @@ class RegistrationRules
 
         $rules = [
             'name' => ['required', 'string', 'max:255'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', Password::defaults(), 'confirmed'],
         ];
 
         $rules['email'] = self::emailRules($settings);

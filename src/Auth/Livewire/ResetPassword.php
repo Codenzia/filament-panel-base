@@ -10,6 +10,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password as PasswordRule;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -38,7 +39,7 @@ class ResetPassword extends Component
         $this->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'string', 'email:rfc'],
-            'password' => ['required', 'string', 'min:8', 'confirmed'],
+            'password' => ['required', 'string', PasswordRule::defaults(), 'confirmed'],
         ]);
 
         $this->ensureNotRateLimited('reset', $this->email, 'email');

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 
 /**
@@ -34,6 +35,32 @@ use Illuminate\Support\Str;
 trait HasTwoFactorAuthentication
 {
     /**
+     * Tracks which encrypted 2FA columns have already logged a decrypt-failure
+     * warning this request, so the log isn't flooded when many rows are read.
+     *
+     * @var array<string, bool>
+     */
+    private static array $twoFactorDecryptWarnings = [];
+
+    /**
+     * Log a one-time warning when an encrypted 2FA column cannot be decrypted
+     * and the accessor falls back to the raw stored value. Most often this
+     * means APP_KEY was rotated without re-encrypting the secrets — silently
+     * treating ciphertext as plaintext would mask that breakage, so surface it
+     * (once per column per request) while still failing soft.
+     */
+    protected static function warnAboutTwoFactorDecryptFailure(string $column): void
+    {
+        if (isset(self::$twoFactorDecryptWarnings[$column])) {
+            return;
+        }
+
+        self::$twoFactorDecryptWarnings[$column] = true;
+
+        Log::warning('filament-panel-base: could not decrypt '.$column.'; falling back to the raw stored value. This usually means APP_KEY was rotated without re-encrypting two-factor data.');
+    }
+
+    /**
      * Decrypted secret accessor / encrypting mutator. Falls back to raw
      * string when the value is already plaintext (covers legacy seeders
      * that bypass the mutator).
@@ -49,6 +76,8 @@ trait HasTwoFactorAuthentication
                 try {
                     return Crypt::decryptString($value);
                 } catch (\Throwable) {
+                    static::warnAboutTwoFactorDecryptFailure('two_factor_secret');
+
                     return $value;
                 }
             },
@@ -76,6 +105,8 @@ trait HasTwoFactorAuthentication
                 try {
                     $decrypted = Crypt::decryptString($value);
                 } catch (\Throwable) {
+                    static::warnAboutTwoFactorDecryptFailure('two_factor_recovery_codes');
+
                     $decrypted = $value;
                 }
 

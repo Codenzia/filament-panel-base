@@ -23,6 +23,7 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -151,6 +152,36 @@ class UserResource extends Resource
             && method_exists(static::getModel(), 'roles');
     }
 
+    /** The role name that grants super-admin, mirroring canAccess()'s cascade. */
+    public static function superAdminRoleName(): string
+    {
+        return (string) config('filament-shield.super_admin.name', 'super_admin');
+    }
+
+    /**
+     * Whether the current actor is allowed to assign the super-admin role.
+     * Only a super-admin can — so the super-admin role can never be granted by
+     * a lesser account, even when a host widens canAccess().
+     */
+    public static function actorCanAssignSuperAdmin(): bool
+    {
+        $user = auth()->user();
+
+        if ($user === null) {
+            return false;
+        }
+
+        if (class_exists(SuperAdmin::class)) {
+            return SuperAdmin::isSuperAdmin($user);
+        }
+
+        if (method_exists($user, 'hasRole')) {
+            return (bool) $user->hasRole(static::superAdminRoleName());
+        }
+
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         $tabs = [
@@ -187,7 +218,15 @@ class UserResource extends Resource
                     Section::make()->schema([
                         Select::make('roles')
                             ->label(__('Roles'))
-                            ->relationship('roles', 'name')
+                            // Only a super-admin may assign the super-admin role.
+                            // For everyone else it is filtered out of the options
+                            // so it can never be granted from this form (privilege
+                            // escalation guard).
+                            ->relationship('roles', 'name', modifyQueryUsing: function (Builder $query): Builder {
+                                return static::actorCanAssignSuperAdmin()
+                                    ? $query
+                                    : $query->where('name', '!=', static::superAdminRoleName());
+                            })
                             ->multiple()->preload()->searchable()
                             ->helperText(__('Roles granted to this user.'))
                             ->columnSpanFull(),

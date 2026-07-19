@@ -47,3 +47,13 @@ it('honours an explicit auth.layout string', function () use ($resolve) {
 
     expect($resolve())->toBe('layouts.app');
 });
+
+it('ships a self-contained stylesheet in the bundled fallback layout (PNB-020)', function () {
+    $html = view('filament-panel-base::layouts.auth', ['slot' => '<form></form>'])->render();
+
+    // The fallback layout never loads the host's compiled Tailwind, so it must
+    // carry its own minimal CSS to be presentable rather than shipping zero CSS.
+    expect($html)->toContain('<style>')
+        ->and($html)->toContain('.fpb-auth-card')
+        ->and($html)->toContain('system-ui');
+});

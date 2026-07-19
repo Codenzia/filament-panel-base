@@ -28,6 +28,13 @@ use Illuminate\Support\Str;
  */
 class OtpService
 {
+    /**
+     * A valid bcrypt hash used purely to spend a comparable amount of time on
+     * the verify() miss path. Keeps the response time of "no active OTP" close
+     * to "wrong code" so timing can't be used to probe whether a code exists.
+     */
+    private const TIMING_EQUALISER_HASH = '$2y$12$zBd5I2yfT/ypZrRrdEiKoe4iNNn3PmVyRgMAwiDIEhbw/kLvYJAvW';
+
     public function __construct(
         private readonly OtpDriverManager $drivers,
         private readonly AuthenticationSettings $settings,
@@ -48,21 +55,28 @@ class OtpService
 
         $code = $this->generateCode();
 
-        DB::table('otp_codes')->where('target', $target)->where('channel', $driverName)->delete();
-
-        DB::table('otp_codes')->insert([
-            'id' => (string) Str::uuid(),
-            'user_id' => $userId,
-            'target' => $target,
-            'channel' => $driverName,
-            'code_hash' => Hash::make($code),
-            'context' => json_encode($context, JSON_THROW_ON_ERROR),
-            'attempts' => 0,
-            'ip' => request()?->ip(),
-            'expires_at' => now()->addMinutes($this->settings->otp_ttl_minutes),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        // Atomic replace: a previous delete()+insert() pair left a window in
+        // which two concurrent sends for the same (target, channel) both
+        // deleted then both inserted, tripping the unique index into a 500.
+        // upsert() issues a single INSERT ... ON CONFLICT so the DB serialises
+        // the race and the latest code always wins.
+        DB::table('otp_codes')->upsert(
+            [[
+                'id' => (string) Str::uuid(),
+                'user_id' => $userId,
+                'target' => $target,
+                'channel' => $driverName,
+                'code_hash' => Hash::make($code),
+                'context' => json_encode($context, JSON_THROW_ON_ERROR),
+                'attempts' => 0,
+                'ip' => request()?->ip(),
+                'expires_at' => now()->addMinutes($this->settings->otp_ttl_minutes),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]],
+            ['target', 'channel'],
+            ['user_id', 'code_hash', 'context', 'attempts', 'ip', 'expires_at', 'updated_at'],
+        );
 
         /** @var OtpDriver $transport */
         $transport = $this->drivers->driver($driverName);
@@ -93,14 +107,24 @@ class OtpService
                 ->where('expires_at', '>', now());
 
             // When an owner is supplied, bind verification to that user so a
-            // code issued for one account can't be consumed by another.
+            // code issued for one account can't be consumed by another. When no
+            // owner is supplied, restrict to codes that are themselves
+            // unbound — otherwise a caller omitting the id could consume a
+            // user-bound code (PNB-032).
             if ($userId !== null) {
                 $query->where('user_id', $userId);
+            } else {
+                $query->whereNull('user_id');
             }
 
             $record = $query->lockForUpdate()->first();
 
             if (! $record) {
+                // Spend the same order-of-magnitude of time as the hit path so
+                // response timing does not reveal whether an active OTP exists
+                // for this target (PNB-031).
+                Hash::check($code, self::TIMING_EQUALISER_HASH);
+
                 return false;
             }
 
