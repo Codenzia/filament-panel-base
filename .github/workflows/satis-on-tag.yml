@@ -1,0 +1,30 @@
+name: Notify Satis on tag
+
+# Manual version tags (the Satis-only release path) never fire the release
+# workflow's package-released dispatch, leaving the tag invisible to consumers
+# until the nightly rebuild. This closes that gap: any pushed v* tag notifies
+# Codenzia/satis directly. Non-fatal by design — the nightly cron remains the
+# safety net, so a missing PAT or transient failure only warns.
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch package-released to Codenzia/satis
+        env:
+          GH_TOKEN: ${{ secrets.CODENZIA_PAT }}
+        run: |
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::warning::CODENZIA_PAT empty; skipping Satis notify (nightly rebuild will catch this tag)."
+            exit 0
+          fi
+          curl -fsS -X POST \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/Codenzia/satis/dispatches \
+            -d '{"event_type":"package-released"}' \
+            || echo "::warning::Satis dispatch failed; nightly rebuild is the safety net."

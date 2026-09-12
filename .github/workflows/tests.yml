@@ -8,11 +8,18 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   tests:
-    uses: Codenzia/plugin-runtime/.github/workflows/plugin-tests.yml@v1.1.0
+    uses: Codenzia/plugin-runtime/.github/workflows/plugin-tests.yml@v1.2.2
     with:
       # Filament v5 requires Livewire v4; this plugin's composer pins
       # Livewire ^3 (directly or via filament 4 transitively). Re-enable
       # once the Livewire constraint is widened to ^3.0 || ^4.0.
       skip_filament_v5: true
+    # Composer needs CODENZIA_PAT + SATIS_USER/SATIS_PASS to resolve the
+    # in-house codenzia/* dependencies from packages.codenzia.com.
+    secrets: inherit

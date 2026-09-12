@@ -27,6 +27,7 @@ use Codenzia\FilamentPanelBase\Filament\Pages\ManageAppearanceSettings;
 use Codenzia\FilamentPanelBase\Filament\Pages\ManageDemoSettings;
 use Codenzia\FilamentPanelBase\Filament\Resources\TranslationResource;
 use Codenzia\FilamentPanelBase\Filament\Resources\UserResource;
+use Codenzia\FilamentPanelBase\NotificationMatrix\Filament\Pages\ManageNotificationPreferences;
 use Codenzia\FilamentPanelBase\Sessions\SessionManagementPlugin;
 use Codenzia\FilamentPanelBase\Support\ThemePresets;
 use Codenzia\FilamentPanelBase\TwoFactor\Filament\Pages\TwoFactorChallengePage;
@@ -71,6 +72,8 @@ class FilamentPanelBasePlugin implements Plugin
     protected ?string $filamentAuthSettingsPageClass = null;
 
     protected ?string $demoSettingsPageClass = null;
+
+    protected ?string $notificationPreferencesPageClass = null;
 
     public function getId(): string
     {
@@ -585,6 +588,58 @@ class FilamentPanelBasePlugin implements Plugin
     }
 
     /**
+     * Register the user-level "Notification Preferences" page on this panel —
+     * opt-in, and only takes effect when
+     * config('filament-panel-base.notification-matrix.enabled') is also true
+     * (env FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX). Lets the signed-in user
+     * toggle, per registered trigger, whether they want it delivered in-app
+     * and/or by email. Default access is any authenticated user — pass
+     * `authorize` to narrow it.
+     *
+     * Example:
+     *
+     *   FilamentPanelBasePlugin::make()->withNotificationPreferencesPage();
+     *
+     * @param  class-string<ManageNotificationPreferences>|null  $page  a host subclass, for custom access/fields
+     * @param  \Closure(): bool|null  $authorize  access gate (default: any authenticated user)
+     */
+    public function withNotificationPreferencesPage(
+        ?string $page = null,
+        ?\Closure $authorize = null,
+        ?string $navigationGroup = null,
+        ?string $navigationIcon = null,
+        ?int $navigationSort = null,
+    ): static {
+        $this->notificationPreferencesPageClass = $page ?? ManageNotificationPreferences::class;
+
+        ($this->notificationPreferencesPageClass)::$authorizeUsing = $authorize;
+
+        $overrides = array_filter([
+            'navigation_group' => $navigationGroup,
+            'navigation_icon' => $navigationIcon,
+            'navigation_sort' => $navigationSort,
+        ], fn ($v) => $v !== null);
+        if ($overrides !== []) {
+            config(['filament-panel-base.notification-matrix' => array_merge(
+                (array) config('filament-panel-base.notification-matrix', []),
+                $overrides,
+            )]);
+        }
+
+        return $this;
+    }
+
+    public function hasNotificationPreferencesPage(): bool
+    {
+        return $this->notificationPreferencesPageClass !== null;
+    }
+
+    public function getNotificationPreferencesPageClass(): ?string
+    {
+        return $this->notificationPreferencesPageClass;
+    }
+
+    /**
      * Resolve the settings instance.
      */
     public function resolveSettings(): ?object
@@ -671,6 +726,11 @@ class FilamentPanelBasePlugin implements Plugin
 
         if ($this->demoSettingsPageClass !== null) {
             $panel->pages([$this->demoSettingsPageClass]);
+        }
+
+        if ($this->notificationPreferencesPageClass !== null
+            && (bool) config('filament-panel-base.notification-matrix.enabled', false)) {
+            $panel->pages([$this->notificationPreferencesPageClass]);
         }
 
         if ($this->twoFactorChallengePageClass !== null) {

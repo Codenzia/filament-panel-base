@@ -81,6 +81,17 @@ return [
     'oauth_invalid_state' => 'انتهت جلسة تسجيل الدخول. يرجى المحاولة مرة أخرى.',
     'oauth_provider_error' => 'فشل تسجيل الدخول عبر :provider. يرجى المحاولة مرة أخرى أو استخدام طريقة أخرى.',
 
+    // Single sign-on (OIDC)
+    'sso_invalid_state' => 'انتهت جلسة تسجيل الدخول. يرجى المحاولة مرة أخرى.',
+    'sso_provider_error' => 'فشل تسجيل الدخول عبر :provider. يرجى المحاولة مرة أخرى أو استخدام طريقة أخرى.',
+    'sso_unavailable' => 'خدمة الدخول الموحّد غير متاحة مؤقتاً. يرجى المحاولة بعد قليل.',
+    'sso_missing_email' => 'حساب :provider الخاص بك لم يشارك عنوان بريد إلكتروني، لذا لا يمكننا مطابقته بحساب.',
+    'sso_unverified_email' => 'عنوان البريد الإلكتروني في حساب :provider غير موثّق. وثّقه لدى :provider ثم حاول مرة أخرى.',
+    'sso_no_account' => 'لا يوجد حساب مطابق لعنوان بريدك في :provider. اطلب من المسؤول دعوتك أولاً.',
+    'sso_link_unverified_account' => 'يوجد حساب يستخدم هذا البريد الإلكتروني لكنه غير موثّق. سجّل الدخول بذلك الحساب ووثّق البريد، ثم استخدم :provider مرة أخرى.',
+    'sso_registration_declined' => 'لا يمكن تسجيل حساب :provider الخاص بك في هذا التطبيق. اطلب من المسؤول منحك صلاحية الدخول.',
+    'sso_domain_not_allowed' => 'عنوان بريدك في :provider خارج النطاقات المسموح لها بالتسجيل هنا.',
+
     // Manage connected accounts
     'social_manage_title' => 'الحسابات المرتبطة',
     'social_manage_subtitle' => 'اربط مزودي الدخول لتسجيل دخول أسرع، أو افصل ما لم تعد تستخدمه.',
@@ -135,6 +146,8 @@ return [
     'settings_credentials_mode_help' => 'يحدد الحقل الذي يسجّل به المستخدمون والحقول التي يجمعها نموذج التسجيل.',
     'settings_phone_required' => 'رقم الهاتف مطلوب',
     'settings_phone_required_help' => 'عند التفعيل والمعرف "البريد الإلكتروني أو الهاتف"، يبقى الهاتف مطلوبًا عند التسجيل.',
+    'settings_phone_format_validation' => 'التحقق من صيغة رقم الهاتف',
+    'settings_phone_format_validation_help' => 'رفض أرقام التسجيل غير المطابقة للصيغة الدولية. عطّله إذا كان مستخدموك يدخلون صيغًا محلية.',
     'settings_default_country_code' => 'رمز الدولة الافتراضي',
     'settings_disposable_email_blocking' => 'حظر نطاقات البريد المؤقت',
     'settings_disposable_email_blocking_help' => 'رفض التسجيل باستخدام مزودي البريد المؤقت.',

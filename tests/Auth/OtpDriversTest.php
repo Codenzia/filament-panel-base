@@ -6,6 +6,7 @@ use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\OtpDriver;
 use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\TwilioSmsOtpDriver;
 use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\VonageSmsOtpDriver;
 use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\WhatsAppMetaOtpDriver;
+use Codenzia\LaravelSms\Facades\Sms;
 
 it('null driver implements OtpDriver and returns its channel name', function (): void {
     $driver = new NullOtpDriver;
@@ -30,7 +31,7 @@ it('whatsapp meta driver returns its channel name', function (): void {
 });
 
 it('twilio driver returns its channel name', function (): void {
-    $driver = new TwilioSmsOtpDriver('', '', '');
+    $driver = new TwilioSmsOtpDriver;
     expect($driver)->toBeInstanceOf(OtpDriver::class)
         ->and($driver->channel())->toBe('twilio');
 });
@@ -47,10 +48,12 @@ it('whatsapp driver suppresses send when credentials are missing', function (): 
     expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(Throwable::class);
 });
 
-it('twilio driver suppresses send when credentials are missing', function (): void {
-    $driver = new TwilioSmsOtpDriver('', '', '');
+it('twilio driver delivers through the laravel-sms Sms facade', function (): void {
+    Sms::fake();
 
-    expect(fn () => $driver->send('+962501234567', '123456'))->not->toThrow(Throwable::class);
+    (new TwilioSmsOtpDriver)->send('+962790000000', '123456');
+
+    Sms::assertSentTo('+962790000000', fn ($message): bool => str_contains($message->body, '123456'));
 });
 
 it('vonage driver suppresses send when credentials are missing', function (): void {

@@ -14,3 +14,6 @@ composer.lock
 fable-*
 *full-review*
 *-full-review.md
+
+# internal review docs
+fable-*.md

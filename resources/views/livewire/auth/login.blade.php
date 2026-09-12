@@ -62,6 +62,8 @@
         </div>
     @endif
 
+    @include('filament-panel-base::sso.buttons')
+
     <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
         {{ __('filament-panel-base::auth.no_account_yet') }}
         <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.create_account') }}</a>

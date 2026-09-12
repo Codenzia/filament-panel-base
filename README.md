@@ -27,8 +27,10 @@
 - **Demo Settings admin page** — view/rotate/share the `/demo` password from the panel without touching `.env`. Singleton `demo_settings` table with encrypted password cast.
 - **Analytics module** — visitor tracking middleware, auth-event recording, AnalyticsPage with 9 widgets (visitors today, 30-day chart, top pages, slowest pages, error-rate sparkline, geo breakdown, device types, auth funnel, failed-login chart), date-range filter, tenant scoping, nightly retention-prune command.
 - **Two-Factor Authentication module** — TOTP enrolment via the profile slide-over, post-login challenge flow with intermediate session state, 8 single-use recovery codes hashed at rest, remember-device cookie, optional role-based mandatory enrolment middleware. Pluggable issuer/digits/period/window via fluent API.
+- **Single Sign-On (OIDC)** — config-driven "Continue with …" login buttons backed by a dependency-free OIDC client (discovery, authorization-code + PKCE, JWKS id_token verification). Generic OIDC plus Google and Microsoft Entra presets, match-by-verified-email with optional auto-provisioning and default role, provider identities recorded in `sso_identities`. Off by default; SAML is out of scope.
 - **Sessions & Devices module** — self-service "Devices & Sessions" tab listing every active session from Laravel's database driver, per-row revoke, "sign out everywhere else", new-device-login event for sending alert emails.
 - **Command Palette (Cmd-K)** — global Cmd-K modal augmenting Filament's chrome with navigation jumps, a "Recent" group auto-populated from record-page views, and an extensible registry where consumer plugins push their own actions.
+- **Notification Preferences matrix** — a fleet-wide trigger registry (`NotificationTriggers::register()`) plus a decision seam (`NotificationPreferences::allows()` / `PreferenceGate::filterChannels()`) that Notification classes call from `via()`, and a user-level "Notification Preferences" page where each user toggles, per trigger and per channel (in-app/email), whether they want it delivered. Off by default; never blocks delivery until a host opts in and registers triggers.
 - **Session-expiry (419) handling** — turns the jarring "Page Expired" error and Livewire "This page has expired" modal into a clean redirect to login, on by default for every panel (config kill-switch + optional front-of-site component).
 - **Branded error pages** — fleet-wide, **database-independent** pages for 500 / 503 / 404 / 403 / 419 / 429 (deep-navy, bilingual EN + AR, logo + primary from config). Rendered when `APP_DEBUG=false`, with **zero DB access** so they survive a database outage. 500 adds a logged reference ID + a prefilled "Report this issue" mailto. Apps brand via config; any single code stays overridable by the app's own `resources/views/errors/{code}.blade.php`.
 
@@ -56,6 +58,14 @@ Publish the config file:
 ```bash
 php artisan vendor:publish --tag="filament-panel-base-config"
 ```
+
+Publish the package's CSS (**required — also after every upgrade**):
+
+```bash
+php artisan filament:assets
+```
+
+The package ships `panel-base.css`, which carries the layout for the components it injects into your panels (Visit Website button, sidebar search, the switcher dropdowns, the panel badge, the auth links). Those layouts used to rely on Tailwind utility classes that only exist in an app's *own* compiled theme, so a panel running the stock Filament build rendered them unstyled. Every rule is scoped under the `fpb-` prefix and reads its colours from Filament's own CSS variables, so it changes nothing in an app that does compile a custom theme. Add `filament:assets` to your deployment pipeline as Filament recommends — without it the stylesheet is simply missing and the components fall back to the old, unstyled rendering.
 
 ### Admin navigation group
 
@@ -178,7 +188,7 @@ npm run build
 
 ### 5. Frontend Theme (Optional)
 
-The package includes a built-in theme system with 17 color presets and runtime CSS variable injection. This enables Tailwind utility classes like `bg-brand-500` that update dynamically when the theme changes — no rebuild required.
+The package includes a built-in theme system with 19 color presets and runtime CSS variable injection. This enables Tailwind utility classes like `bg-brand-500` that update dynamically when the theme changes — no rebuild required.
 
 **Step 1: Add components to your layout `<head>`:**
 
@@ -301,7 +311,7 @@ class AdminPanelProvider extends BasePanelProvider
 
 ### Theme System
 
-The package ships 17 predefined color presets plus a `custom` option. Each preset defines 15 color keys covering primary, secondary, background, surface, text, status, border, and shadow colors.
+The package ships 19 predefined color presets plus a `custom` option. Each preset defines 15 color keys covering primary, secondary, background, surface, text, status, border, and shadow colors.
 
 **Available presets:** Ocean Blue, Forest Green, Sunset Orange, Royal Purple, Rose Garden, Modern Dark, Teal Breeze, Amber Gold, Slate Steel, Crimson Fire, Sky Light, Emerald Fresh, Indigo Classic, Pink Blossom, Warm Earth, Midnight Blue, Charcoal Noir.
 
@@ -403,6 +413,49 @@ Three buckets are checked on every attempt:
 Both windows pull their limits from `AuthenticationSettings::throttle_per_minute` (default `5`) and `throttle_per_day` (default `50`). When a budget is exhausted, the component throws a `ValidationException` with the `auth.throttle_rate_limited` message routed to the form's error bag — no extra UI work needed.
 
 Identifiers (emails, phones, user ids, OTP targets) are HMAC'd with the app key before being used as cache keys, so raw addresses never land in the cache store.
+
+### SMS OTP transport (codenzia/laravel-sms)
+
+The `twilio` OTP channel delivers through [`codenzia/laravel-sms`](https://github.com/Codenzia/laravel-sms) rather than calling Twilio directly. panel-base still owns the *conversation* (code generation, `otp_codes`, hashing, TTL, attempts, throttling, replay/consume — all in `OtpService`, unchanged); laravel-sms owns the *pipe*. Configure Twilio credentials in the laravel-sms config (`sms.drivers.twilio` — `TWILIO_SID`, `TWILIO_TOKEN`, and either `TWILIO_FROM` or `TWILIO_MESSAGING_SERVICE_SID`), not in panel-base. In demo/local, laravel-sms' `fake` driver captures messages so no real SMS is sent. The `whatsapp` and `vonage` OTP channels are unchanged (they have no laravel-sms transport yet).
+
+### Headless OTP REST API (opt-in)
+
+For native mobile clients that cannot drive the Livewire auth pages, the package ships thin JSON endpoints over the same `OtpService`. **Disabled by default** — enable with `filament-panel-base.otp_api.enabled` (or `FILAMENT_PANEL_BASE_OTP_API=true`). Prefix (`api/pb`), middleware (`['api']`), and per-IP throttles are config-overridable.
+
+| Method & path | Body | Success |
+| --- | --- | --- |
+| `POST {prefix}/otp/request` | `target` (email or phone), `channel?` | `202 { "status": "sent" }` |
+| `POST {prefix}/otp/verify` | `target`, `code`, `channel?` | `200 { "verified": true, ...token }` |
+| `POST {prefix}/phone/register` | `phone`, `channel?` | `202 { "status": "sent", "target": "+9627…" }` |
+
+Security parity with the fleet OTP hardening: phone input is normalised to E.164, invalid input fails closed (`422`), per-IP throttles apply (request `10/hr`, verify `20/hr`, register `10/hr` — override under `otp_api.throttle`), and **the OTP code is never returned** in any response. A wrong code returns `422 { "verified": false }`.
+
+**Token issuance is the host app's job** — panel-base does not mint Sanctum/Passport tokens. On a successful verify it fires the existing `OtpVerified` event and, if configured, calls a host `token_issuer`:
+
+```php
+// config/filament-panel-base.php
+'otp_api' => [
+    'enabled' => true,
+    'token_issuer' => \App\Auth\IssueMobileToken::class, // class-string or invokable
+],
+```
+
+```php
+use Codenzia\FilamentPanelBase\Auth\Contracts\OtpTokenIssuer;
+use Illuminate\Http\Request;
+
+class IssueMobileToken implements OtpTokenIssuer
+{
+    public function issue(string $target, Request $request): array
+    {
+        $user = User::firstOrCreate(['phone' => $target], [/* provision unverified citizen */]);
+
+        return ['token' => $user->createToken('mobile')->plainTextToken];
+    }
+}
+```
+
+The returned array is merged into the verify response. Auto-provisioning (create-user-on-first-verify) and identity linkage live entirely in the host's issuer / `OtpVerified` listener — the package stays identity-agnostic.
 
 The `ThrottleAuth` middleware still ships, but it's scoped to the OAuth redirect/callback routes only (where every hit triggers external API work). Don't attach it to Livewire-backed routes — it has no effect there and only causes confusion.
 
@@ -564,6 +617,7 @@ For post-persistence side effects (welcome emails, audit logging) use `SocialUse
 | **Closed** — no self-signup | Don't enable Filament's `->registration()` page; admins create/invite accounts |
 | **Domain-restricted** — only `@acme.com` (and subdomains) | `allowed_email_domains = ['acme.com']` (empty = any domain) |
 | **No throwaway emails** | `disposable_email_blocking = true` (default) |
+| **Strict phone format** | `phone_format_validation = true` (default) — off accepts local formats libphonenumber rejects |
 
 The email-domain allowlist is enforced by the `AllowedEmailDomain` validation rule and is look-alike safe (`notacme.com` does **not** satisfy an `acme.com` allowlist). Set it three ways — admin **Authentication** settings page, the fluent API, or an env fallback:
 
@@ -573,6 +627,7 @@ FilamentPanelBasePlugin::make()
         ->moderation()                          // require admin approval
         ->allowedEmailDomains(['acme.com'])     // staff-only signup (+ subdomains)
         ->disposableEmailBlocking()             // reject throwaway providers
+        ->phoneFormatValidation(false)          // accept local phone formats
     );
 ```
 
@@ -1844,6 +1899,148 @@ The auto-loaded migration adds these to your `users` table (idempotent via `Sche
 
 ---
 
+## Single Sign-On (OIDC)
+
+Config-driven OpenID Connect sign-in. Each configured provider becomes a "Continue with …" button on the login screen; a successful sign-in matches (or optionally creates) a local user and records the provider identity.
+
+**Disabled by default.** With `sso.enabled` false no routes register and no buttons render, so upgrading changes nothing until a host opts in.
+
+> **SAML is out of scope.** This module speaks OIDC only. An identity provider that offers both (Entra, Okta, Keycloak, …) should be wired through its OIDC endpoints.
+
+**No new dependencies.** The OIDC client — discovery, authorization-code + PKCE, token exchange and JWKS id_token verification — is implemented on Laravel's HTTP client and `ext-openssl`. Socialite is *not* required (the separate, older `oauth/*` social-login flow still uses it).
+
+### Quick start
+
+```bash
+# .env
+FILAMENT_PANEL_BASE_SSO=true
+SSO_GOOGLE_CLIENT_ID=...apps.googleusercontent.com
+SSO_GOOGLE_CLIENT_SECRET=...
+```
+
+That's it — the Google preset supplies the issuer. Register this callback URL with the provider:
+
+```
+https://your-app.test/sso/google/callback
+```
+
+The URL is `{app_url}/{sso.routes.prefix}/{provider key}/callback`; the prefix defaults to `sso`.
+
+### Providers
+
+Providers live under `filament-panel-base.sso.providers`, keyed by the slug that appears in the URL. Google and Entra are conveniences — they are ordinary OIDC providers whose issuer is already known.
+
+```php
+'providers' => [
+    // Google — preset supplies https://accounts.google.com
+    'google' => [
+        'label' => 'Google',
+        'icon' => 'google',
+        'preset' => 'google',
+        'client_id' => env('SSO_GOOGLE_CLIENT_ID'),
+        'client_secret' => env('SSO_GOOGLE_CLIENT_SECRET'),
+        'scopes' => ['openid', 'profile', 'email'],
+    ],
+
+    // Microsoft Entra ID — tenant id, a domain, or 'common'
+    'entra' => [
+        'label' => 'Microsoft',
+        'icon' => 'microsoft',
+        'preset' => 'entra',
+        'tenant' => env('SSO_ENTRA_TENANT', 'common'),
+        'client_id' => env('SSO_ENTRA_CLIENT_ID'),
+        'client_secret' => env('SSO_ENTRA_CLIENT_SECRET'),
+    ],
+
+    // Generic OIDC — Keycloak, Okta, Auth0, Authentik, ...
+    'oidc' => [
+        'label' => env('SSO_OIDC_LABEL', 'SSO'),
+        'issuer' => env('SSO_OIDC_ISSUER'), // https://id.acme.com/realms/acme
+        'client_id' => env('SSO_OIDC_CLIENT_ID'),
+        'client_secret' => env('SSO_OIDC_CLIENT_SECRET'),
+    ],
+],
+```
+
+A provider is only offered once `client_id`, `client_secret` **and** a resolvable discovery URL are all present — a half-configured preset never renders a dead button.
+
+| Key | Purpose |
+|---|---|
+| `label` | Button text (`Continue with :label`). Defaults to the ucfirst'd provider key. |
+| `icon` | Key for the bundled `social-provider-icon` component (`google`, `microsoft`, `github`, …). Unknown names fall back to a generic mark. |
+| `preset` | `google` or `entra`. Supplies a known issuer; nothing else. |
+| `tenant` | Entra tenant id / domain / `common`. Entra preset only. |
+| `issuer` | Generic OIDC issuer. Discovery is read from `{issuer}/.well-known/openid-configuration`. |
+| `discovery_url` | Full discovery URL. Overrides `issuer` and any preset. |
+| `scopes` | Requested scopes. `openid` is added automatically if absent. |
+| `allow_unverified_email` | Accept an id_token whose `email_verified` claim is missing or false. **Off by default.** |
+
+### Environment variables
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FILAMENT_PANEL_BASE_SSO` | `false` | Master switch. Off = no routes, no buttons. |
+| `FILAMENT_PANEL_BASE_SSO_AUTO_PROVISION` | `false` | Create users on first sign-in. |
+| `FILAMENT_PANEL_BASE_SSO_DEFAULT_ROLE` | `null` | Role assigned to auto-provisioned users. |
+| `SSO_GOOGLE_CLIENT_ID` / `_SECRET` | — | Google credentials. |
+| `SSO_ENTRA_CLIENT_ID` / `_SECRET` / `SSO_ENTRA_TENANT` | tenant `common` | Entra credentials. |
+| `SSO_OIDC_ISSUER` / `SSO_OIDC_DISCOVERY_URL` / `SSO_OIDC_CLIENT_ID` / `_SECRET` / `SSO_OIDC_LABEL` | — | Generic OIDC. |
+
+### User matching & provisioning
+
+Resolution runs in this order:
+
+1. **By subject** — an existing `sso_identities` row for `(provider, sub)`. The `sub` claim is the provider's immutable identifier, so a user whose email changed still lands on the same account.
+2. **By verified email** — the `email` claim (lower-cased) is matched against `users.email`, and the identity is recorded for next time.
+3. **Auto-provision** — only when `sso.auto_provision` is true.
+
+If none apply, the user is redirected back to the login screen with *"No account matches your … email address."* — an unknown address is never an implicit invitation.
+
+**Auto-provisioning** (`auto_provision = true`) creates the user with `name` from the `name` / `preferred_username` / `given_name + family_name` claims (falling back to the email local-part), `email` from the claim, `email_verified_at` set, and a random unusable password. When `sso.default_role` is set and the user model exposes `assignRole()` (spatie/laravel-permission), that role is assigned; a failure there is logged, not fatal.
+
+**SSO is additive.** An existing password still works — nothing in this module clears or replaces one. Users can have both.
+
+### The `sso_identities` table
+
+Auto-migrated (no `vendor:publish` needed), like the analytics and notification-matrix tables. It is inert while the module is disabled.
+
+| Column | Notes |
+|---|---|
+| `user_id` | Indexed. |
+| `provider` | Provider key, e.g. `google`. |
+| `subject` | The `sub` claim. Unique together with `provider`. |
+| `last_login_at` | Refreshed on every successful sign-in. |
+
+No tokens are stored: the module reads the id_token claims and discards both tokens, so there is nothing here for a database dump to leak.
+
+### Security notes
+
+- **State, nonce and PKCE** are all generated per attempt and stored in the session. The stored flow is *pulled* at callback, making it single-use — a replayed callback URL is rejected.
+- **id_token verification** is full: the signature is checked against the provider's JWKS, with the algorithm taken from a fixed allowlist (`RS256`/`RS384`/`RS512`) rather than the token header — `alg: none` and RS→HS confusion are rejected outright. `iss` must equal the discovery document's issuer, `aud` must contain the client id (with an `azp` check when there are several), `nonce` must match the session, and `exp`/`iat` are checked with 60s of leeway.
+- **Unverified emails are rejected** unless the provider sets `allow_unverified_email`. Without that check, an IdP that lets users self-assert an address would allow taking over an account by email.
+- **Moderation and 2FA still apply.** A suspended or pending account cannot sign in via SSO, and an account with 2FA enabled is still challenged — a provider assertion is not a second factor.
+- **Nothing sensitive is logged.** Failures log a short technical reason only; tokens, authorization codes, client secrets and provider `error_description` text are never written to the log or shown to the user.
+- Discovery documents and JWKS are cached for `sso.cache_ttl` seconds (default 3600). Both endpoints are called over HTTPS in production; the issuer URL is host-controlled config, never user input.
+- The redirect/callback routes carry the package's `ThrottleAuth` middleware.
+
+### Customising
+
+```php
+// config/filament-panel-base.php
+'sso' => [
+    'routes' => [
+        'prefix' => 'auth/sso',   // callback becomes /auth/sso/{provider}/callback
+        'middleware' => ['web'],
+    ],
+    'remember' => true,           // issue a long-lived cookie on SSO sign-in
+    'cache_ttl' => 3600,
+],
+```
+
+The login buttons render on Filament's own login form (via the `AUTH_LOGIN_FORM_AFTER` render hook) and on the package's standalone Livewire login page. Both include `filament-panel-base::sso.buttons`, which resolves its provider list from the registry — publish the view to restyle it.
+
+---
+
 ## Sessions & Devices
 
 Self-service active-session list with per-row revoke and "sign out everywhere else". Off by default — call `->withSessionManagement()` on the plugin to turn it on.
@@ -1995,6 +2192,88 @@ Actions are deduped by `id`, scored against the query (label prefix > label subs
 
 All handled by Alpine.js inside the modal — no JS bundle changes.
 
+## Notification Preferences (Optional)
+
+A fleet-wide, per-trigger notification preference matrix. Host apps and plugins register every notification they can send; each user then gets a self-service page to toggle which ones reach them, and through which channel (in-app / email). This package never sends a notification itself — it only answers "is this one allowed?".
+
+Off by default (`filament-panel-base.notification-matrix.enabled`, env `FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX`). While disabled, the decision seam always returns `true` and the preferences page never registers — **zero behaviour change** until you opt in.
+
+### Enabling
+
+```env
+FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX=true
+```
+
+```php
+// UserPanelProvider::panel — the self-service page any signed-in user can reach
+FilamentPanelBasePlugin::make()->withNotificationPreferencesPage();
+```
+
+```bash
+php artisan migrate   // creates the notification_preferences table
+```
+
+### Registering triggers
+
+In your app's (or plugin's) `AppServiceProvider::boot()`:
+
+```php
+use Codenzia\FilamentPanelBase\NotificationMatrix\NotificationTriggers;
+
+NotificationTriggers::register('task-off.task.assigned', [
+    'label' => 'Task assigned to you',
+    'group' => 'Tasks',                    // section heading in the preferences UI
+    'channels' => ['database', 'mail'],    // default — omit if both apply
+    'default_enabled' => true,             // opt-out by default when omitted
+]);
+```
+
+Keys are namespaced strings (`app.entity.event`) so multiple apps/plugins never collide. An unregistered key is never blocked — `allows()` returns `true` for it, so a stale or mistyped key can't silently swallow a notification.
+
+### Calling the gate from a Notification
+
+```php
+use Codenzia\FilamentPanelBase\NotificationMatrix\PreferenceGate;
+
+class TaskAssignedNotification extends Notification
+{
+    public function via(object $notifiable): array
+    {
+        return PreferenceGate::filterChannels(
+            $notifiable,
+            'task-off.task.assigned',
+            ['database', 'mail'],
+        );
+    }
+}
+```
+
+Or check a single channel directly:
+
+```php
+use Codenzia\FilamentPanelBase\NotificationMatrix\NotificationPreferences;
+
+if (NotificationPreferences::allows($user, 'task-off.task.assigned', 'mail')) {
+    // ...
+}
+```
+
+### How preferences are stored
+
+Absence of a row means "use the trigger's `default_enabled`" — only actual opt-outs/opt-ins are stored, keyed by `(user, trigger_key, channel)`. Toggling a channel back to its default deletes the row instead of storing a redundant one, so the table only ever holds real deviations from the registered defaults.
+
+### The preferences page
+
+> _Screenshot: triggers grouped by section, In-app/Email toggle switches per row, search box, "Reset to defaults" header action._
+
+Triggers are grouped by their `group` meta, searchable by label or key, with an In-app/Email toggle per row and a "Reset to defaults" header action. Default access is any authenticated user — pass `authorize` to narrow it:
+
+```php
+FilamentPanelBasePlugin::make()->withNotificationPreferencesPage(
+    authorize: fn () => auth()->check(),
+);
+```
+
 ## Plugin API
 
 ```php
@@ -2018,6 +2297,8 @@ FilamentPanelBasePlugin::make()
     ->withSessionManagement()
     // Cmd-K command palette mounted on every Filament page in this panel
     ->withCommandPalette()
+    // Per-trigger notification preferences page (requires notification-matrix.enabled)
+    ->withNotificationPreferencesPage()
 
 // Get resolved theme colors (used internally by <x-filament-panel-base::theme-styles />)
 FilamentPanelBasePlugin::make()->getThemeColors();

@@ -9,9 +9,9 @@ use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Services\SocialiteService;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
-use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
+use Codenzia\FilamentPanelBase\TwoFactor\Exceptions\TwoFactorUnavailableException;
+use Codenzia\FilamentPanelBase\TwoFactor\Services\LoginChallengeDecider;
 use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorChallengeSession;
-use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -150,7 +150,13 @@ class OAuthController
         $remember = (bool) config('filament-panel-base.auth.oauth.remember', false);
 
         // Honour the same 2FA challenge the password path enforces.
-        if ($this->shouldChallengeForTwoFactor($user)) {
+        try {
+            $challengeRequired = $this->shouldChallengeForTwoFactor($user);
+        } catch (TwoFactorUnavailableException) {
+            return $this->redirectWithError('filament-panel-base::two-factor.service_unavailable', null);
+        }
+
+        if ($challengeRequired) {
             $challenge = app(TwoFactorChallengeSession::class);
             $challenge->stash($user, $remember);
 
@@ -166,44 +172,11 @@ class OAuthController
 
     /**
      * Decide whether to interrupt this social sign-in with a TOTP challenge.
-     * Mirrors the logic in the Livewire Login component.
+     * Shared with the OIDC SSO callback so the two sign-in paths cannot drift.
      */
     private function shouldChallengeForTwoFactor(mixed $user): bool
     {
-        if ($user === null) {
-            return false;
-        }
-
-        try {
-            $settings = app(TwoFactorSettings::class);
-
-            if (! $settings->enabled) {
-                return false;
-            }
-        } catch (Throwable) {
-            return false;
-        }
-
-        if (! in_array(HasTwoFactorAuthentication::class, class_uses_recursive($user), true)) {
-            return false;
-        }
-
-        if (! method_exists($user, 'hasTwoFactorEnabled') || ! $user->hasTwoFactorEnabled()) {
-            return false;
-        }
-
-        if ($settings->remember_device) {
-            try {
-                $challenge = app(TwoFactorChallengeSession::class);
-                if ($challenge->deviceIsRemembered($user)) {
-                    return false;
-                }
-            } catch (Throwable) {
-                // Fall through to challenge.
-            }
-        }
-
-        return true;
+        return app(LoginChallengeDecider::class)->shouldChallenge($user);
     }
 
     private function guard(string $provider): void

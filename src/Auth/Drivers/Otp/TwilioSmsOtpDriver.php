@@ -5,57 +5,26 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Auth\Drivers\Otp;
 
 use Codenzia\FilamentPanelBase\Auth\Exceptions\OtpDeliveryException;
-use Illuminate\Support\Facades\Http;
+use Codenzia\LaravelSms\Exceptions\SmsException;
+use Codenzia\LaravelSms\Facades\Sms;
 use Illuminate\Support\Facades\Log;
 
 /**
- * SMS OTP via Twilio. Hits the Twilio Messages API directly with HTTP
- * Basic auth so the driver doesn't require the heavy twilio/sdk package.
+ * SMS OTP over Twilio, delivered through codenzia/laravel-sms.
  *
- * Credentials are read from config (env-driven). When credentials are
- * missing, the driver logs the code at warning level so local development
- * keeps working.
+ * The raw Twilio transport (credentials, HTTP call, error handling) now lives
+ * in laravel-sms' TwilioSmsDriver; this driver keeps only the "conversation"
+ * concerns — rendering the localised message body and mapping transport
+ * failures onto the auth module's OtpDeliveryException. Twilio credentials are
+ * configured in laravel-sms (`sms.drivers.twilio`), not here.
  */
 class TwilioSmsOtpDriver implements OtpDriver
 {
-    use MasksOtpCode;
-
-    public function __construct(
-        private readonly string $sid,
-        private readonly string $token,
-        private readonly string $from,
-    ) {}
-
     public function send(string $target, string $code, array $context = []): void
     {
-        if ($this->sid === '' || $this->token === '' || $this->from === '') {
-            Log::warning('[fpb-auth] Twilio credentials missing — SMS OTP suppressed.', [
-                'target' => $target,
-                'code' => self::maskCode($code),
-            ]);
-
-            if (app()->environment('local', 'testing')) {
-                return;
-            }
-
-            throw new OtpDeliveryException('Twilio credentials are not configured.');
-        }
-
-        $body = $this->renderBody($code, $context);
-
         try {
-            Http::withBasicAuth($this->sid, $this->token)
-                ->asForm()
-                ->post(
-                    sprintf('https://api.twilio.com/2010-04-01/Accounts/%s/Messages.json', $this->sid),
-                    [
-                        'From' => $this->from,
-                        'To' => $target,
-                        'Body' => $body,
-                    ]
-                )
-                ->throw();
-        } catch (\Throwable $exception) {
+            Sms::to($target)->via('twilio')->send($this->renderBody($code, $context));
+        } catch (SmsException $exception) {
             Log::error('[fpb-auth] Twilio SMS OTP delivery failed: '.$exception->getMessage(), [
                 'target' => $target,
                 'exception' => $exception::class,

@@ -79,7 +79,9 @@ class TwoFactorChallenge extends Component
         $this->clearRateLimiter('two-factor', (string) $user->getAuthIdentifier());
         $challenge->forget();
 
-        Auth::login($user, $remember);
+        // Complete on the guard that verified the first factor, not on
+        // whatever guard happens to be default for this request.
+        Auth::guard($challenge->pendingGuard())->login($user, $remember);
         session()->regenerate();
 
         if ($this->rememberDevice && $settings->remember_device) {

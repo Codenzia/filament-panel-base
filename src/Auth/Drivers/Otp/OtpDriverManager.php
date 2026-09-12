@@ -52,13 +52,10 @@ class OtpDriverManager extends Manager
 
     protected function createTwilioDriver(): TwilioSmsOtpDriver
     {
-        $config = (array) $this->container['config']->get('filament-panel-base.auth.drivers.twilio', []);
-
-        return new TwilioSmsOtpDriver(
-            sid: (string) ($config['sid'] ?? ''),
-            token: (string) ($config['token'] ?? ''),
-            from: (string) ($config['from'] ?? ''),
-        );
+        // Twilio credentials/transport now live in codenzia/laravel-sms
+        // (`sms.drivers.twilio`); this driver only renders the OTP body and
+        // hands off to the Sms facade.
+        return new TwilioSmsOtpDriver;
     }
 
     protected function createVonageDriver(): VonageSmsOtpDriver

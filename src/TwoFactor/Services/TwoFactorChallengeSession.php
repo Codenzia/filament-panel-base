@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\TwoFactor\Services;
 
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Support\Facades\Auth;
@@ -24,19 +25,31 @@ class TwoFactorChallengeSession
 
     private const REMEMBER_COOKIE = 'codenzia_2fa_remember';
 
+    /** Fallback lifetime, in minutes, for a pending challenge. */
+    private const DEFAULT_CHALLENGE_TTL_MINUTES = 5;
+
     /** Hard ceiling on the remember-device cookie lifetime, in days. */
     private const MAX_REMEMBER_DAYS = 365;
 
     /**
      * Stash the user pending 2FA verification. Caller must NOT also call
      * Auth::login() — that defeats the gate.
+     *
+     * Alongside the identifier the stash records what the pending state is
+     * bound to: the guard that authenticated the first factor, when it was
+     * issued, and a fingerprint of the account's credentials. `pendingUser()`
+     * re-checks all three, so a challenge cannot be completed after the
+     * account was suspended, its password reset, or the window elapsed.
      */
-    public function stash(Authenticatable $user, bool $remember = false): void
+    public function stash(Authenticatable $user, bool $remember = false, ?string $guard = null): void
     {
         session()->put(self::SESSION_KEY, [
             'id' => $user->getAuthIdentifier(),
             'remember' => $remember,
             'intended' => session('url.intended'),
+            'guard' => $guard ?? Auth::getDefaultDriver(),
+            'issued_at' => now()->getTimestamp(),
+            'auth_hash' => $this->authHash($user),
         ]);
     }
 
@@ -48,18 +61,60 @@ class TwoFactorChallengeSession
     /**
      * Pull the pending user from the session (without clearing it). The
      * caller is expected to call `forget()` once the challenge passes.
+     *
+     * Returns null — meaning "start over" — whenever the stashed state no
+     * longer describes an account that may complete this sign-in.
      */
     public function pendingUser(): ?Authenticatable
     {
-        $id = session(self::SESSION_KEY.'.id');
+        /** @var array<string, mixed>|null $state */
+        $state = session(self::SESSION_KEY);
 
-        if ($id === null) {
+        if (! is_array($state) || ($state['id'] ?? null) === null) {
             return null;
         }
 
-        $provider = Auth::guard()->getProvider();
+        if ($this->hasExpired($state)) {
+            return null;
+        }
 
-        return $provider->retrieveById($id);
+        try {
+            $provider = Auth::guard($this->stashedGuard($state))->getProvider();
+        } catch (\Throwable) {
+            // The guard the first factor ran on no longer exists.
+            return null;
+        }
+
+        $user = $provider?->retrieveById($state['id']);
+
+        if ($user === null) {
+            return null;
+        }
+
+        // Credentials changed under the pending challenge (password reset,
+        // forced rotation) — the half-finished sign-in dies with them.
+        $expected = $state['auth_hash'] ?? null;
+
+        if (is_string($expected) && ! hash_equals($expected, $this->authHash($user))) {
+            return null;
+        }
+
+        if ($user instanceof HasModerationStatus && ($user->isSuspended() || $user->isPending())) {
+            return null;
+        }
+
+        return $user;
+    }
+
+    /**
+     * The guard the first factor was verified against, so completion logs the
+     * user in on the same one rather than whatever is currently default.
+     */
+    public function pendingGuard(): ?string
+    {
+        $state = session(self::SESSION_KEY);
+
+        return is_array($state) ? $this->stashedGuard($state) : null;
     }
 
     public function pendingRemember(): bool
@@ -140,6 +195,58 @@ class TwoFactorChallengeSession
         }
 
         return hash_equals($this->deviceToken($user, $issuedAt, $rand), $hmac);
+    }
+
+    /**
+     * A pending challenge is short-lived by design: it represents a user
+     * standing at the second-factor prompt, not a session. State with no
+     * issue time predates this binding and is treated as expired.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    private function hasExpired(array $state): bool
+    {
+        $issuedAt = $state['issued_at'] ?? null;
+
+        if (! is_numeric($issuedAt)) {
+            return true;
+        }
+
+        $ttl = (int) config(
+            'filament-panel-base.two_factor.challenge_ttl_minutes',
+            self::DEFAULT_CHALLENGE_TTL_MINUTES,
+        );
+
+        $ttl = max(1, $ttl);
+
+        $age = now()->getTimestamp() - (int) $issuedAt;
+
+        return $age < 0 || $age > $ttl * 60;
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function stashedGuard(array $state): ?string
+    {
+        $guard = $state['guard'] ?? null;
+
+        return is_string($guard) && $guard !== '' ? $guard : null;
+    }
+
+    /**
+     * Fingerprint of the credentials the first factor was checked against.
+     * Hashed with APP_KEY so the session never carries the password hash.
+     */
+    private function authHash(Authenticatable $user): string
+    {
+        try {
+            $password = (string) $user->getAuthPassword();
+        } catch (\Throwable) {
+            $password = '';
+        }
+
+        return hash_hmac('sha256', $password, (string) config('app.key'));
     }
 
     public function forgetDevice(): void

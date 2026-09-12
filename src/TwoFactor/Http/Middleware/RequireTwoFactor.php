@@ -9,6 +9,7 @@ use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -58,11 +59,15 @@ class RequireTwoFactor
             if (! $settings->enabled || empty($settings->require_for_roles)) {
                 return $next($request);
             }
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->warnUnenforceable('two-factor settings could not be read', $e::class);
+
             return $next($request);
         }
 
         if (! in_array(HasTwoFactorAuthentication::class, class_uses_recursive($user), true)) {
+            $this->warnUnenforceable('the user model does not use HasTwoFactorAuthentication');
+
             return $next($request);
         }
 
@@ -100,6 +105,8 @@ class RequireTwoFactor
         // a loop. Enforcement resumes once a reachable enrolment route is set —
         // see the two_factor config block.
         if (! is_string($enrolmentRoute) || $enrolmentRoute === '') {
+            $this->warnUnenforceable('no filament-panel-base.two_factor.enrolment_route is configured');
+
             return $next($request);
         }
 
@@ -107,7 +114,9 @@ class RequireTwoFactor
         // instead of throwing a 500 on every request.
         try {
             $target = route($enrolmentRoute);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->warnUnenforceable("the configured enrolment route [{$enrolmentRoute}] is not registered", $e::class);
+
             return $next($request);
         }
 
@@ -125,13 +134,30 @@ class RequireTwoFactor
         if (! method_exists($user, 'hasAnyRole')) {
             // Without spatie/laravel-permission we can't check roles —
             // fail open so the middleware doesn't lock admins out.
+            $this->warnUnenforceable('the user model has no hasAnyRole() to evaluate require_for_roles against');
+
             return false;
         }
 
         try {
             return (bool) $user->hasAnyRole($required);
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $this->warnUnenforceable('the role lookup failed', $e::class);
+
             return false;
         }
+    }
+
+    /**
+     * Say out loud that a configured 2FA requirement is not being enforced.
+     * The middleware still lets the request through — trapping every user in a
+     * redirect loop is worse — but a policy that silently does nothing is not
+     * something an operator should have to discover from a screenshot.
+     */
+    private function warnUnenforceable(string $reason, ?string $exception = null): void
+    {
+        Log::warning('filament-panel-base: RequireTwoFactor cannot enforce the configured policy — '.$reason, array_filter([
+            'exception' => $exception,
+        ]));
     }
 }

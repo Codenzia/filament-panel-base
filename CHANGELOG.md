@@ -5,7 +5,91 @@ All notable changes to `filament-panel-base` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.4] - 2026-09-11
+
+### Fixed
+- **Package icons no longer swell to fill the page in panels without a compiled custom theme.** Every SVG the package renders was sized only by Tailwind utility classes (`h-5 w-5`, `w-4 h-4`, …). Those utilities exist only in an app's own compiled theme — Filament's shipped stylesheet does not carry them — so in a panel using the stock build the classes resolved to nothing, the SVG fell back to `width: 100%`, and the "Visit Website" topbar icon and the sidebar search magnifier rendered at container size (measured at 98×98 px on SnapCar, pushing the topbar to 122 px tall). Confirmed the same way on gamephoria and dropflow.
+
+  Every class-sized SVG now also carries literal `width`/`height` attributes matching its utility class, so the intrinsic size is correct with or without a theme; where the classes do exist they still win, and nothing changes visually. Covers `visit-website-button`, `auth-links`, `panel-badge`, `sidebar-search`, `sidebar-collapse-button`, `dark-mode-toggle`, `country-select`, `country-code-select`, `country-switcher`, `currency-switcher`, `phone-input`, `social-provider-icon`, the Filament phone input field and the demo page. `<x-filament::icon>` usages were already safe — Filament's own `.fi-icon.fi-size-*` rules size those — and `locale-switcher` sizes its glyphs from the scoped `<style>` block it ships, so neither needed changing.
+
+  `social-provider-icon` merges `width`/`height` as defaults, so a caller passing its own still overrides them. A regression test walks every blade view in the package and fails on any SVG left sized by classes alone.
+
+- **The panel chrome now carries its own layout, so it holds together without a compiled theme.** The same missing-utility root cause broke the *layout* of the components this package injects, not only the icon size: without a custom theme, `inline-flex`, `items-center`, `gap-1.5`, `hidden sm:inline` and the rest resolved to nothing, so the "Visit Website" label dropped onto a second line under its icon, the sidebar search lost its input chrome entirely (transparent background, no radius, no padding, the magnifier floating 16 px above the field), and the switcher dropdowns lost their positioning.
+
+  The package now ships `resources/dist/panel-base.css`, registered with Filament's asset system as `Css::make('panel-base', …)` alongside the existing flag-icons stylesheet, so `php artisan filament:assets` publishes it and every panel loads it through `@filamentStyles`. Every rule is namespaced under the `fpb-` prefix — the prefix the self-contained `locale-switcher` already used — so it cannot collide with an app's theme, and every colour is read from the CSS custom properties Filament itself emits (`--gray-*`, `--primary-*`, `--success-*`, …), so a panel keeps its own palette rather than a hard-coded one. `visit-website-button`, `sidebar-search`, `sidebar-collapse-button`, `country-switcher`, `currency-switcher`, `dark-mode-toggle`, `auth-links`, `panel-badge` and `powered-by` carry the scoped classes alongside their existing utilities; the utilities are untouched, so nothing is lost where a theme does compile them.
+
+  **Themed apps are unaffected, measured not assumed.** On a consumer with a compiled theme the rendered page is pixel-identical with and without the stylesheet (full-page screenshot diff: no differing pixel), and on a consumer with no theme the components now measure exactly what the themed app measures — the "Visit Website" anchor 138.72 × 36 px on one line with a 20 × 20 px icon (was 97.78 × 44 px with the label wrapped beneath), the sidebar search field 273 × 32 px with an 8 px radius and the magnifier centred inside it (was a 215 × 24 px transparent box with the icon above it). The locale switcher keeps its own `<style>` block because it must also render on public pages outside any Filament panel.
+
+  **Upgrading:** run `php artisan filament:assets` (and keep it in your deploy pipeline). Without it the stylesheet is absent and the components render exactly as they did before — no regression, just no fix.
+
+## [0.8.3] - 2026-09-11
+
+### Added
+- **Phone-format validation is switchable.** `ValidPhoneFormat` was applied to every sign-up unconditionally, so a consumer whose users type local formats libphonenumber rejects had no way to relax it — AqarKom shipped a "Validate phone number format" admin toggle that could not change anything. `AuthenticationSettings::$phone_format_validation` (default **true**, so behaviour is unchanged) now decides whether `RegistrationRules` attaches the rule, set from the admin Authentication page or the fluent API:
+
+  ```php
+  FilamentPanelBasePlugin::make()
+      ->withAuthentication(fn ($auth) => $auth->phoneFormatValidation(false));
+  ```
+
+  Length and uniqueness still apply when it is off. Existing installs pick up the new key from `database/settings/add_phone_format_validation_to_authentication_settings.php`.
+
+## [0.8.2] - 2026-09-08
+
+### Fixed
+- Skip the notification_preferences migration when a host already owns that table (Codenzia notification-module). The migration aborted `migrate` with "table notification_preferences already exists" on every app running `codenzia/notification-module`, which owns a table of the same name with a different schema — pinning those apps to 0.6.1. `up()` now stands aside when the table exists, `down()` only drops a table carrying this package's own columns, and `NotificationPreferences::storageAvailable()` probes the live schema at runtime: on a foreign table the matrix reports itself unavailable (every trigger falls back to its registered default, the preferences page stops registering) and logs the reason once instead of erroring on every read and write.
+
+## [0.8.1] - 2026-09-08
+
+### Changed
+- Accept codenzia/laravel-sms ^0.4.
+
+## [0.8.0] - 2026-09-08
+
+### Added
+- **Single sign-on over OpenID Connect (opt-in, disabled by default).** Config-driven SSO for panel users: every entry under `filament-panel-base.sso.providers` becomes a "Continue with …" button on the login screen (Filament's own login form via the `AUTH_LOGIN_FORM_AFTER` render hook, and the package's standalone Livewire login page) plus a `{prefix}/{provider}/redirect` + `/callback` route pair. Generic OIDC is configured with an `issuer` or `discovery_url`; **Google** and **Microsoft Entra** ship as presets that supply nothing but a known issuer. A provider is only offered once `client_id`, `client_secret` and a resolvable discovery URL are all present, so a half-configured preset never renders a dead button. While `sso.enabled` is false (the default, env `FILAMENT_PANEL_BASE_SSO`) no routes register and no buttons render, so adopting the release is a zero-behaviour change until a host opts in.
+  - **No new dependencies.** The relying-party client — discovery, authorization-code flow with PKCE, token exchange and id_token verification against the provider's JWKS — is implemented on Laravel's HTTP client and `ext-openssl`. `laravel/socialite` is *not* required (it remains an optional dependency of the older `oauth/*` social-login flow).
+  - **User matching**: by `(provider, issuer, sub)` in the new auto-migrated `sso_identities` table first, then by the lower-cased verified `email` claim — and only into a local account that has itself verified that address. `sso.auto_provision` (default **false**) decides what happens when neither matches — off, the user gets a friendly "no account matches" error; on, the user is created through the ordinary registration pipeline and assigned `sso.default_role` when the user model exposes `assignRole()`. SSO is strictly additive: an existing password keeps working and is never touched.
+  - **Security**: per-attempt `state`, `nonce` and PKCE (S256), with the stored flow *pulled* at callback so a replayed callback URL is rejected. id_token validation takes the signing algorithm from a fixed allowlist (`RS256`/`RS384`/`RS512`) rather than the token header — `alg: none` and RS→HS confusion are rejected — and checks the JWKS signature, `iss`, `aud`/`azp`, `nonce` and `exp`/`iat`. Unverified email claims are rejected unless a provider sets `allow_unverified_email`. Existing moderation gating and the 2FA challenge both still apply, so a suspended account cannot enter through SSO and a provider assertion is not treated as a second factor. No token, authorization code, client secret, or provider-supplied `error_description` is ever logged or shown.
+  - **Provisioning obeys the host's admission policy.** Auto-provisioning runs through `RegistrationPipeline`, so the cancellable `UserRegistering` hook, the moderation mode and the email-domain allowlist all apply to an IdP sign-up exactly as they do to a form sign-up; a declined registration leaves no user, role or identity row behind. A first-time user is marked `pending` on a moderated application unless the provider sets the new per-provider **`auto_approve`** key (default **false**) — the explicit statement that this IdP is the admission decision. `email_verified_at` is only stamped when the accepted claim was actually verified, so `allow_unverified_email` no longer satisfies verified-email middleware.
+  - **Identity is scoped by issuer.** `sso_identities` carries the validated `issuer` and is unique on `(provider, issuer, subject)`, so re-pointing a provider entry at a different IdP cannot resolve a colliding subject onto the previous IdP's user. Discovery and JWKS cache keys include a digest of the provider's discovery URL and client id, and an id_token signed by an unrecognised `kid` triggers exactly one forced JWKS refetch so an ordinary key rotation does not lock everyone out until the TTL expires.
+  - The `sso_identities` table stores no tokens — only `user_id`, `provider`, `issuer`, `subject` and `last_login_at`.
+
+### Changed
+- The "should this login be challenged for 2FA?" decision moved out of `OAuthController` into `TwoFactor\Services\LoginChallengeDecider`, which the password, OAuth and OIDC sign-in paths now all share, so a sign-in route cannot silently omit the check.
+- **The two-factor decision fails closed.** "Disabled" and "cannot be determined" are now different answers: when the settings store is unreachable and the user holds a confirmed second factor, the decider raises `TwoFactor\Exceptions\TwoFactorUnavailableException` and the sign-in stops with a translated "temporarily unavailable" message (`two-factor.service_unavailable`) instead of completing as password-only. A user who never enrolled still signs in normally. A required challenge with no registered `two-factor.challenge` route is likewise refused rather than skipped, and `RequireTwoFactor` now logs a warning naming exactly why a configured role requirement could not be enforced.
+- **A pending two-factor challenge is bound to the account it started on.** The stash records the guard, an issue time and a fingerprint of the account's credentials; completing the challenge re-checks all three plus moderation status, so a challenge cannot be finished after the account was suspended, its password was reset, the guard changed, or the new `two_factor.challenge_ttl_minutes` window (default 5) elapsed. Completion logs the user in on the guard that verified the first factor. Pending state stashed by an earlier release carries no issue time and is treated as expired — those users re-enter their password once.
+- **Device sessions read and write the session connection.** `DeviceSessionRepository` resolves `session.connection` for schema discovery, listing and revocation instead of always using the default connection, filters out rows already past `session.lifetime` so expired rows are not presented as active devices, and reports the number of genuinely active sessions that "sign out everywhere else" ended.
+- **Demo impersonation is a guarded POST.** The `login-as` endpoint now accepts POST only (so the `web` stack's CSRF token is required) and authorises through the demo page's own `authorizeLoginAs()`, so a host that narrowed which accounts the button offers narrows the endpoint too. Privileged accounts, accounts flagged `is_protected`, and suspended or pending accounts are refused, and each switch is logged with actor and target. The demo table's "Login" control is now a form button rather than a link.
+- **Provider-created accounts no longer carry a password nobody was given.** Socialite and SSO provisioning store `Auth\Support\UnusablePassword::make()` instead of a random hash, and "connected accounts" treats such a value as no sign-in method — so disconnecting the only linked provider is refused until a real password exists, rather than reported as a success that locks the user out.
+- **OTP issuance is serialised and its failures are honest.** A per-(target, channel) lock stops two concurrent sends from invalidating one another's code and billing two deliveries; an issuance is counted against the throttle before delivery, and a transport failure deletes the stored code instead of leaving a live one nobody received.
+- The public OTP endpoints validate `channel` against an explicit allowlist — `otp_api.channels`, defaulting to the admin-managed `allowed_otp_drivers` — so being registered as a driver no longer means being offered to anonymous callers. The null/logging driver is not on the default list.
+- `id_token` validation now requires `iat`, and rejects a present `azp` that names another client as well as a multi-audience token that omits `azp` entirely.
+- `HasTwoFactorAuthentication` hides `two_factor_secret`, `two_factor_recovery_codes` and `two_factor_remember_token` from model serialisation. A controller that returns a user model no longer publishes the decrypted second factor; a host that needs the attribute asks for it with `makeVisible()`.
+
+## [0.7.1] - 2026-08-20
+
+### Added
+- New `midnight_violet` theme preset: violet-black dark palette (near-black indigo background, violet-tinted surfaces and borders, bright violet primary) for the PMO-style dark look.
+
+## [0.7.0] - 2026-08-19
+
+### Added
+- **Notification Preferences matrix (opt-in, disabled by default).** A fleet-wide, per-trigger notification preference system: host apps and plugins register every notification they can send via `NotificationTriggers::register(string $key, array $meta)` (label, group, channels, default_enabled), and each user gets a self-service "Notification Preferences" page (`FilamentPanelBasePlugin::make()->withNotificationPreferencesPage()`) to toggle, per trigger and per channel (in-app/email), whether they want it delivered. The decision seam — `NotificationPreferences::allows(Model $user, string $triggerKey, string $channel): bool` and the `via()` convenience `PreferenceGate::filterChannels($user, $key, array $channels): array` — is what host Notification classes call; **this package never sends a notification itself**. Absence of a preference row means "use the trigger's registered default"; only actual opt-outs/opt-ins are stored (`notification_preferences` table, auto-migrated). While `filament-panel-base.notification-matrix.enabled` is false (the default, env `FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX`), `allows()`/`filterChannels()` always return permissive results and the preferences page never registers, so adopting the package has zero behaviour change until a host opts in.
+
+## [0.6.1] - 2026-07-27
+
+### Changed
+- **Accept `codenzia/laravel-sms` v0.3.** The constraint widens to `^0.2 || ^0.3`; the package only consumes the `Sms` facade and `SmsException`, both unchanged by v0.3.0's production hardening. Without this, a host application cannot adopt laravel-sms v0.3 (which removes the fixed-OTP-code default and refuses to deliver through the fake driver in production).
+
+## [0.6.0] - 2026-07-23
+
+### Added
+- **Headless OTP REST API (opt-in, disabled by default).** Native mobile clients cannot drive the Livewire auth pages, so the package now ships three thin JSON endpoints over the existing `OtpService`: `POST {prefix}/otp/request`, `POST {prefix}/otp/verify` and `POST {prefix}/phone/register`. They are registered only when `filament-panel-base.otp_api.enabled` is true (env `FILAMENT_PANEL_BASE_OTP_API`); prefix (`api/pb`) and middleware (`api`) are config-overridable, and each endpoint carries its own per-IP throttle (`10,60` / `20,60` / `10,60`). Input goes through Form Request classes with shared E.164 normalisation, so a locally-typed number resolves to the same account the Livewire pages would have found. **The OTP code is never returned in a response.** Token issuance stays the host's decision: point `otp_api.token_issuer` at a class implementing `Auth\Contracts\OtpTokenIssuer` (or an invokable) to mint a Sanctum/Passport token on a successful verify — when it is null, verify returns `{"verified": true}` and the host reacts to the existing `OtpVerified` event.
+- **BVT roll-call test net over the shipped surfaces** (`tests/BVT/SurfaceRollCallTest`), so a surface listed in `FEATURES.md` cannot silently disappear from a release.
+
+### Changed
+- **The Twilio SMS OTP driver now delivers through `codenzia/laravel-sms` (`^0.2`).** `TwilioSmsOtpDriver` no longer owns a raw Twilio HTTP transport; it sends via the `Sms` facade, so credentials, retries and driver selection live in one fleet package instead of being duplicated per consumer. The OTP logic itself — generation, hashing, TTL, attempt counting, throttling, replay/consume — is untouched. **Upgrade note:** the `auth.otp.channels.twilio` config block is gone. Configure the credentials in laravel-sms under `sms.drivers.twilio` (`TWILIO_SID` / `TWILIO_TOKEN` / `TWILIO_FROM`, or `TWILIO_MESSAGING_SERVICE_SID`); apps still setting only `TWILIO_ACCOUNT_SID` / `TWILIO_AUTH_TOKEN` will not send. `packages.codenzia.com` is now declared as a repository in `composer.json`.
 
 ## [0.5.6] - 2026-07-19
 
@@ -163,6 +247,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Auth-page submit buttons (`bg-primary-600`, `hover:bg-primary-700`, `focus:ring-primary-500`) previously rendered with no background on consuming projects because Tailwind v4 doesn't generate utilities for undefined color scales. The new `primary-*` scale in `theme.css` resolves these references.
 - `makeTranslatablePlaceholder()` closure no longer accesses `$component->getLivewire()` on a component whose `$container` is still uninitialized. The inner closure now accepts `$component` as an injected parameter (Filament's `EvaluatesClosures::evaluate()` binds `$this` via `evaluationIdentifier = 'component'`) instead of capturing the definition-time prototype via `use ($component)`. Resolved a 500 error on Filament forms that nest text inputs inside repeater rows (e.g. `MediaSettings` with tabs → repeater → grid → TextInput).
 
+[0.8.2]: https://github.com/Codenzia/filament-panel-base/compare/v0.8.1...v0.8.2
+[0.8.1]: https://github.com/Codenzia/filament-panel-base/compare/v0.8.0...v0.8.1
+[0.8.0]: https://github.com/Codenzia/filament-panel-base/compare/v0.7.1...v0.8.0
 [0.4.0]: https://github.com/Codenzia/filament-panel-base/compare/v0.3.1...v0.4.0
 
 ## [0.3.1] - 2026-06-06

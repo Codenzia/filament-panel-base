@@ -19,6 +19,7 @@ return [
 
     'invalid_code' => 'That code is not valid. Try again or use a recovery code.',
     'unavailable' => 'Two-factor authentication is not configured for this account.',
+    'service_unavailable' => 'Two-factor authentication is temporarily unavailable, so sign-in cannot be completed. Please try again shortly.',
 
     'disable_button' => 'Disable two-factor',
     'disable_description' => 'You will be able to sign in with just your password again. Your recovery codes will be discarded.',

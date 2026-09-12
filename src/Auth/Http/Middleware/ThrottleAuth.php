@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Auth\Http\Middleware;
 
 use Closure;
+use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Illuminate\Http\Exceptions\ThrottleRequestsException;
 use Illuminate\Http\Request;
@@ -43,7 +44,7 @@ use Symfony\Component\HttpFoundation\Response;
  * `TrustProxies` middleware (trustedProxies in bootstrap/app.php) correctly —
  * otherwise a client can spoof the forwarded IP and trivially evade these
  * per-IP limits. The same caveat applies to the per-IP buckets in
- * {@see \Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts}.
+ * {@see ThrottlesAuthAttempts}.
  */
 class ThrottleAuth
 {

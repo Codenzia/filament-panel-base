@@ -81,6 +81,17 @@ return [
     'oauth_invalid_state' => 'Your sign-in session expired. Please try again.',
     'oauth_provider_error' => 'Sign in with :provider failed. Please try again or use another method.',
 
+    // Single sign-on (OIDC)
+    'sso_invalid_state' => 'Your sign-in session expired. Please try again.',
+    'sso_provider_error' => 'Sign in with :provider failed. Please try again or use another method.',
+    'sso_unavailable' => 'Single sign-on is temporarily unavailable. Please try again shortly.',
+    'sso_missing_email' => 'Your :provider account did not share an email address, so we cannot match it to an account.',
+    'sso_unverified_email' => 'Your :provider account has an unverified email address. Verify it with :provider and try again.',
+    'sso_no_account' => 'No account matches your :provider email address. Ask an administrator to invite you first.',
+    'sso_link_unverified_account' => 'An account already uses this email address but has not verified it. Sign in with that account and verify the address, then use :provider again.',
+    'sso_registration_declined' => 'Your :provider account cannot be registered on this application. Ask an administrator for access.',
+    'sso_domain_not_allowed' => 'Your :provider email address is outside the domains allowed to register here.',
+
     // Manage connected accounts
     'social_manage_title' => 'Connected accounts',
     'social_manage_subtitle' => 'Link providers so you can sign in faster, or disconnect ones you no longer use.',
@@ -135,6 +146,8 @@ return [
     'settings_credentials_mode_help' => 'Determines which field users sign in with and what the registration form collects.',
     'settings_phone_required' => 'Phone number is required',
     'settings_phone_required_help' => 'When enabled and the identifier is "Email or phone", a phone is still required at signup.',
+    'settings_phone_format_validation' => 'Validate phone number format',
+    'settings_phone_format_validation_help' => 'Reject sign-up numbers that are not valid international format. Turn off if your users enter local formats.',
     'settings_default_country_code' => 'Default country code',
     'settings_disposable_email_blocking' => 'Block disposable email domains',
     'settings_disposable_email_blocking_help' => 'Reject sign-ups using throwaway email providers (e.g. 10minutemail).',

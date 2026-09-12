@@ -6,6 +6,7 @@ namespace Codenzia\FilamentPanelBase\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
+use Illuminate\Translation\Translator;
 
 /**
  * Scaffolds `lang/{locale}/validation.php` for every locale the host
@@ -56,6 +57,7 @@ class ScaffoldValidationLangCommand extends Command
             if ($files->exists($target) && ! $force) {
                 $this->line("  <fg=yellow>skip</> {$target} (already exists — pass --force to overwrite)");
                 $skipped++;
+
                 continue;
             }
 
@@ -80,7 +82,7 @@ class ScaffoldValidationLangCommand extends Command
             // Reflect on the installed Translator class so we work even when
             // base_path() resolves to a testbench shim that doesn't ship a
             // local vendor copy.
-            dirname((new \ReflectionClass(\Illuminate\Translation\Translator::class))->getFileName())
+            dirname((new \ReflectionClass(Translator::class))->getFileName())
                 .'/lang/en/validation.php',
         ];
 

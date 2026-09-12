@@ -10,6 +10,7 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     $this->createUsersTable();
@@ -120,7 +121,7 @@ it('short-circuits when notify_on_new_device is off', function (): void {
 });
 
 it('does not throw when the sessions table is missing', function (): void {
-    \Illuminate\Support\Facades\Schema::dropIfExists('sessions');
+    Schema::dropIfExists('sessions');
 
     Event::fake([NewDeviceLogin::class]);
 

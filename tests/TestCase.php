@@ -2,7 +2,11 @@
 
 namespace Codenzia\FilamentPanelBase\Tests;
 
+use BladeUI\Heroicons\BladeHeroiconsServiceProvider;
+use BladeUI\Icons\BladeIconsServiceProvider;
 use Codenzia\FilamentPanelBase\FilamentPanelBaseServiceProvider;
+use Codenzia\FilamentPanelBase\NotificationMatrix\NotificationPreferences;
+use Codenzia\LaravelSms\SmsServiceProvider;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Laravel\Socialite\Facades\Socialite;
@@ -13,10 +17,20 @@ use Spatie\LaravelSettings\LaravelSettingsServiceProvider;
 
 class TestCase extends Orchestra
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        NotificationPreferences::flushStorageAvailability();
+    }
+
     protected function getPackageProviders($app): array
     {
         return [
+            BladeIconsServiceProvider::class,
+            BladeHeroiconsServiceProvider::class,
             LaravelSettingsServiceProvider::class,
+            SmsServiceProvider::class,
             FilamentPanelBaseServiceProvider::class,
             SocialiteServiceProvider::class,
             LivewireServiceProvider::class,

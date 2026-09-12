@@ -3,6 +3,8 @@
 declare(strict_types=1);
 
 use Codenzia\FilamentPanelBase\FilamentPanelBaseServiceProvider;
+use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +21,18 @@ class DemoRouteUser extends AuthUser
     public function hasRole(string $role): bool
     {
         return $this->role === $role;
+    }
+}
+
+/**
+ * A demo page that narrows which accounts the button offers. The endpoint must
+ * apply the same narrowing — otherwise the override is decoration.
+ */
+class RestrictedDemoPage extends DemoPage
+{
+    protected function canLogInAs(Model $user): bool
+    {
+        return parent::canLogInAs($user) && $user->getAttribute('name') !== 'Denied';
     }
 }
 
@@ -47,6 +61,7 @@ beforeEach(function (): void {
         $table->string('name')->nullable();
         $table->string('email')->nullable();
         $table->string('role')->nullable();
+        $table->boolean('is_protected')->default(false);
     });
 });
 
@@ -58,7 +73,7 @@ it('logs in the target user and redirects to the app', function () {
     $user = DemoRouteUser::create(['name' => 'Editor', 'role' => 'editor']);
 
     $this->withSession(['filament-panel-base.demo.unlocked' => true])
-        ->get(route('filament-panel-base.demo.login-as', $user->getKey()))
+        ->post(route('filament-panel-base.demo.login-as', $user->getKey()))
         ->assertRedirect(url('/admin'));
 
     expect(Auth::id())->toBe($user->getKey());
@@ -68,7 +83,7 @@ it('forbids switching into the admin role', function () {
     $admin = DemoRouteUser::create(['name' => 'Root', 'role' => 'super_admin']);
 
     $this->withSession(['filament-panel-base.demo.unlocked' => true])
-        ->get(route('filament-panel-base.demo.login-as', $admin->getKey()))
+        ->post(route('filament-panel-base.demo.login-as', $admin->getKey()))
         ->assertForbidden();
 
     expect(Auth::check())->toBeFalse();
@@ -77,7 +92,7 @@ it('forbids switching into the admin role', function () {
 it('forbids the switch when the demo is locked', function () {
     $user = DemoRouteUser::create(['name' => 'Editor', 'role' => 'editor']);
 
-    $this->get(route('filament-panel-base.demo.login-as', $user->getKey()))
+    $this->post(route('filament-panel-base.demo.login-as', $user->getKey()))
         ->assertForbidden();
 
     expect(Auth::check())->toBeFalse();
@@ -85,6 +100,50 @@ it('forbids the switch when the demo is locked', function () {
 
 it('404s for an unknown user id', function () {
     $this->withSession(['filament-panel-base.demo.unlocked' => true])
-        ->get(route('filament-panel-base.demo.login-as', 999999))
+        ->post(route('filament-panel-base.demo.login-as', 999999))
         ->assertNotFound();
+});
+
+it('refuses a GET so a cross-site link cannot change who you are', function () {
+    $user = DemoRouteUser::create(['name' => 'Editor', 'role' => 'editor']);
+
+    $this->withSession(['filament-panel-base.demo.unlocked' => true])
+        ->get(route('filament-panel-base.demo.login-as', $user->getKey()))
+        ->assertMethodNotAllowed();
+
+    expect(Auth::check())->toBeFalse();
+});
+
+it('forbids switching into an account the host marked protected', function () {
+    $user = DemoRouteUser::create(['name' => 'Owner', 'role' => 'editor', 'is_protected' => true]);
+
+    $this->withSession(['filament-panel-base.demo.unlocked' => true])
+        ->post(route('filament-panel-base.demo.login-as', $user->getKey()))
+        ->assertForbidden();
+
+    expect(Auth::check())->toBeFalse();
+});
+
+it('honours the demo page override on direct requests', function () {
+    config()->set('filament-panel-base.demo.component', RestrictedDemoPage::class);
+
+    $provider = $this->app->getProvider(FilamentPanelBaseServiceProvider::class);
+    $boot = new ReflectionMethod($provider, 'bootDemoModule');
+    $boot->setAccessible(true);
+    $boot->invoke($provider);
+
+    $denied = DemoRouteUser::create(['name' => 'Denied', 'role' => 'editor']);
+    $allowed = DemoRouteUser::create(['name' => 'Editor', 'role' => 'editor']);
+
+    $this->withSession(['filament-panel-base.demo.unlocked' => true])
+        ->post(route('filament-panel-base.demo.login-as', $denied->getKey()))
+        ->assertForbidden();
+
+    expect(Auth::check())->toBeFalse();
+
+    $this->withSession(['filament-panel-base.demo.unlocked' => true])
+        ->post(route('filament-panel-base.demo.login-as', $allowed->getKey()))
+        ->assertRedirect(url('/admin'));
+
+    expect(Auth::id())->toBe($allowed->getKey());
 });

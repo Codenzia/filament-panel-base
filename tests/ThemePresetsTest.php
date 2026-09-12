@@ -7,7 +7,7 @@ use Codenzia\FilamentPanelBase\Support\ThemePresets;
 it('contains all expected presets', function () {
     $presets = ThemePresets::all();
 
-    expect($presets)->toHaveCount(19);
+    expect($presets)->toHaveCount(20);
     expect($presets)->toHaveKeys([
         'ocean_blue', 'forest_green', 'sunset_orange', 'royal_purple',
         'rose_garden', 'modern_dark', 'teal_breeze', 'amber_gold',
@@ -47,7 +47,7 @@ it('custom preset has only a label', function () {
 it('returns labels for all presets', function () {
     $labels = ThemePresets::labels();
 
-    expect($labels)->toHaveCount(19);
+    expect($labels)->toHaveCount(20);
     expect($labels['ocean_blue'])->toBe('Ocean Blue');
     expect($labels['custom'])->toBe('Custom');
 });

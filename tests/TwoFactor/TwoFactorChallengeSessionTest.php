@@ -1,9 +1,13 @@
 <?php
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ModeratesStatus;
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
 use Codenzia\FilamentPanelBase\TwoFactor\Services\TwoFactorChallengeSession;
 use Codenzia\FilamentPanelBase\TwoFactor\Settings\TwoFactorSettings;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Facades\Schema;
 
 /** The private cookie name the service reads/writes. */
 function rememberCookieName(): string
@@ -28,6 +32,12 @@ function setRememberCookie(string $value): void
 
 beforeEach(function (): void {
     $this->createUsersTable();
+
+    // The moderation contract needs somewhere to record its decision.
+    Schema::table('users', function (Blueprint $table): void {
+        $table->string('status')->nullable();
+    });
+
     $this->challenge = new TwoFactorChallengeSession;
 
     // Configure the session driver for tests that touch session()
@@ -180,3 +190,75 @@ it('invalidates a remembered device once the remember-token nonce is rotated (PN
 
     expect($this->challenge->deviceIsRemembered($this->user))->toBeFalse();
 });
+
+/*
+|--------------------------------------------------------------------------
+| Pending-challenge binding (PB-04)
+|--------------------------------------------------------------------------
+*/
+
+it('expires a pending challenge past the configured window (PB-04)', function (): void {
+    $this->challenge->stash($this->user);
+
+    expect($this->challenge->pendingUser())->not->toBeNull();
+
+    $this->travel(6)->minutes();
+
+    expect($this->challenge->pendingUser())->toBeNull();
+});
+
+it('refuses to complete a challenge after the password changed (PB-04)', function (): void {
+    $this->challenge->stash($this->user);
+
+    $this->user->forceFill(['password' => bcrypt('rotated-password')])->save();
+
+    expect($this->challenge->pendingUser())->toBeNull();
+});
+
+it('refuses to complete a challenge for a suspended account (PB-04)', function (): void {
+    config()->set('auth.providers.users.model', ModeratedTwoFactorUser::class);
+
+    $user = ModeratedTwoFactorUser::create([
+        'name' => 'Sam',
+        'email' => 'sam@example.com',
+        'password' => 'x',
+        'status' => 'approved',
+    ]);
+
+    $this->challenge->stash($user);
+
+    expect($this->challenge->pendingUser())->not->toBeNull();
+
+    $user->forceFill(['status' => 'suspended'])->save();
+
+    expect($this->challenge->pendingUser())->toBeNull();
+});
+
+it('records the guard the first factor ran on (PB-04)', function (): void {
+    $this->challenge->stash($this->user);
+
+    expect($this->challenge->pendingGuard())->toBe('web');
+});
+
+it('treats pending state with no issue time as expired (PB-04)', function (): void {
+    // What a session stashed by an older release looks like.
+    session()->put('codenzia.two_factor_challenge', [
+        'id' => $this->user->getAuthIdentifier(),
+        'remember' => false,
+        'intended' => null,
+    ]);
+
+    expect($this->challenge->hasPending())->toBeTrue()
+        ->and($this->challenge->pendingUser())->toBeNull();
+});
+
+/**
+ * A two-factor user that also carries the moderation contract, so a
+ * suspension mid-challenge is observable.
+ */
+class ModeratedTwoFactorUser extends TwoFactorUser implements HasModerationStatus
+{
+    use ModeratesStatus;
+
+    protected $table = 'users';
+}

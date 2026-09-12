@@ -526,6 +526,13 @@ return [
             'default' => 'email',
             'ttl_minutes' => 10,
             'max_attempts' => 5,
+
+            /*
+            | Last-resort allowlist for the public OTP endpoints, used only
+            | when neither `otp_api.channels` nor the settings table can be
+            | read.
+            */
+            'public_channels' => ['email'],
         ],
 
         /*
@@ -539,11 +546,11 @@ return [
                 'template_name' => env('WHATSAPP_TEMPLATE_NAME', 'verification_code'),
                 'template_language' => env('WHATSAPP_TEMPLATE_LANGUAGE', 'en'),
             ],
-            'twilio' => [
-                'sid' => env('TWILIO_ACCOUNT_SID'),
-                'token' => env('TWILIO_AUTH_TOKEN'),
-                'from' => env('TWILIO_FROM'),
-            ],
+            // Twilio SMS OTP transport now lives in codenzia/laravel-sms.
+            // Configure credentials there under `sms.drivers.twilio`
+            // (TWILIO_SID / TWILIO_TOKEN / TWILIO_FROM or
+            // TWILIO_MESSAGING_SERVICE_SID). The 'twilio' OTP channel delivers
+            // through the Sms facade.
             'vonage' => [
                 'key' => env('VONAGE_KEY'),
                 'secret' => env('VONAGE_SECRET'),
@@ -553,6 +560,49 @@ return [
                 'from_address' => env('MAIL_FROM_ADDRESS'),
                 'from_name' => env('MAIL_FROM_NAME'),
             ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Headless OTP REST API
+    |--------------------------------------------------------------------------
+    |
+    | Thin JSON endpoints over the existing OtpService, for native mobile
+    | clients that cannot drive the Livewire auth pages. DISABLED by default —
+    | set `enabled` to true (or FILAMENT_PANEL_BASE_OTP_API=true) to register:
+    |
+    |   POST {prefix}/otp/request   — issue an OTP to a target
+    |   POST {prefix}/otp/verify    — verify a submitted code
+    |   POST {prefix}/phone/register — begin phone signup (E.164 + OTP)
+    |
+    | The endpoints NEVER return the OTP code. Token issuance is the host app's
+    | responsibility: point `token_issuer` at a class implementing
+    | Codenzia\FilamentPanelBase\Auth\Contracts\OtpTokenIssuer (or an invokable)
+    | to mint a Sanctum/Passport token on a successful verify. When null, verify
+    | returns `{ "verified": true }` and the host reacts to the OtpVerified event.
+    |
+    | Throttles are per-IP, expressed as "maxAttempts,decayMinutes".
+    */
+    'otp_api' => [
+        'enabled' => env('FILAMENT_PANEL_BASE_OTP_API', false),
+        'prefix' => 'api/pb',
+        'middleware' => ['api'],
+        'token_issuer' => null,
+
+        /*
+        | Channels a public caller may name in `channel`. Null defers to the
+        | admin-managed AuthenticationSettings::allowed_otp_drivers. Set it
+        | explicitly to narrow the endpoint to the transports this application
+        | actually intends to expose — being registered as a driver is not the
+        | same as being offered to anonymous callers, and the null/logging
+        | driver in particular must never be reachable here.
+        */
+        'channels' => null,
+        'throttle' => [
+            'request' => '10,60',
+            'verify' => '20,60',
+            'register' => '10,60',
         ],
     ],
 
@@ -571,8 +621,164 @@ return [
     | (lets the request through) rather than trapping the user in a redirect
     | loop. Enforcement only kicks in once a reachable enrolment route is set.
     */
+    /*
+    |--------------------------------------------------------------------------
+    | Notification Preferences Matrix (opt-in)
+    |--------------------------------------------------------------------------
+    |
+    | Per-trigger notification preferences: host apps and plugins register the
+    | notifications they can send via NotificationTriggers::register(), and
+    | this module lets each user toggle, per trigger and per channel
+    | (in-app/email), whether they want to receive it.
+    |
+    | DISABLED by default — while disabled, the decision seam
+    | (NotificationPreferences::allows() / PreferenceGate::filterChannels())
+    | always returns true and the "Notification Preferences" page never
+    | registers, so existing notification code is completely unaffected
+    | until a host explicitly opts in.
+    |
+    | Enable with FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX=true and register
+    | the page on a panel via
+    | FilamentPanelBasePlugin::make()->withNotificationPreferencesPage().
+    |
+    */
+    'notification-matrix' => [
+        'enabled' => env('FILAMENT_PANEL_BASE_NOTIFICATION_MATRIX', false),
+        'navigation_group' => 'Settings',
+        'navigation_sort' => 95,
+        'navigation_icon' => 'heroicon-o-bell-alert',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Single Sign-On (OIDC) — opt-in, disabled by default
+    |--------------------------------------------------------------------------
+    |
+    | Config-driven OpenID Connect sign-in for panel users. Each entry under
+    | `providers` becomes a "Continue with ..." button on the login screen and
+    | a pair of routes ({prefix}/{provider}/redirect + /callback). SAML is NOT
+    | supported — this module speaks OIDC only.
+    |
+    | While `enabled` is false (the default) no routes register, no buttons
+    | render, and nothing reads the `sso_identities` table — adopting the
+    | release is a zero-behaviour change until a host opts in.
+    |
+    | Per-provider keys:
+    |   label                  — button text ("Continue with :label").
+    |   icon                   — key passed to the social-provider-icon
+    |                            component ('google', 'microsoft', ...).
+    |   client_id/client_secret— OIDC client credentials (env-driven).
+    |   preset                 — 'google' | 'entra' to derive the issuer.
+    |   tenant                 — Entra tenant id/domain ('common' by default).
+    |   issuer                 — explicit issuer for generic OIDC; the
+    |                            discovery document is read from
+    |                            {issuer}/.well-known/openid-configuration.
+    |   discovery_url          — full discovery URL; overrides `issuer`.
+    |   scopes                 — requested scopes; must include 'openid'.
+    |   allow_unverified_email — accept an id_token whose `email_verified`
+    |                            claim is absent/false. OFF by default; only
+    |                            turn it on for an IdP you fully control.
+    |   auto_approve           — treat this provider's assertion as the
+    |                            admission decision, so an auto-provisioned
+    |                            user is approved immediately instead of
+    |                            following `registration_mode`. OFF by
+    |                            default: on a moderated or invitation-only
+    |                            application, being able to authenticate is
+    |                            not the same as being allowed an account.
+    |
+    | A provider is only offered when `client_id`, `client_secret` and a
+    | resolvable discovery URL are all present, so an unconfigured preset
+    | never renders a dead button.
+    |
+    */
+    'sso' => [
+        'enabled' => env('FILAMENT_PANEL_BASE_SSO', false),
+
+        /*
+        | Route registration for the redirect/callback pair. The callback URL
+        | you register with the identity provider is
+        | {app_url}/{prefix}/{provider}/callback.
+        */
+        'routes' => [
+            'prefix' => 'sso',
+            'middleware' => ['web'],
+        ],
+
+        /*
+        | Create a local user when a verified SSO email matches no account.
+        | OFF by default: unmatched users get a friendly "no account" error
+        | instead of silently gaining access.
+        |
+        | Provisioning runs through the ordinary registration pipeline, so the
+        | host's moderation mode, email-domain allowlist and cancellable
+        | UserRegistering listeners all still apply. A provider skips
+        | moderation only when its own `auto_approve` key says so.
+        */
+        'auto_provision' => env('FILAMENT_PANEL_BASE_SSO_AUTO_PROVISION', false),
+
+        /*
+        | Role assigned to auto-provisioned users (requires a user model with
+        | spatie/laravel-permission's assignRole). Null = assign nothing.
+        */
+        'default_role' => env('FILAMENT_PANEL_BASE_SSO_DEFAULT_ROLE'),
+
+        /*
+        | Issue a long-lived "remember me" cookie on a successful SSO sign-in.
+        | Matches the (opt-in) behaviour of the OAuth path.
+        */
+        'remember' => false,
+
+        /*
+        | Seconds the discovery document and JWKS are cached for. Keys rotate
+        | rarely; a cache miss costs one HTTPS round-trip per sign-in.
+        */
+        'cache_ttl' => 3600,
+
+        'providers' => [
+            'google' => [
+                'label' => 'Google',
+                'icon' => 'google',
+                'preset' => 'google',
+                'client_id' => env('SSO_GOOGLE_CLIENT_ID'),
+                'client_secret' => env('SSO_GOOGLE_CLIENT_SECRET'),
+                'scopes' => ['openid', 'profile', 'email'],
+                'allow_unverified_email' => false,
+            ],
+
+            'entra' => [
+                'label' => 'Microsoft',
+                'icon' => 'microsoft',
+                'preset' => 'entra',
+                'tenant' => env('SSO_ENTRA_TENANT', 'common'),
+                'client_id' => env('SSO_ENTRA_CLIENT_ID'),
+                'client_secret' => env('SSO_ENTRA_CLIENT_SECRET'),
+                'scopes' => ['openid', 'profile', 'email'],
+                'allow_unverified_email' => false,
+            ],
+
+            'oidc' => [
+                'label' => env('SSO_OIDC_LABEL', 'SSO'),
+                'icon' => null,
+                'issuer' => env('SSO_OIDC_ISSUER'),
+                'discovery_url' => env('SSO_OIDC_DISCOVERY_URL'),
+                'client_id' => env('SSO_OIDC_CLIENT_ID'),
+                'client_secret' => env('SSO_OIDC_CLIENT_SECRET'),
+                'scopes' => ['openid', 'profile', 'email'],
+                'allow_unverified_email' => false,
+            ],
+        ],
+    ],
+
     'two_factor' => [
         'enrolment_route' => env('FILAMENT_PANEL_BASE_2FA_ENROLMENT_ROUTE'),
+
+        /*
+        | How long a pending challenge stays completable, in minutes. It
+        | represents a user standing at the code prompt, so it is deliberately
+        | much shorter than the session lifetime: past this window the login
+        | restarts from credentials.
+        */
+        'challenge_ttl_minutes' => 5,
 
         /*
         | DB-free fallback for the server-side "remember this device, skip 2FA"

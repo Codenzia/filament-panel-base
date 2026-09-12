@@ -30,6 +30,7 @@ use Codenzia\FilamentPanelBase\Commands\InstallAuthCommand;
 use Codenzia\FilamentPanelBase\Commands\ScaffoldValidationLangCommand;
 use Codenzia\FilamentPanelBase\Commands\ScanTranslationsCommand;
 use Codenzia\FilamentPanelBase\Livewire\Demo\DemoPage;
+use Codenzia\FilamentPanelBase\NotificationMatrix\NotificationTriggers;
 use Codenzia\FilamentPanelBase\Sessions\Listeners\DetectNewDeviceLogin;
 use Codenzia\FilamentPanelBase\Sessions\Livewire\DeviceSessionList;
 use Codenzia\FilamentPanelBase\Sessions\Settings\SessionManagementSettings;
@@ -51,6 +52,7 @@ use Illuminate\Session\TokenMismatchException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Livewire;
@@ -129,6 +131,11 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // plugins push extra actions into. Singleton because every contributor
         // is added once at boot time.
         $this->app->singleton(CommandPaletteRegistry::class);
+
+        // Same treatment for NotificationTriggers — hosts and plugins call
+        // NotificationTriggers::register() once at boot, and every later
+        // resolution during the request must see the same set.
+        $this->app->singleton(NotificationTriggers::class);
     }
 
     public function packageBooted(): void
@@ -139,6 +146,8 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         $this->bootTwoFactorModule();
         $this->bootSessionManagementModule();
         $this->bootCommandPaletteModule();
+        $this->bootNotificationMatrixModule();
+        $this->bootSsoModule();
         $this->bootDemoModule();
         $this->bootBrandingFooter();
         $this->bootSessionExpiryModule();
@@ -174,10 +183,18 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             $this->loadJsonTranslationsFrom($jsonLang);
         }
 
-        // Register flag-icons CSS with Filament's asset system.
+        // Register the package's own CSS with Filament's asset system.
         // Auto-injected on Filament panels via @filamentStyles.
+        //
+        // `panel-base` carries the layout for the components this package
+        // injects through render hooks. Those were laid out with Tailwind
+        // utilities, which live in an app's own compiled theme — a panel with
+        // no custom theme has none of them, so the markup collapsed. Every
+        // rule is namespaced `fpb-` and reads its colours from Filament's own
+        // CSS custom properties, so a themed panel is unaffected.
         FilamentAsset::register([
             Css::make('flag-icons', __DIR__.'/../resources/dist/flag-icons.css'),
+            Css::make('panel-base', __DIR__.'/../resources/dist/panel-base.css'),
         ], 'codenzia/filament-panel-base');
 
         // Publish the SVG flags directory alongside the CSS.
@@ -232,6 +249,10 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
 
         if ((bool) config('filament-panel-base.auth.routes.enabled', true)) {
             $this->loadAuthRoutes();
+        }
+
+        if ((bool) config('filament-panel-base.otp_api.enabled', false)) {
+            $this->loadOtpApiRoutes();
         }
 
         if ((bool) config('filament-panel-base.locale.routes.enabled', true)) {
@@ -496,6 +517,81 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
     }
 
     /**
+     * Boot the Notification Preferences Matrix module: auto-load the
+     * `notification_preferences` table migration. That's it — trigger
+     * registration happens in host/plugin service providers at boot via
+     * NotificationTriggers::register(), and the preferences page is opt-in
+     * per panel via FilamentPanelBasePlugin::withNotificationPreferencesPage().
+     *
+     * Loading the migration unconditionally (not gated on
+     * notification-matrix.enabled) mirrors the Analytics/Two-Factor/Command
+     * Palette modules: the table existing is harmless, and NotificationPreferences::allows()
+     * always returns true while the module's config flag is off, so nothing
+     * reads or writes it until a host opts in.
+     */
+    protected function bootNotificationMatrixModule(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/notification_matrix');
+    }
+
+    /**
+     * Boot the Single Sign-On (OIDC) module.
+     *
+     * The `sso_identities` migration auto-loads unconditionally — same as the
+     * Analytics / Command Palette / Notification Matrix tables. An empty table
+     * is inert: while `sso.enabled` is false nothing reads or writes it.
+     *
+     * Everything the user can actually reach IS gated on the flag: with SSO
+     * off, no routes register and the login-page render hook is never
+     * installed, so adopting the release changes no behaviour until a host
+     * opts in.
+     *
+     * The render hook targets Filament's own login form. The package's
+     * standalone Livewire login page includes the same partial directly, so
+     * both surfaces show one identical, registry-driven button list.
+     */
+    protected function bootSsoModule(): void
+    {
+        $this->loadMigrationsFrom(__DIR__.'/../database/migrations/sso');
+
+        if (! (bool) config('filament-panel-base.sso.enabled', false)) {
+            return;
+        }
+
+        $this->loadSsoRoutes();
+
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
+            fn (): string => Blade::render(<<<'BLADE'
+                @include('filament-panel-base::sso.buttons')
+            BLADE),
+        );
+    }
+
+    /**
+     * Register the OIDC redirect/callback pair under the configured prefix.
+     * Route names are always `filament-panel-base.sso.*` so the callback URL
+     * a host registers with their identity provider is stable.
+     */
+    protected function loadSsoRoutes(): void
+    {
+        $routesFile = __DIR__.'/../routes/sso.php';
+
+        if (! file_exists($routesFile)) {
+            return;
+        }
+
+        $prefix = (string) config('filament-panel-base.sso.routes.prefix', 'sso');
+        /** @var array<int, string> $middleware */
+        $middleware = (array) config('filament-panel-base.sso.routes.middleware', ['web']);
+
+        Route::middleware($middleware)
+            ->prefix($prefix)
+            ->name('filament-panel-base.sso.')
+            ->group($routesFile);
+    }
+
+    /**
      * Boot the Demo module: register the /demo Livewire route and component
      * when explicitly opted in via filament-panel-base.demo.enabled. No-op
      * otherwise so production deployments stay clean by default.
@@ -549,13 +645,18 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                 ->get($uri, $component)
                 ->name('filament-panel-base.demo');
 
-            // Full-page user switcher. The demo "Login" links point here instead
-            // of a Livewire action: rotating the session inside a Livewire request
-            // makes Livewire drop the redirect (clicks appear to do nothing), so
-            // the switch happens on a normal request. Gated by the unlocked demo
-            // session; never switches into the admin role.
+            // Full-page user switcher. The demo "Login" buttons post here
+            // instead of running a Livewire action: rotating the session inside
+            // a Livewire request makes Livewire drop the redirect (clicks appear
+            // to do nothing), so the switch happens on a normal request.
+            //
+            // POST, so the CSRF token in the `web` stack is required — a GET
+            // that changes who you are signed in as can be triggered by any
+            // page that manages to embed the URL. Authorization is the demo
+            // page's own `authorizeLoginAs()`, so a host that narrowed the
+            // button also narrows the endpoint.
             Route::middleware(array_merge($middleware, ['throttle:30,1']))
-                ->get(rtrim($uri, '/').'/login-as/{userId}', function (string $userId) {
+                ->post(rtrim($uri, '/').'/login-as/{userId}', function (string $userId) use ($component) {
                     abort_unless(session()->get('filament-panel-base.demo.unlocked') === true, 403);
 
                     $userModelClass = config('filament-panel-base.user_model');
@@ -564,17 +665,20 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
                     $user = $userModelClass::query()->find($userId);
                     abort_if($user === null, 404);
 
-                    $adminRole = (string) config('filament-panel-base.admin_role', 'super_admin');
-                    $isAdmin = false;
-                    if (method_exists($user, 'hasRole')) {
-                        try {
-                            $isAdmin = (bool) $user->hasRole($adminRole);
-                        } catch (\Throwable) {
-                            // No role system available — treat as not-admin.
-                            $isAdmin = false;
-                        }
+                    try {
+                        $allowed = app($component)->authorizeLoginAs($user);
+                    } catch (\Throwable) {
+                        // A policy that cannot be evaluated is not a policy
+                        // that passed.
+                        $allowed = false;
                     }
-                    abort_if($isAdmin, 403);
+
+                    abort_unless($allowed, 403);
+
+                    Log::info('filament-panel-base: demo impersonation', [
+                        'target_id' => $user->getKey(),
+                        'actor_id' => Auth::id(),
+                    ]);
 
                     Auth::login($user);
                     session()->regenerate();
@@ -716,6 +820,30 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         Route::middleware($middleware)
             ->prefix($prefix)
             ->name($name)
+            ->group($routesFile);
+    }
+
+    /**
+     * Register the headless OTP REST routes. Gated by
+     * `filament-panel-base.otp_api.enabled` (default false) so production
+     * stays closed unless a host opts in. Prefix + middleware are
+     * config-overridable; per-endpoint per-IP throttles live in the routes file.
+     */
+    protected function loadOtpApiRoutes(): void
+    {
+        $routesFile = __DIR__.'/../routes/otp-api.php';
+
+        if (! file_exists($routesFile)) {
+            return;
+        }
+
+        $prefix = (string) config('filament-panel-base.otp_api.prefix', 'api/pb');
+        /** @var array<int, string> $middleware */
+        $middleware = (array) config('filament-panel-base.otp_api.middleware', ['api']);
+
+        Route::middleware($middleware)
+            ->prefix($prefix)
+            ->name('filament-panel-base.otp-api.')
             ->group($routesFile);
     }
 

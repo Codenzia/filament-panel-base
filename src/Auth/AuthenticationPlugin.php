@@ -140,6 +140,18 @@ class AuthenticationPlugin
     }
 
     /**
+     * Enforce strict international-format validation on the signup phone
+     * number. Disable it for consumers whose users type local formats that
+     * libphonenumber rejects — length and uniqueness still apply.
+     */
+    public function phoneFormatValidation(bool $enabled = true): static
+    {
+        $this->overrides['phone_format_validation'] = $enabled;
+
+        return $this;
+    }
+
+    /**
      * Restrict self-registration to these email domains (e.g. 'acme.com').
      * Empty list = any domain allowed. A leading `@` is tolerated. An entry
      * matches its exact host and any subdomain.

@@ -171,3 +171,19 @@ it('does not fire TwoFactorDisabled when 2FA was never enabled', function (): vo
 
     Event::assertNotDispatched(TwoFactorDisabled::class);
 });
+
+it('keeps the second factor out of a serialised user', function (): void {
+    $this->user->generateTwoFactorSecret();
+    $this->user->rotateTwoFactorRememberToken();
+    $this->user->refresh();
+
+    $serialised = $this->user->toArray();
+
+    expect($serialised)->not->toHaveKey('two_factor_secret')
+        ->and($serialised)->not->toHaveKey('two_factor_recovery_codes')
+        ->and($serialised)->not->toHaveKey('two_factor_remember_token');
+
+    // A host that genuinely needs the attribute can still ask for it.
+    expect($this->user->makeVisible('two_factor_secret')->toArray())
+        ->toHaveKey('two_factor_secret');
+});

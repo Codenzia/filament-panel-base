@@ -9,6 +9,8 @@ use Codenzia\FilamentPanelBase\Auth\Drivers\Otp\OtpDriverManager;
 use Codenzia\FilamentPanelBase\Auth\Events\OtpRequested;
 use Codenzia\FilamentPanelBase\Auth\Events\OtpVerified;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Illuminate\Contracts\Cache\Lock;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
@@ -51,6 +53,37 @@ class OtpService
     {
         $driverName = $driver ?? $this->settings->otp_driver;
 
+        // The throttle precheck, the token write and the paid delivery are
+        // three separate operations; without a lock two concurrent requests
+        // both pass the precheck, invalidate one another's code and bill two
+        // deliveries. Whoever loses the race is told to wait, exactly as if
+        // they had hit the throttle.
+        $lock = $this->issuanceLock($target, $driverName);
+
+        if ($lock === null) {
+            return $this->issue($target, $driverName, $context, $userId);
+        }
+
+        if (! $lock->get()) {
+            throw new \RuntimeException(
+                __('filament-panel-base::auth.otp_rate_limited', ['seconds' => 1])
+            );
+        }
+
+        try {
+            return $this->issue($target, $driverName, $context, $userId);
+        } finally {
+            $lock->release();
+        }
+    }
+
+    /**
+     * Persist and deliver one code. Runs under the issuance lock.
+     *
+     * @param  array<string, mixed>  $context
+     */
+    private function issue(string $target, string $driverName, array $context, int|string|null $userId): string
+    {
         $this->ensureNotRateLimited($target, $driverName);
 
         $code = $this->generateCode();
@@ -78,15 +111,43 @@ class OtpService
             ['user_id', 'code_hash', 'context', 'attempts', 'ip', 'expires_at', 'updated_at'],
         );
 
-        /** @var OtpDriver $transport */
-        $transport = $this->drivers->driver($driverName);
-        $transport->send($target, $code, $context);
-
+        // Counted before delivery: an attempt that fails at the transport still
+        // consumed an issuance, otherwise a failing provider turns the endpoint
+        // into an unmetered retry loop.
         RateLimiter::hit($this->rateLimitKey($target, $driverName), 60);
+
+        try {
+            /** @var OtpDriver $transport */
+            $transport = $this->drivers->driver($driverName);
+            $transport->send($target, $code, $context);
+        } catch (\Throwable $e) {
+            // Nothing was delivered, so nothing should remain verifiable: drop
+            // the record rather than leaving a live code nobody received.
+            DB::table('otp_codes')
+                ->where('target', $target)
+                ->where('channel', $driverName)
+                ->delete();
+
+            throw $e;
+        }
 
         event(new OtpRequested($target, $driverName, $context));
 
         return $code;
+    }
+
+    /**
+     * Serialises issuance for one (target, channel) pair. A cache store
+     * without lock support degrades to a no-contention lock rather than
+     * failing the send.
+     */
+    private function issuanceLock(string $target, string $driver): ?Lock
+    {
+        try {
+            return Cache::lock('lock:'.$this->rateLimitKey($target, $driver), 10);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

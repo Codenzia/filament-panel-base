@@ -19,18 +19,22 @@
     ];
 
     $classes = $colorClasses[$color] ?? $colorClasses['primary'];
+
+    // Scoped fallback class — carries the same palette through Filament's own
+    // CSS variables for panels that never compiled these Tailwind utilities.
+    $scopedClass = 'fpb-badge'.(isset($colorClasses[$color]) && $color !== 'primary' ? ' fpb-badge--'.$color : '');
 @endphp
 
 @if($centered)
-    <div class="flex justify-center mb-4">
-        <span class="inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
-            @if($icon) @svg($icon, 'w-5 h-5 mx-1.5') @endif
+    <div class="fpb-badge__wrapper flex justify-center mb-4">
+        <span class="{{ $scopedClass }} inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
+            @if($icon) @svg($icon, 'fpb-badge__icon w-5 h-5 mx-1.5', ['width' => 20, 'height' => 20]) @endif
             {{ $label }}
         </span>
     </div>
 @else
-    <span style="margin-inline-start: 1rem;" class="inline-flex items-center gap-x-1.5 rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
-        @if($icon) @svg($icon, 'h-4 w-4') @endif
+    <span style="margin-inline-start: 1rem;" class="{{ $scopedClass }} inline-flex items-center gap-x-1.5 rounded-md px-2.5 py-1 text-xs font-medium ring-1 ring-inset {{ $classes }}">
+        @if($icon) @svg($icon, 'fpb-badge__icon h-4 w-4', ['width' => 16, 'height' => 16]) @endif
         {{ $label }}
     </span>
 @endif

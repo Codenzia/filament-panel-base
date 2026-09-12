@@ -20,18 +20,18 @@
             : null;
     @endphp
 
-    <div class="flex items-center gap-2">
+    <div class="fpb-auth-links flex items-center gap-2">
         @if ($loginUrl)
             <a href="{{ $loginUrl }}"
-                class="inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
+                class="fpb-auth-links__link inline-flex items-center px-3 py-1.5 text-sm font-medium text-gray-700 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white transition-colors">
                 {{ __('Sign in') }}
             </a>
         @endif
 
         @if ($registerUrl)
             <a href="{{ $registerUrl }}"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 rounded-lg shadow-sm shadow-primary-500/25 transition-all duration-200 hover:shadow-md hover:shadow-primary-500/30">
-                @svg('heroicon-o-sparkles', 'h-4 w-4')
+                class="fpb-auth-links__cta inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-500 hover:to-primary-400 rounded-lg shadow-sm shadow-primary-500/25 transition-all duration-200 hover:shadow-md hover:shadow-primary-500/30">
+                @svg('heroicon-o-sparkles', 'fpb-auth-links__icon h-4 w-4', ['width' => 16, 'height' => 16])
                 <span>{{ __('Sign up free') }}</span>
             </a>
         @endif

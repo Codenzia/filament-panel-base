@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Livewire\Demo;
 
+use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Codenzia\FilamentPanelBase\Models\DemoSetting;
 use Composer\InstalledVersions;
@@ -222,16 +223,18 @@ class DemoPage extends Component
             return;
         }
 
-        if (! $this->canLogInAs($user)) {
+        if (! $this->authorizeLoginAs($user)) {
             return;
         }
 
-        // Hand off to the full-page login-as route. Performing the auth switch
-        // here (Auth::login + session rotation) inside the Livewire request makes
-        // Livewire drop the follow-up redirect, so the click intermittently does
-        // nothing. Redirecting to a plain GET route does the switch reliably. The
-        // canLogInAs() check above is still honoured before the hand-off.
-        $this->redirect(route('filament-panel-base.demo.login-as', $user->getKey()));
+        // The impersonation endpoint is a CSRF-protected POST, which a Livewire
+        // redirect cannot issue, so this programmatic entry point performs the
+        // switch itself — behind exactly the same policy the endpoint applies.
+        Auth::login($user);
+        session()->regenerate();
+        session()->put($this->sessionKey(), true);
+
+        $this->redirect(url(config('filament-panel-base.demo.app_url', '/admin')));
     }
 
     /**
@@ -334,6 +337,38 @@ class DemoPage extends Component
         }
 
         return false;
+    }
+
+    /**
+     * The single authoritative answer to "may the demo switch into this
+     * account?". Both the button and the impersonation endpoint ask this, so a
+     * host override cannot be walked around by calling the route directly.
+     */
+    public function authorizeLoginAs(Model $user): bool
+    {
+        return $this->isImpersonable($user) && $this->canLogInAs($user);
+    }
+
+    /**
+     * Baseline restrictions no host override can relax: privileged accounts,
+     * accounts the host marked protected, and accounts that are not allowed to
+     * sign in at all.
+     */
+    protected function isImpersonable(Model $user): bool
+    {
+        if ($this->isSuperAdmin($user)) {
+            return false;
+        }
+
+        if ((bool) ($user->getAttribute('is_protected') ?? false)) {
+            return false;
+        }
+
+        if ($user instanceof HasModerationStatus && ($user->isSuspended() || $user->isPending())) {
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -529,7 +564,7 @@ class DemoPage extends Component
                 'email' => (string) ($user->email ?? ''),
                 'roles' => $roles,
                 'is_current' => Auth::id() === $user->getKey(),
-                'is_super' => ! $this->canLogInAs($user),
+                'is_super' => ! $this->authorizeLoginAs($user),
                 'avatar' => $this->avatarFor($user),
             ];
         })->all();

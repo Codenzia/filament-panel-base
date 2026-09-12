@@ -20,13 +20,13 @@ beforeEach(function (): void {
 it('returns every action when query is empty', function (): void {
     $this->palette->query = '';
 
-    expect($this->palette->actions)->toHaveCount(4);
+    expect($this->palette->actions())->toHaveCount(4);
 });
 
 it('filters by case-insensitive label match', function (): void {
     $this->palette->query = 'POST';
 
-    $matches = $this->palette->actions;
+    $matches = $this->palette->actions();
     expect($matches)->toHaveCount(1);
     expect($matches[0]->id)->toBe('p');
 });
@@ -34,7 +34,7 @@ it('filters by case-insensitive label match', function (): void {
 it('matches against keywords', function (): void {
     $this->palette->query = 'blog';
 
-    $matches = $this->palette->actions;
+    $matches = $this->palette->actions();
     expect($matches)->toHaveCount(1);
     expect($matches[0]->id)->toBe('p');
 });
@@ -42,7 +42,7 @@ it('matches against keywords', function (): void {
 it('matches against descriptions', function (): void {
     $this->palette->query = 'revenue';
 
-    $matches = $this->palette->actions;
+    $matches = $this->palette->actions();
     expect($matches)->toHaveCount(1);
     expect($matches[0]->id)->toBe('r');
 });
@@ -50,7 +50,7 @@ it('matches against descriptions', function (): void {
 it('returns empty array on no matches', function (): void {
     $this->palette->query = 'xyzzy';
 
-    expect($this->palette->actions)->toBe([]);
+    expect($this->palette->actions())->toBe([]);
 });
 
 it('ranks label-prefix matches higher than substring matches', function (): void {
@@ -64,7 +64,7 @@ it('ranks label-prefix matches higher than substring matches', function (): void
     $palette = new CommandPalette;
     $palette->query = 'user';
 
-    $matches = $palette->actions;
+    $matches = $palette->actions();
     expect($matches[0]->id)->toBe('pre');
     expect($matches[1]->id)->toBe('mid');
 });

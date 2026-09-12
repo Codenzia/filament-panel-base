@@ -106,6 +106,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
             'require_phone_verification' => $settings->require_phone_verification,
             'credentials_mode' => $settings->credentials_mode,
             'phone_required' => $settings->phone_required,
+            'phone_format_validation' => $settings->phone_format_validation,
             'default_country_code' => $settings->default_country_code,
             'otp_driver' => $settings->otp_driver,
             'allowed_otp_drivers' => $settings->allowed_otp_drivers,
@@ -152,6 +153,9 @@ class ManageAuthenticationSettings extends Page implements HasForms
                             ->placeholder('+1')
                             ->maxLength(6)
                             ->required(),
+                        Toggle::make('phone_format_validation')
+                            ->label(__('filament-panel-base::auth.settings_phone_format_validation'))
+                            ->helperText(__('filament-panel-base::auth.settings_phone_format_validation_help')),
                         Toggle::make('disposable_email_blocking')
                             ->label(__('filament-panel-base::auth.settings_disposable_email_blocking'))
                             ->helperText(__('filament-panel-base::auth.settings_disposable_email_blocking_help')),
@@ -265,6 +269,7 @@ class ManageAuthenticationSettings extends Page implements HasForms
         $settings->require_phone_verification = (bool) $data['require_phone_verification'];
         $settings->credentials_mode = $data['credentials_mode'];
         $settings->phone_required = (bool) $data['phone_required'];
+        $settings->phone_format_validation = (bool) $data['phone_format_validation'];
         $settings->default_country_code = $data['default_country_code'];
         $knownDrivers = ['email', 'whatsapp', 'twilio', 'vonage', 'null'];
         $allowedDrivers = array_values(array_intersect(

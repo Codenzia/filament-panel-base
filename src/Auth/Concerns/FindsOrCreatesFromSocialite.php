@@ -9,6 +9,7 @@ use Codenzia\FilamentPanelBase\Auth\Events\SocialAccountMapping;
 use Codenzia\FilamentPanelBase\Auth\Events\SocialUserLinked;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Auth\Support\UnusablePassword;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Database\Eloquent\Model;
@@ -145,7 +146,11 @@ trait FindsOrCreatesFromSocialite
             'name' => $name,
             'email' => $email,
             'email_verified_at' => $trustVerified && is_string($email) && $email !== '' ? now() : null,
-            'password' => bcrypt(Str::random(40)),
+            // Explicitly no password rather than a random hash: a hash the user
+            // was never told is not a sign-in method, and treating it as one is
+            // what lets someone disconnect their only provider and lock
+            // themselves out (PNB-035).
+            'password' => UnusablePassword::make(),
         ];
 
         // Mirror RegistrationPipeline's moderation step so social sign-ups honour

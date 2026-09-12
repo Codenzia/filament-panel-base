@@ -24,6 +24,7 @@ it('declares all auth-related properties', function (): void {
         'allowed_otp_drivers' => 'array',
         'social_providers_enabled' => 'array',
         'disposable_email_blocking' => 'bool',
+        'phone_format_validation' => 'bool',
         'throttle_per_minute' => 'int',
         'throttle_per_day' => 'int',
         'default_country_code' => 'string',
@@ -53,5 +54,6 @@ it('declares sane defaults on its properties', function (): void {
         ->and($defaults['otp_driver'])->toBe('email')
         ->and($defaults['otp_code_length'])->toBe(6)
         ->and($defaults['otp_ttl_minutes'])->toBe(10)
-        ->and($defaults['disposable_email_blocking'])->toBeTrue();
+        ->and($defaults['disposable_email_blocking'])->toBeTrue()
+        ->and($defaults['phone_format_validation'])->toBeTrue();
 });

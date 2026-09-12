@@ -73,6 +73,13 @@ class AuthenticationSettings extends Settings
     public bool $disposable_email_blocking = true;
 
     /**
+     * Enforce strict international-format validation on the signup phone
+     * number. Off accepts any string the length/uniqueness rules allow —
+     * for consumers whose users enter local formats libphonenumber rejects.
+     */
+    public bool $phone_format_validation = true;
+
+    /**
      * Allowlist of email domains permitted to self-register (e.g.
      * ['acme.com']). Empty = any domain allowed. An entry matches its exact
      * host and any subdomain. Composes with `registration_mode` — a

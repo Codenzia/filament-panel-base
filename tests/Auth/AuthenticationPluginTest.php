@@ -100,3 +100,12 @@ it('apply is a no-op when not enabled', function (): void {
 
     expect($settings->credentials_mode)->toBe('email');
 });
+
+it('carries the phone-format switch through to the settings singleton', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    expect($settings->phone_format_validation)->toBeTrue();
+
+    (new AuthenticationPlugin)->phoneFormatValidation(false)->enable()->apply($settings);
+
+    expect($settings->phone_format_validation)->toBeFalse();
+});

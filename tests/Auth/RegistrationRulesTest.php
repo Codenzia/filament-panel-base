@@ -1,6 +1,7 @@
 <?php
 
 use Codenzia\FilamentPanelBase\Auth\Rules\AllowedEmailDomain;
+use Codenzia\FilamentPanelBase\Auth\Rules\ValidPhoneFormat;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Auth\Validation\RegistrationRules;
 
@@ -66,4 +67,29 @@ it('always requires name and password', function (): void {
     expect($rules['name'])->toContain('required')
         ->and($rules['password'])->toContain('required')
         ->and($rules['password'])->toContain('confirmed');
+});
+
+it('validates the phone format by default', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    $settings->credentials_mode = 'phone';
+
+    $rules = RegistrationRules::build($settings);
+
+    $hasFormatRule = collect($rules['phone'])->contains(fn ($rule): bool => $rule instanceof ValidPhoneFormat);
+
+    expect($hasFormatRule)->toBeTrue();
+});
+
+it('drops the phone format rule when the consumer switches it off', function (): void {
+    $settings = (new ReflectionClass(AuthenticationSettings::class))->newInstanceWithoutConstructor();
+    $settings->credentials_mode = 'phone';
+    $settings->phone_format_validation = false;
+
+    $rules = RegistrationRules::build($settings);
+
+    $hasFormatRule = collect($rules['phone'])->contains(fn ($rule): bool => $rule instanceof ValidPhoneFormat);
+
+    expect($hasFormatRule)->toBeFalse()
+        ->and($rules['phone'])->toContain('required')
+        ->and($rules['phone'])->toContain('max:20');
 });

@@ -7,10 +7,10 @@ namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 use Codenzia\FilamentPanelBase\Auth\Contracts\SupportsSocialLogin;
 use Codenzia\FilamentPanelBase\Auth\Models\SocialAccount;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
+use Codenzia\FilamentPanelBase\Auth\Support\UnusablePassword;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Livewire\Component;
 
 /**
@@ -87,14 +87,19 @@ class ManageSocialAccounts extends Component
 
     /**
      * True when removing the given social account still leaves the user
-     * a way to authenticate (password or another linked social account).
+     * a way to authenticate (a password they actually set, or another linked
+     * social account).
+     *
+     * A provider-created account carries a password nobody has ever been
+     * given; counting it as a fallback is how "Disconnected successfully"
+     * becomes a lockout.
      */
     private function userHasOtherSignInMethod(SupportsSocialLogin $user, SocialAccount $account): bool
     {
         /** @var Model $user */
         $password = $user->getAttribute('password');
 
-        if (is_string($password) && $password !== '' && Hash::info($password)['algoName'] !== 'unknown') {
+        if (! UnusablePassword::is($password)) {
             return true;
         }
 

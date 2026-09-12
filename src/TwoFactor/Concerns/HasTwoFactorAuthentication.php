@@ -43,6 +43,24 @@ trait HasTwoFactorAuthentication
     private static array $twoFactorDecryptWarnings = [];
 
     /**
+     * Keep the second factor out of anything that serialises the model.
+     *
+     * The accessors below hand back the *decrypted* secret and recovery-code
+     * hashes, so a controller that returns the user model — or a relation that
+     * eager-loads one — publishes the very thing the second factor rests on.
+     * Hiding them here means a host has to opt back in deliberately with
+     * `makeVisible()` rather than leak them by forgetting.
+     */
+    public function initializeHasTwoFactorAuthentication(): void
+    {
+        $this->hidden = array_values(array_unique(array_merge($this->hidden, [
+            'two_factor_secret',
+            'two_factor_recovery_codes',
+            'two_factor_remember_token',
+        ])));
+    }
+
+    /**
      * Log a one-time warning when an encrypted 2FA column cannot be decrypted
      * and the accessor falls back to the raw stored value. Most often this
      * means APP_KEY was rotated without re-encrypting the secrets — silently

@@ -3,7 +3,9 @@
 use Codenzia\FilamentPanelBase\Analytics\Services\UserAgentParser;
 use Codenzia\FilamentPanelBase\Sessions\Services\DeviceSessionRepository;
 use Codenzia\FilamentPanelBase\Tests\Support\TwoFactorUser;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 beforeEach(function (): void {
     $this->createUsersTable();
@@ -118,4 +120,75 @@ it('throws when the session driver is not database', function (): void {
 
     expect(fn () => $this->repo->forUser($this->user))
         ->toThrow(RuntimeException::class);
+});
+
+/*
+|--------------------------------------------------------------------------
+| Session connection and lifetime (PB-06)
+|--------------------------------------------------------------------------
+*/
+
+it('hides sessions that are already past the configured lifetime (PB-06)', function (): void {
+    config()->set('session.lifetime', 120);
+
+    insertSession($this->user->id, 'live-sess', minutesAgo: 10);
+    insertSession($this->user->id, 'dead-sess', minutesAgo: 500);
+
+    $sessions = $this->repo->forUser($this->user);
+
+    expect($sessions->pluck('id')->all())->toBe(['live-sess']);
+});
+
+it('counts only genuinely active sessions when revoking the rest (PB-06)', function (): void {
+    config()->set('session.lifetime', 120);
+
+    insertSession($this->user->id, 'current-sess');
+    insertSession($this->user->id, 'other-live');
+    insertSession($this->user->id, 'other-dead', minutesAgo: 500);
+
+    $revoked = $this->repo->revokeAllExcept($this->user, 'current-sess');
+
+    expect($revoked)->toBe(1)
+        ->and(DB::table('sessions')->pluck('id')->all())->toBe(['current-sess']);
+});
+
+it('reads and revokes on the configured session connection (PB-06)', function (): void {
+    // A second, distinct database standing in for a dedicated session store.
+    config()->set('database.connections.sessions', [
+        'driver' => 'sqlite',
+        'database' => ':memory:',
+        'prefix' => '',
+    ]);
+    config()->set('session.connection', 'sessions');
+
+    Schema::connection('sessions')->create('sessions', function (Blueprint $table): void {
+        $table->string('id')->primary();
+        $table->foreignId('user_id')->nullable()->index();
+        $table->string('ip_address', 45)->nullable();
+        $table->text('user_agent')->nullable();
+        $table->longText('payload');
+        $table->integer('last_activity')->index();
+    });
+
+    DB::connection('sessions')->table('sessions')->insert([
+        'id' => 'remote-sess',
+        'user_id' => $this->user->id,
+        'ip_address' => '1.1.1.1',
+        'user_agent' => 'Mozilla',
+        'payload' => '',
+        'last_activity' => now()->timestamp,
+    ]);
+
+    // A same-named row on the DEFAULT connection that must be left alone.
+    insertSession($this->user->id, 'default-sess');
+
+    $repo = new DeviceSessionRepository(new UserAgentParser);
+
+    expect($repo->forUser($this->user)->pluck('id')->all())->toBe(['remote-sess']);
+
+    expect($repo->revoke($this->user, 'remote-sess'))->toBeTrue()
+        ->and(DB::connection('sessions')->table('sessions')->count())->toBe(0)
+        ->and(DB::table('sessions')->count())->toBe(1);
+
+    Schema::connection('sessions')->drop('sessions');
 });

@@ -57,7 +57,11 @@ class RegistrationRules
     private static function phoneRules(AuthenticationSettings $settings): array
     {
         $table = self::userTable();
-        $base = ['string', 'max:20', "unique:{$table},phone", new ValidPhoneFormat];
+        $base = ['string', 'max:20', "unique:{$table},phone"];
+
+        if ($settings->phone_format_validation) {
+            $base[] = new ValidPhoneFormat;
+        }
 
         return match (true) {
             $settings->credentials_mode === 'phone' => array_merge(['required'], $base),

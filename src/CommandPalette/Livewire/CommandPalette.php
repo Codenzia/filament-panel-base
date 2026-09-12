@@ -47,7 +47,10 @@ class CommandPalette extends Component
     {
         $groups = [];
 
-        foreach ($this->actions as $action) {
+        // Call the computed method directly rather than reading `$this->actions`:
+        // the magic property only resolves on a booted component, and this is
+        // the sole reader per render so the memoisation buys nothing.
+        foreach ($this->actions() as $action) {
             $key = $action->group ?? 'General';
             $groups[$key] ??= [];
             $groups[$key][] = $action;

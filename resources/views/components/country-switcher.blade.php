@@ -10,14 +10,14 @@
 ])
 
 @if ($mode !== 'hide' && isset($availableCountries) && $availableCountries->count() > 0)
-    <div class="{{ $relative ? 'relative' : '' }}" x-data="{ open: false }">
+    <div class="fpb-switcher {{ $relative ? 'fpb-switcher--relative relative' : '' }}" x-data="{ open: false }">
         <button @if ($mode !== 'disabled') @click="open = !open" @endif
             @disabled($mode === 'disabled')
-            class="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded-md {{ $mode === 'disabled' ? 'cursor-not-allowed opacity-60' : '' }}">
+            class="fpb-switcher__trigger flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 px-2 py-1 rounded-md {{ $mode === 'disabled' ? 'cursor-not-allowed opacity-60' : '' }}">
             @if ($currentCountry?->code)
                 <span class="flag flag-{{ strtolower($currentCountry->code) }} shrink-0"></span>
             @else
-                <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg class="fpb-switcher__icon w-4 h-4 shrink-0" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -26,16 +26,16 @@
         </button>
         @if ($mode !== 'disabled')
             <div x-show="open" x-cloak @click.away="open = false" x-transition
-                class="absolute {{ $align === 'start' ? 'start-0' : 'end-0' }} mt-2 w-48 z-50 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 max-h-64 overflow-y-auto py-1">
+                class="fpb-switcher__menu fpb-switcher__menu--{{ $align === 'start' ? 'start' : 'end' }} absolute {{ $align === 'start' ? 'start-0' : 'end-0' }} mt-2 w-48 z-50 bg-white dark:bg-gray-700 rounded-md shadow-lg border border-gray-300 dark:border-gray-600 max-h-64 overflow-y-auto py-1">
                 @foreach ($availableCountries as $country)
                     <a href="{{ route($switchRoute, $country) }}"
-                        class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600">
+                        class="fpb-switcher__item flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-zinc-300 dark:hover:bg-gray-600">
                         @if ($currentCountry && $currentCountry->id === $country->id)
-                            <svg class="w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
+                            <svg class="fpb-switcher__check w-3 h-3 text-brand-600 dark:text-brand-400 shrink-0" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" />
                             </svg>
                         @else
-                            <span class="w-3 shrink-0"></span>
+                            <span class="fpb-switcher__check-placeholder w-3 shrink-0"></span>
                         @endif
                         <span class="flag flag-{{ strtolower($country->code) }} shrink-0"></span>
                         {{ $country->name }}
