@@ -5,6 +5,21 @@ All notable changes to `filament-panel-base` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-09-12
+
+### Fixed
+- **`filament-panel-base:enable-translations` published nothing, silently.** The command called `vendor:publish` with `--tag=config` and `--tag=migrations`, but spatie/laravel-translation-loader builds its provider with laravel-package-tools, which names every tag `<short name>-<group>` — here `translation-loader-config` and `translation-loader-migrations`. The bare tags matched no publish group, so `vendor:publish` printed `No publishable resources for tag [migrations]` and **exited 0**. Consumers that followed the command's own instructions ended up with `->withTranslations()` enabled on the panel and no `language_lines` table.
+
+  The cost is per request, not per install: with the table absent, `Spatie\TranslationLoader\TranslationLoaderManager::load()` throws and catches a `QueryException` and then probes `Schema::hasTable()` **once per translation group**. Measured on BuyMyProducts' storefront homepage: 30 thrown exceptions plus 30 `sqlite_master` probes on every request, 60 of the page's 116 queries. Publishing and migrating correctly took the page from 89 queries to 59.
+
+  The command now publishes under both real tags, and its post-install instructions tell the operator to add `$table->softDeletes()` to the published migration before running it — spatie's stub creates no `deleted_at`, but this package's own `Models\Translation` is a `SoftDeletes` `LanguageLine` and backs the panel's Translations screen, so without the column that screen fails on "no such column: deleted_at".
+
+- **The analytics signup funnel reported impossible conversion rates.** `AuthFunnelWidget` counted distinct users per event type inside the window and then divided logins by registrations. Those are two unrelated populations — every user who registered months ago and logged in this week landed in the numerator only — so an established panel routinely showed "Conversion 200%" or "450%", and the "Verified" step's "% of registrants" line overshot the same way. The description under the number ("N of M registrants logged in") claimed a cohort the query never computed.
+
+  Every step below "Registered" is now counted against the window's registration cohort: the user ids are constrained by a subquery against the same registration query that produced the "Registered" figure, so "Verified" and "First login" are always subsets of it and no ratio can exceed 100%. The stated copy is now literally what is measured. Whether the flow has an OTP step at all is still asked of every event in the window, so a panel that verifies by OTP still shows the step (at `0%`) rather than falsely reporting "No OTP step in this flow" when no one in this cohort has verified yet. "First login" now reads "Registrants who logged in" instead of "Distinct users who logged in".
+
+  **Expect the numbers to drop** on any panel with existing users — they were inflated, not the funnel. A panel whose users all registered before the selected range now reads 0 registered and 0% conversion, which is the honest answer for that window; widen the range to see a cohort.
+
 ## [0.8.4] - 2026-09-11
 
 ### Fixed
