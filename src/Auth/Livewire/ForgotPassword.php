@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Password;
@@ -11,6 +12,7 @@ use Livewire\Component;
 
 class ForgotPassword extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     public string $email = '';
@@ -36,8 +38,7 @@ class ForgotPassword extends Component
 
     public function render(): View
     {
-        return view('filament-panel-base::livewire.auth.forgot-password')
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.forgot-password'))
             ->title(__('filament-panel-base::auth.forgot_title'));
     }
 }

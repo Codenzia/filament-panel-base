@@ -484,11 +484,25 @@ return [
 
     'auth' => [
         /*
-        | Blade layout that Livewire auth views @extend. Hosts override this
-        | to fit their public site chrome. Set to null to use a minimal
-        | bundled fallback layout.
+        | Blade layout the Livewire auth pages render inside. Hosts override
+        | this to fit their public site chrome. Set to null to use the minimal
+        | bundled fallback layout; naming a view the application does not ship
+        | also falls back to it (with a warning) rather than throwing.
+        |
+        | By default the layout is rendered as a Blade component and the page
+        | arrives as `$slot`. A layout built the classic way — `@yield('...')`,
+        | filled by `@extends` — must name its content section in
+        | `layout_section` below, or it will render the site shell around an
+        | empty section and the auth form will be nowhere on the page.
         */
         'layout' => 'layouts.app',
+
+        /*
+        | Section the auth page fills when `layout` is a section-based
+        | (`@yield`) layout — usually 'content'. Leave null for a
+        | component-style layout that renders `{{ $slot }}`.
+        */
+        'layout_section' => null,
 
         /*
         | Front-of-site route registration. Set `enabled` to false to skip

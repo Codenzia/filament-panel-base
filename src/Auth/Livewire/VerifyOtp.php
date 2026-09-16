@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasOtpVerification;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
@@ -20,6 +21,7 @@ use Livewire\Component;
  */
 class VerifyOtp extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     public string $code = '';
@@ -102,13 +104,12 @@ class VerifyOtp extends Component
     {
         $target = $this->resolveTarget($settings) ?? '';
 
-        return view('filament-panel-base::livewire.auth.verify-otp', [
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.verify-otp', [
             'channel' => $settings->otp_driver,
             'channelLabel' => __('filament-panel-base::auth.channel.'.$settings->otp_driver),
             'length' => $settings->otp_code_length,
             'target' => $target,
-        ])
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        ]))
             ->title(__('filament-panel-base::auth.verify_otp_title', [
                 'channel' => __('filament-panel-base::auth.channel.'.$settings->otp_driver),
             ]));

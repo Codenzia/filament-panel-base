@@ -5,6 +5,17 @@ All notable changes to `filament-panel-base` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-09-16
+
+### Fixed
+- **A host layout the package could not render took the sign-in form off the page — silently.** `auth.layout` is handed to Livewire's `->layout()`, which renders the layout as a Blade component and passes the page in as `$slot`. A layout built the classic way — `@yield('content')`, filled by `@extends` — has no `$slot`, so the host's whole page shell rendered around an empty content section: HTTP 200, the site header and footer present, and no credentials form anywhere on it. Nothing was logged, because nothing failed. The package's own default (`layouts.app`) is exactly the name a classic Laravel layout usually has, so any host that had one and never overrode the setting shipped a login page nobody could log in from. Confirmed on SnapCar and Toolenza.
+
+  Naming a view the application does not ship failed the other way: `MissingLayoutException`, HTTP 500, on the only route into the customer account area. Confirmed on Serveeta, where `/login` and everything behind it (My Bookings) were down.
+
+  Hosts with a section-based layout now name its content section in the new `auth.layout_section` config key and the page is rendered with `@extends`/`@section` instead. A configured layout the application does not ship falls back to the bundled one and writes a warning naming the missing view, rather than throwing. Both paths are shared by all seven auth screens (login, register, forgot/reset password, e-mail verification, OTP, 2FA challenge) through a single `ResolvesAuthLayout` concern.
+
+  `auth.layout_section` defaults to `null`, which is the existing component-style behaviour, so nothing changes for a host whose layout already renders `{{ $slot }}`.
+
 ## [0.8.5] - 2026-09-12
 
 ### Fixed

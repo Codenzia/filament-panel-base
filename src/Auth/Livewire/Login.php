@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Settings\AuthenticationSettings;
 use Codenzia\FilamentPanelBase\Contracts\HasModerationStatus;
@@ -20,6 +21,7 @@ use Livewire\Component;
  */
 class Login extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     public string $identifier = '';
@@ -104,11 +106,10 @@ class Login extends Component
 
     public function render(AuthenticationSettings $settings): View
     {
-        return view('filament-panel-base::livewire.auth.login', [
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.login', [
             'credentialsMode' => $settings->credentials_mode,
             'enabledSocialProviders' => $settings->social_providers_enabled,
-        ])
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        ]))
             ->title(__('filament-panel-base::auth.login_title'));
     }
 

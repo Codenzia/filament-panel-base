@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Contracts\View\View;
@@ -17,6 +18,7 @@ use Livewire\Component;
 
 class ResetPassword extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     #[Locked]
@@ -84,8 +86,7 @@ class ResetPassword extends Component
 
     public function render(): View
     {
-        return view('filament-panel-base::livewire.auth.reset-password')
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.reset-password'))
             ->title(__('filament-panel-base::auth.reset_title'));
     }
 }

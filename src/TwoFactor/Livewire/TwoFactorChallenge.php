@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\TwoFactor\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\TwoFactor\Concerns\HasTwoFactorAuthentication;
 use Codenzia\FilamentPanelBase\TwoFactor\Events\TwoFactorChallengeFailed;
@@ -24,6 +25,7 @@ use Livewire\Component;
  */
 class TwoFactorChallenge extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     #[Validate(['required', 'string', 'max:64'])]
@@ -93,8 +95,7 @@ class TwoFactorChallenge extends Component
 
     public function render(): View
     {
-        return view('filament-panel-base::livewire.auth.two-factor-challenge')
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.two-factor-challenge'))
             ->title(__('filament-panel-base::two-factor.challenge_title'));
     }
 }

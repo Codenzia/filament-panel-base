@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Contracts\View\View;
@@ -12,6 +13,7 @@ use Livewire\Component;
 
 class VerifyEmailNotice extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     public function resend(): void
@@ -43,11 +45,10 @@ class VerifyEmailNotice extends Component
     {
         $email = Auth::user()?->email ?? '';
 
-        return view('filament-panel-base::livewire.auth.verify-email-notice', [
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.verify-email-notice', [
             'email' => $email,
             'verified' => Auth::user()?->hasVerifiedEmail() ?? false,
-        ])
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        ]))
             ->title(__('filament-panel-base::auth.verify_email_title'));
     }
 }

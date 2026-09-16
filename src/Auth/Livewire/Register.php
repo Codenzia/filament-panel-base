@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Codenzia\FilamentPanelBase\Auth\Livewire;
 
 use App\Models\User;
+use Codenzia\FilamentPanelBase\Auth\Concerns\ResolvesAuthLayout;
 use Codenzia\FilamentPanelBase\Auth\Concerns\ThrottlesAuthAttempts;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasOtpVerification;
 use Codenzia\FilamentPanelBase\Auth\Contracts\HasPhone;
@@ -24,6 +25,7 @@ use Livewire\Component;
  */
 class Register extends Component
 {
+    use ResolvesAuthLayout;
     use ThrottlesAuthAttempts;
 
     public string $name = '';
@@ -125,12 +127,11 @@ class Register extends Component
 
     public function render(AuthenticationSettings $settings): View
     {
-        return view('filament-panel-base::livewire.auth.register', [
+        return $this->withAuthLayout(view('filament-panel-base::livewire.auth.register', [
             'credentialsMode' => $settings->credentials_mode,
             'phoneRequired' => $settings->phone_required || $settings->credentials_mode === 'phone',
             'enabledSocialProviders' => $settings->social_providers_enabled,
-        ])
-            ->layout(config('filament-panel-base.auth.layout') ?: 'filament-panel-base::layouts.auth')
+        ]))
             ->title(__('filament-panel-base::auth.register_title'));
     }
 
