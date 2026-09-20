@@ -4,7 +4,7 @@
 <button x-data="{ dark: document.documentElement.classList.contains('dark') }"
     @click="dark = !dark; document.documentElement.classList.toggle('dark'); localStorage.setItem('theme', dark ? 'dark' : 'light')"
     class="fpb-dark-toggle p-2 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md"
-    :title="dark ? '{{ __('Light Mode') }}' : '{{ __('Dark Mode') }}'">
+    :title="dark ? '{{ fpb_trans('Light Mode') }}' : '{{ fpb_trans('Dark Mode') }}'">
     <!-- Sun icon (shown in dark mode) -->
     <svg x-show="dark" class="fpb-dark-toggle__icon w-5 h-5 hidden dark:block" width="20" height="20" fill="none"
         stroke="currentColor" viewBox="0 0 24 24">

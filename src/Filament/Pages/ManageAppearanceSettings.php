@@ -80,7 +80,7 @@ class ManageAppearanceSettings extends Page implements HasForms
 
     public static function getNavigationGroup(): ?string
     {
-        return __(config('filament-panel-base.appearance.navigation_group', 'Settings'));
+        return fpb_trans(config('filament-panel-base.appearance.navigation_group', 'Settings'));
     }
 
     public static function getNavigationSort(): ?int
@@ -95,17 +95,17 @@ class ManageAppearanceSettings extends Page implements HasForms
 
     public static function getNavigationLabel(): string
     {
-        return __('Appearance');
+        return fpb_trans('Appearance');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Appearance');
+        return fpb_trans('Appearance');
     }
 
     public function getSubheading(): ?string
     {
-        return __('Branding for this panel — name, logo, and theme colors. Changes apply on the next page load.');
+        return fpb_trans('Branding for this panel — name, logo, and theme colors. Changes apply on the next page load.');
     }
 
     /** The panel's configured settings instance (host-defined), or null if none wired. */
@@ -136,31 +136,31 @@ class ManageAppearanceSettings extends Page implements HasForms
         $has = fn (string $field): bool => $settings !== null && property_exists($settings, $field);
 
         $identity = array_values(array_filter([
-            $has('app_name') ? TextInput::make('app_name')->label(__('App name'))->required()->maxLength(120) : null,
-            $has('app_tagline') ? TextInput::make('app_tagline')->label(__('Tagline'))->maxLength(255)->columnSpanFull() : null,
-            $has('logo_url') ? TextInput::make('logo_url')->label(__('Logo URL / path'))->maxLength(255)
-                ->helperText(__('A public path (e.g. images/logo.png) or absolute URL.')) : null,
-            $has('favicon_url') ? TextInput::make('favicon_url')->label(__('Favicon URL / path'))->maxLength(255) : null,
+            $has('app_name') ? TextInput::make('app_name')->label(fpb_trans('App name'))->required()->maxLength(120) : null,
+            $has('app_tagline') ? TextInput::make('app_tagline')->label(fpb_trans('Tagline'))->maxLength(255)->columnSpanFull() : null,
+            $has('logo_url') ? TextInput::make('logo_url')->label(fpb_trans('Logo URL / path'))->maxLength(255)
+                ->helperText(fpb_trans('A public path (e.g. images/logo.png) or absolute URL.')) : null,
+            $has('favicon_url') ? TextInput::make('favicon_url')->label(fpb_trans('Favicon URL / path'))->maxLength(255) : null,
         ]));
 
         $theme = array_values(array_filter([
-            $has('theme_preset') ? Select::make('theme_preset')->label(__('Theme preset'))->live()->native(false)
-                ->options(array_merge(ThemePresets::labels(), ['custom' => __('Custom (choose colors)')])) : null,
-            $has('primary_color') ? ColorPicker::make('primary_color')->label(__('Primary color'))
+            $has('theme_preset') ? Select::make('theme_preset')->label(fpb_trans('Theme preset'))->live()->native(false)
+                ->options(array_merge(ThemePresets::labels(), ['custom' => fpb_trans('Custom (choose colors)')])) : null,
+            $has('primary_color') ? ColorPicker::make('primary_color')->label(fpb_trans('Primary color'))
                 ->visible(fn (Get $get): bool => ! $has('theme_preset') || $get('theme_preset') === 'custom') : null,
-            $has('secondary_color') ? ColorPicker::make('secondary_color')->label(__('Secondary color'))
+            $has('secondary_color') ? ColorPicker::make('secondary_color')->label(fpb_trans('Secondary color'))
                 ->visible(fn (Get $get): bool => ! $has('theme_preset') || $get('theme_preset') === 'custom') : null,
         ]));
 
         $sections = [];
         if ($identity !== []) {
-            $sections[] = Section::make(__('Identity'))->icon('heroicon-o-identification')
-                ->description(__('Name, tagline and imagery shown across the panel.'))
+            $sections[] = Section::make(fpb_trans('Identity'))->icon('heroicon-o-identification')
+                ->description(fpb_trans('Name, tagline and imagery shown across the panel.'))
                 ->components($identity)->columns(2);
         }
         if ($theme !== []) {
-            $sections[] = Section::make(__('Theme'))->icon('heroicon-o-swatch')
-                ->description(__('Pick a preset, or “Custom” to choose your own colors.'))
+            $sections[] = Section::make(fpb_trans('Theme'))->icon('heroicon-o-swatch')
+                ->description(fpb_trans('Pick a preset, or “Custom” to choose your own colors.'))
                 ->components($theme)->columns(2);
         }
 
@@ -171,7 +171,7 @@ class ManageAppearanceSettings extends Page implements HasForms
     {
         $settings = $this->settings();
         if ($settings === null) {
-            Notification::make()->title(__('No settings are configured for this panel.'))->danger()->send();
+            Notification::make()->title(fpb_trans('No settings are configured for this panel.'))->danger()->send();
 
             return;
         }
@@ -184,7 +184,7 @@ class ManageAppearanceSettings extends Page implements HasForms
         }
         $settings->save();
 
-        Notification::make()->title(__('Appearance updated.'))
-            ->body(__('Reload to see the new branding applied.'))->success()->send();
+        Notification::make()->title(fpb_trans('Appearance updated.'))
+            ->body(fpb_trans('Reload to see the new branding applied.'))->success()->send();
     }
 }

@@ -88,7 +88,7 @@
             <input
                 type="text"
                 x-model="search"
-                placeholder="{{ __('Search...') }}"
+                placeholder="{{ fpb_trans('Search...') }}"
                 class="w-full rounded-md border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-gray-600 px-2.5 py-1.5 text-sm text-gray-900 dark:text-gray-100 focus:border-primary-500 focus:ring-primary-500"
             />
         </div>
@@ -106,7 +106,7 @@
                 </button>
             </template>
             <div x-show="filteredCountries.length === 0" class="px-3 py-2 text-sm text-gray-400">
-                {{ __('No results') }}
+                {{ fpb_trans('No results') }}
             </div>
         </div>
     </div>

@@ -5,7 +5,7 @@
                 <x-filament::input
                     type="search"
                     wire:model.live.debounce.300ms="search"
-                    :placeholder="__('Search notifications…')"
+                    :placeholder="fpb_trans('Search notifications…')"
                 />
             </x-filament::input.wrapper>
         </div>
@@ -17,9 +17,9 @@
                 <div class="flex flex-col items-center gap-2 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     <x-filament::icon icon="heroicon-o-bell-slash" class="h-8 w-8 text-gray-300 dark:text-gray-600" />
                     @if ($search !== '')
-                        {{ __('No notifications match ":search".', ['search' => $search]) }}
+                        {{ fpb_trans('No notifications match ":search".', ['search' => $search]) }}
                     @else
-                        {{ __('No notification triggers are registered yet.') }}
+                        {{ fpb_trans('No notification triggers are registered yet.') }}
                     @endif
                 </div>
             </x-filament::section>
@@ -35,7 +35,7 @@
                     <table class="w-full min-w-[36rem] text-start text-sm">
                         <thead>
                             <tr class="border-b border-gray-200 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-white/10 dark:text-gray-400">
-                                <th class="px-6 py-2 text-start font-medium">{{ __('Notification') }}</th>
+                                <th class="px-6 py-2 text-start font-medium">{{ fpb_trans('Notification') }}</th>
                                 @foreach ($this->getChannels() as $channel)
                                     <th class="px-6 py-2 text-center font-medium">{{ $this->channelLabel($channel) }}</th>
                                 @endforeach
@@ -55,7 +55,7 @@
                                                     wire:click="toggleChannel('{{ $key }}', '{{ $channel }}')"
                                                     role="switch"
                                                     aria-checked="{{ $this->isChannelEnabled($key, $channel) ? 'true' : 'false' }}"
-                                                    aria-label="{{ __(':channel notifications for :trigger', ['channel' => $this->channelLabel($channel), 'trigger' => $meta['label']]) }}"
+                                                    aria-label="{{ fpb_trans(':channel notifications for :trigger', ['channel' => $this->channelLabel($channel), 'trigger' => $meta['label']]) }}"
                                                     @class([
                                                         'inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900',
                                                         'bg-primary-600' => $this->isChannelEnabled($key, $channel),

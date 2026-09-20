@@ -74,7 +74,8 @@ class TranslationScanner
      * Pattern A: Grouped PHP translations — trans('group.key'), @lang('pkg::group.key').
      *   Only matches strict dot-notation keys (alphanumeric + dots).
      *
-     * Patterns B/C: JSON translations — __("text") / __('text') plus any extra
+     * Patterns B/C: JSON translations — __("text") / __('text'), the package's
+     *   own fpb_trans('text') guard, plus any extra
      *   functions from config('filament-panel-base.translations.scan_functions').
      *   Single-line only, handles escaped quotes.
      *
@@ -90,7 +91,7 @@ class TranslationScanner
 
         // Build JSON function alternation: __ + any extra functions from config (e.g. $t, i18n.t)
         $extraFunctions = config('filament-panel-base.translations.scan_functions', []);
-        $jsonFunctions = collect(['__', ...$extraFunctions])
+        $jsonFunctions = collect(['__', 'fpb_trans', ...$extraFunctions])
             ->map(fn (string $fn): string => preg_quote($fn, '/'))
             ->implode('|');
 

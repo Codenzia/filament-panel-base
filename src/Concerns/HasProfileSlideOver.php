@@ -37,7 +37,7 @@ trait HasProfileSlideOver
     protected function getProfileSlideOverAction(): Action
     {
         return Action::make('edit-profile')
-            ->label(fn (): string => __('Edit Profile'))
+            ->label(fn (): string => fpb_trans('Edit Profile'))
             ->icon('heroicon-o-user')
             ->slideOver()
             ->modalWidth('2xl')
@@ -68,10 +68,10 @@ trait HasProfileSlideOver
     protected function getProfileFormTabs(): array
     {
         return [
-            Tab::make(__('Personal Information'))
+            Tab::make(fpb_trans('Personal Information'))
                 ->icon('heroicon-o-user')
                 ->components($this->getProfilePersonalInfoComponents()),
-            Tab::make(__('Change Password'))
+            Tab::make(fpb_trans('Change Password'))
                 ->icon('heroicon-o-lock-closed')
                 ->components($this->getProfilePasswordComponents()),
         ];
@@ -148,7 +148,7 @@ trait HasProfileSlideOver
         if (! $this->canEditProfile()) {
             Notification::make()
                 ->warning()
-                ->title(__('Profile is read-only'))
+                ->title(fpb_trans('Profile is read-only'))
                 ->send();
 
             return;

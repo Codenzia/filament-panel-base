@@ -31,12 +31,12 @@ class EnsureUserApproved
             $request->session()->regenerateToken();
 
             return redirect()->route('login')
-                ->with('error', __('Your account has been suspended. Please contact support.'));
+                ->with('error', fpb_trans('Your account has been suspended. Please contact support.'));
         }
 
         if ($user->isPending()) {
             return redirect()->route('home')
-                ->with('warning', __('Your account is awaiting approval. You will be notified when approved.'));
+                ->with('warning', fpb_trans('Your account is awaiting approval. You will be notified when approved.'));
         }
 
         return $next($request);

@@ -1,7 +1,7 @@
 <x-filament-widgets::widget>
     <x-filament::section>
         <x-slot name="heading">
-            {{ __('Slowest pages') }}
+            {{ fpb_trans('Slowest pages') }}
         </x-slot>
 
         <x-slot name="description">
@@ -10,11 +10,11 @@
 
         @if (! $ready)
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ __('Run php artisan migrate to create the analytics tables.') }}
+                {{ fpb_trans('Run php artisan migrate to create the analytics tables.') }}
             </p>
         @elseif ($rows->isEmpty())
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ __('Not enough timing data yet. Pages need at least 5 samples to appear here.') }}
+                {{ fpb_trans('Not enough timing data yet. Pages need at least 5 samples to appear here.') }}
             </p>
         @else
             @php

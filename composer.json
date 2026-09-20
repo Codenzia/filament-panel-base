@@ -62,7 +62,10 @@
     "autoload": {
         "psr-4": {
             "Codenzia\\FilamentPanelBase\\": "src/"
-        }
+        },
+        "files": [
+            "src/helpers.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

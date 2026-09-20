@@ -644,11 +644,11 @@ abstract class BasePanelProvider extends PanelProvider
             Action::make('um_phone')
                 ->disabled()
                 ->icon('heroicon-o-phone')
-                ->label(fn () => filament()->auth()->user()?->phone ?? __('No phone')),
+                ->label(fn () => filament()->auth()->user()?->phone ?? fpb_trans('No phone')),
             Action::make('um_email')
                 ->disabled()
                 ->icon('heroicon-o-envelope')
-                ->label(fn () => filament()->auth()->user()?->email ?? __('No Email')),
+                ->label(fn () => filament()->auth()->user()?->email ?? fpb_trans('No Email')),
         ];
 
         // Cross-panel navigation
@@ -658,7 +658,7 @@ abstract class BasePanelProvider extends PanelProvider
 
             if ($panelId === $dashboardPanel) {
                 $items[] = Action::make('admin-panel')
-                    ->label(fn (): string => __('Admin Panel'))
+                    ->label(fn (): string => fpb_trans('Admin Panel'))
                     ->icon('heroicon-o-cog-6-tooth')
                     ->url('/'.$adminPanel)
                     ->color('info')
@@ -670,7 +670,7 @@ abstract class BasePanelProvider extends PanelProvider
                     ->sort(50);
             } elseif ($panelId === $adminPanel) {
                 $items[] = Action::make('user-dashboard')
-                    ->label(fn (): string => __('My Dashboard'))
+                    ->label(fn (): string => fpb_trans('My Dashboard'))
                     ->icon('heroicon-o-squares-2x2')
                     ->url('/'.$dashboardPanel)
                     ->color('primary')
@@ -690,13 +690,17 @@ abstract class BasePanelProvider extends PanelProvider
      * The role chip in the user menu. Spatie stores role names as machine
      * slugs ('vendor', 'super_admin'), so printing them raw left the chip in
      * English on an otherwise translated panel.
+     *
+     * The no-role fallback resolves the `user` slug through the same
+     * catalogue as every other role rather than through a bare `__('User')`,
+     * which a host shipping `lang/{locale}/user.php` turns into an array.
      */
     protected function getUserRoleLabel(): string
     {
         $user = filament()->auth()->user();
 
         if (! $user || ! method_exists($user, 'roles')) {
-            return __('User');
+            return $this->resolveRoleLabel('user');
         }
 
         $labels = collect($user->roles ?? [])
@@ -704,7 +708,7 @@ abstract class BasePanelProvider extends PanelProvider
             ->filter()
             ->all();
 
-        return $labels === [] ? __('User') : implode(', ', $labels);
+        return $labels === [] ? $this->resolveRoleLabel('user') : implode(', ', $labels);
     }
 
     /**
@@ -727,8 +731,12 @@ abstract class BasePanelProvider extends PanelProvider
         }
 
         foreach (['roles.'.$name, 'filament-panel-base::roles.'.$name] as $key) {
-            if (trans()->has($key)) {
-                return (string) __($key);
+            $line = trans($key);
+
+            // A group file the host happens to have named after the key hands
+            // back its whole array; only a real line is a label.
+            if (is_string($line) && $line !== $key) {
+                return $line;
             }
         }
 
@@ -746,7 +754,7 @@ abstract class BasePanelProvider extends PanelProvider
             // A string keeps the long-standing catalogue lookup; a closure has
             // already produced its final text, so translating it again would
             // only risk a second, unintended lookup.
-            'label' => $label instanceof Closure ? $this->resolveLabel($label) : __($label),
+            'label' => $label instanceof Closure ? $this->resolveLabel($label) : fpb_trans($label),
             'color' => $this->titleBadgeConfig['color'] ?? 'primary',
             'icon' => $this->titleBadgeConfig['icon'] ?? null,
             'centered' => $centered,
@@ -756,7 +764,7 @@ abstract class BasePanelProvider extends PanelProvider
     protected function getVisitWebsiteButton(): View
     {
         return view('filament-panel-base::components.visit-website-button', [
-            'label' => $this->resolveLabel($this->visitWebsiteLabel) ?? __('Visit Website'),
+            'label' => $this->resolveLabel($this->visitWebsiteLabel) ?? fpb_trans('Visit Website'),
         ]);
     }
 

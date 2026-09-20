@@ -4,7 +4,7 @@
 
         <div class="flex justify-end">
             <x-filament::button type="submit">
-                {{ __('Save') }}
+                {{ fpb_trans('Save') }}
             </x-filament::button>
         </div>
     </form>

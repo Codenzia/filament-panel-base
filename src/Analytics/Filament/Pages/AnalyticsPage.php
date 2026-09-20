@@ -125,12 +125,12 @@ class AnalyticsPage extends Dashboard
         return $schema
             ->components([
                 Select::make('range')
-                    ->label(__('Date range'))
+                    ->label(fpb_trans('Date range'))
                     ->options([
-                        '24h' => __('Last 24 hours'),
-                        '7d' => __('Last 7 days'),
-                        '30d' => __('Last 30 days'),
-                        '90d' => __('Last 90 days'),
+                        '24h' => fpb_trans('Last 24 hours'),
+                        '7d' => fpb_trans('Last 7 days'),
+                        '30d' => fpb_trans('Last 30 days'),
+                        '90d' => fpb_trans('Last 90 days'),
                     ])
                     ->selectablePlaceholder(false)
                     ->native(false)

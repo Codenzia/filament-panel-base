@@ -5,6 +5,17 @@ All notable changes to `filament-panel-base` will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.3] - 2026-09-20
+
+### Fixed
+- **A host language file named after one of the package's keys took every Filament page down with a 500.** The chrome this package ships is keyed by its English text — `__('User')`, `__('Visit Website')`, `__('Password')` — so that an app can override any of it from `lang/{locale}.json` without publishing anything. Laravel resolves a key with no dot in it as a translation *group* the moment the JSON catalogue misses it, and `__('User')` then loads `lang/{locale}/User.php` and hands back **that whole file as an array**. Returned from `BasePanelProvider::getUserRoleLabel(): string` that is `TypeError: Return value must be of type string, array returned`; printed in a Blade view it is an "Array to string conversion". Toolenza ships `lang/ar/user.php` and `lang/en/user.php`, and Windows and macOS match those case-insensitively against `User.php`, so every page of both its panels 500'd on the developer machines while Linux hosts were untouched. Any app was one `lang/{locale}/Users.php`, `Roles.php`, `Name.php` or `Password.php` away from the same crash, on any operating system.
+
+  Every one of the package's own dotless-key lookups — 213 call sites across `src/` and `resources/views/`, the `__()` keys added in 0.9.2 among them — now goes through a new `fpb_trans()` helper, which is `__()` with the key as the fallback for anything the catalogue does not return as a string. Override behaviour is unchanged: `lang/{locale}.json` in the app still wins over the package's own `resources/lang/ar.json`, which is why the keys stay English text rather than being renamed into a `filament-panel-base::` namespace and quietly dropping the overrides apps already ship. Calls that were already namespaced (`filament-panel-base::`, `filament-panels::`) were left alone — a namespaced key cannot collide with a host file.
+
+  `getUserRoleLabel()`'s no-role fallback no longer reads `__('User')` at all: it resolves the `user` slug through `resolveRoleLabel()`, the same host-first catalogue (`getLabel()` → app `roles.user` → `filament-panel-base::roles.user`) every other role already used, so the chip reads "User" / "مستخدم" from the package's namespaced role names. `resolveRoleLabel()` itself now requires a *string* line rather than trusting `trans()->has()`, which reports true for a group file as readily as for a real translation. An app that had translated the chip through a `"User"` entry in its own `lang/ar.json` will see the package's `مستخدم` instead; add `roles.user` to `lang/ar/roles.php` to keep your own wording.
+
+  `translations:scan` recognises `fpb_trans()` alongside `__()`, so the Translation Manager still picks up these keys.
+
 ## [0.9.2] - 2026-09-20
 
 ### Added

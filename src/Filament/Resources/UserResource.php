@@ -85,7 +85,7 @@ class UserResource extends Resource
 
     public static function getNavigationGroup(): ?string
     {
-        return __(config('filament-panel-base.user_management.navigation_group', 'User Management'));
+        return fpb_trans(config('filament-panel-base.user_management.navigation_group', 'User Management'));
     }
 
     public static function getNavigationSort(): ?int
@@ -95,17 +95,17 @@ class UserResource extends Resource
 
     public static function getNavigationLabel(): string
     {
-        return __('Users');
+        return fpb_trans('Users');
     }
 
     public static function getModelLabel(): string
     {
-        return __('User');
+        return fpb_trans('User');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Users');
+        return fpb_trans('Users');
     }
 
     public static function getNavigationBadge(): ?string
@@ -185,25 +185,25 @@ class UserResource extends Resource
     public static function form(Schema $schema): Schema
     {
         $tabs = [
-            Tab::make(__('Account'))
+            Tab::make(fpb_trans('Account'))
                 ->icon('heroicon-o-user')
                 ->schema([
                     Section::make()->schema([
                         TextInput::make('name')
-                            ->label(__('Name'))->required()->maxLength(255)->columnSpanFull(),
+                            ->label(fpb_trans('Name'))->required()->maxLength(255)->columnSpanFull(),
                         TextInput::make('email')
-                            ->label(__('Email'))->email()->required()->maxLength(255)
+                            ->label(fpb_trans('Email'))->email()->required()->maxLength(255)
                             ->unique(ignoreRecord: true)->columnSpanFull(),
                         TextInput::make('password')
-                            ->label(__('Password'))->password()->revealable()->maxLength(255)
+                            ->label(fpb_trans('Password'))->password()->revealable()->maxLength(255)
                             // Kept only when filled, so editing without retyping leaves it unchanged.
                             ->dehydrated(fn (?string $state): bool => filled($state))
                             ->dehydrateStateUsing(fn (?string $state): ?string => filled($state) ? Hash::make($state) : null)
                             ->required(fn (string $operation): bool => $operation === 'create')
-                            ->helperText(fn (string $operation): ?string => $operation === 'edit' ? __('Leave blank to keep the current password.') : null)
+                            ->helperText(fn (string $operation): ?string => $operation === 'edit' ? fpb_trans('Leave blank to keep the current password.') : null)
                             ->columnSpanFull(),
                         TextInput::make('password_confirmation')
-                            ->label(__('Confirm password'))->password()->revealable()->maxLength(255)
+                            ->label(fpb_trans('Confirm password'))->password()->revealable()->maxLength(255)
                             ->dehydrated(false)->same('password')
                             ->required(fn (Get $get, string $operation): bool => $operation === 'create' || filled($get('password')))
                             ->columnSpanFull(),
@@ -212,12 +212,12 @@ class UserResource extends Resource
         ];
 
         if (static::rolesSupported()) {
-            $tabs[] = Tab::make(__('Roles'))
+            $tabs[] = Tab::make(fpb_trans('Roles'))
                 ->icon('heroicon-o-user-group')
                 ->schema([
                     Section::make()->schema([
                         Select::make('roles')
-                            ->label(__('Roles'))
+                            ->label(fpb_trans('Roles'))
                             // Only a super-admin may assign the super-admin role.
                             // For everyone else it is filtered out of the options
                             // so it can never be granted from this form (privilege
@@ -228,7 +228,7 @@ class UserResource extends Resource
                                     : $query->where('name', '!=', static::superAdminRoleName());
                             })
                             ->multiple()->preload()->searchable()
-                            ->helperText(__('Roles granted to this user.'))
+                            ->helperText(fpb_trans('Roles granted to this user.'))
                             ->columnSpanFull(),
                     ]),
                 ]);
@@ -249,24 +249,24 @@ class UserResource extends Resource
             // Circular avatar via the panel's avatar provider (UI-avatars by default) —
             // works for any user model with no extra packages. Apps with their own
             // avatars (e.g. filament-media) swap this through the tableColumns hook.
-            ImageColumn::make('avatar')->label(__('Photo'))->circular()->grow(false)
+            ImageColumn::make('avatar')->label(fpb_trans('Photo'))->circular()->grow(false)
                 ->state(fn ($record): string => Filament::getUserAvatarUrl($record)),
-            TextColumn::make('name')->label(__('Name'))->searchable()->sortable()->weight('medium'),
-            TextColumn::make('email')->label(__('Email'))->searchable()->sortable()->color('gray')->copyable(),
+            TextColumn::make('name')->label(fpb_trans('Name'))->searchable()->sortable()->weight('medium'),
+            TextColumn::make('email')->label(fpb_trans('Email'))->searchable()->sortable()->color('gray')->copyable(),
         ];
 
         if (static::rolesSupported()) {
-            $columns[] = TextColumn::make('roles.name')->label(__('Roles'))->badge()->toggleable();
+            $columns[] = TextColumn::make('roles.name')->label(fpb_trans('Roles'))->badge()->toggleable();
         }
 
-        $columns[] = IconColumn::make('email_verified_at')->label(__('Verified'))->boolean()
+        $columns[] = IconColumn::make('email_verified_at')->label(fpb_trans('Verified'))->boolean()
             ->state(fn ($record): bool => filled($record->email_verified_at ?? null))->toggleable();
-        $columns[] = TextColumn::make('created_at')->label(__('Joined'))->since()->sortable()
+        $columns[] = TextColumn::make('created_at')->label(fpb_trans('Joined'))->since()->sortable()
             ->toggleable(isToggledHiddenByDefault: true);
 
         $filters = [];
         if (static::rolesSupported()) {
-            $filters[] = SelectFilter::make('roles')->label(__('Role'))
+            $filters[] = SelectFilter::make('roles')->label(fpb_trans('Role'))
                 ->relationship('roles', 'name')->searchable()->preload();
         }
 

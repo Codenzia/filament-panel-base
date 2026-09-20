@@ -58,7 +58,7 @@ class RegistrationPipeline
         event($event);
 
         if ($event->cancelled) {
-            throw new \RuntimeException($event->cancellationReason ?? __('Registration was cancelled.'));
+            throw new \RuntimeException($event->cancellationReason ?? fpb_trans('Registration was cancelled.'));
         }
 
         $payload = $event->payload; // listeners may have mutated by reference

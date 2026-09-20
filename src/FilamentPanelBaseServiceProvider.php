@@ -765,7 +765,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             PanelsRenderHook::FOOTER,
             fn (): string => Blade::render(<<<'BLADE'
                 <div class="py-3 text-center text-xs text-gray-400 dark:text-gray-600">
-                    {{ __('Powered by') }}
+                    {{ fpb_trans('Powered by') }}
                     <a href="https://www.codenzia.com" target="_blank" rel="noopener"
                        class="font-medium hover:text-primary-500 transition">Codenzia</a>
                 </div>

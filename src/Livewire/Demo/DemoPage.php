@@ -78,7 +78,7 @@ class DemoPage extends Component
 
         if ($expected === '' || ! hash_equals($expected, $this->gatePassword)) {
             RateLimiter::hit($this->gateThrottleKey(), 60);
-            $this->gateError = __('Incorrect password.');
+            $this->gateError = fpb_trans('Incorrect password.');
             $this->gatePassword = '';
 
             return;
@@ -107,7 +107,7 @@ class DemoPage extends Component
     {
         $seconds = RateLimiter::availableIn($this->gateThrottleKey());
 
-        return __('Too many attempts. Please try again in :seconds seconds.', ['seconds' => $seconds]);
+        return fpb_trans('Too many attempts. Please try again in :seconds seconds.', ['seconds' => $seconds]);
     }
 
     /**
@@ -167,7 +167,7 @@ class DemoPage extends Component
 
         if ($expected === '' || ! hash_equals($expected, $this->seederPassword)) {
             RateLimiter::hit($this->gateThrottleKey(), 60);
-            $this->passwordError = __('Incorrect password.');
+            $this->passwordError = fpb_trans('Incorrect password.');
 
             return;
         }
@@ -178,7 +178,7 @@ class DemoPage extends Component
         // unless the host has explicitly opted in — even behind the password
         // gate this is a DB-destruction primitive reachable over HTTP (PNB-006).
         if (app()->isProduction() || ! (bool) config('filament-panel-base.demo.allow_reseed', false)) {
-            $this->passwordError = __('Database reseeding is disabled.');
+            $this->passwordError = fpb_trans('Database reseeding is disabled.');
 
             return;
         }

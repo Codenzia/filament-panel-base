@@ -124,7 +124,7 @@ class DeviceTypeWidget extends ChartWidget
     {
         $key = 'filament-panel-base::analytics.device_'.$device;
 
-        return Lang::has($key) ? __($key) : ucfirst($device);
+        return Lang::has($key) ? fpb_trans($key) : ucfirst($device);
     }
 
     protected function getType(): string

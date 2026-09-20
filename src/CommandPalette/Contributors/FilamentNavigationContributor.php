@@ -44,7 +44,7 @@ class FilamentNavigationContributor implements CommandPaletteContributor
 
             $actions[] = new CommandPaletteAction(
                 id: "resource:{$panelId}:{$resource}",
-                label: __('Go to :name', ['name' => $this->resourceLabel($resource)]),
+                label: fpb_trans('Go to :name', ['name' => $this->resourceLabel($resource)]),
                 url: $url,
                 description: __('filament-panel-base::command-palette.go_to_resource'),
                 icon: $this->safeCall(fn () => $resource::getNavigationIcon()) ?: 'heroicon-o-folder',

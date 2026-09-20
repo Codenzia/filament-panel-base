@@ -721,6 +721,14 @@ Already maintaining your own settings page (the deprecated `RegistrationSettings
 
 The package treats locale handling as a layered concern — middleware, routing, model traits, vendor overrides — instead of one big switcher. Everything below works without `filament/translations` or `laravel-lang/lang` installed (those packages improve translation coverage but are not required for the mechanics to function).
 
+#### How the package's own copy is keyed
+
+The chrome this package ships (topbar buttons, user-menu chips, the `/demo` page, the settings pages) is keyed by its **English text** — `'Visit Website'`, `'No phone'` — and translated from `resources/lang/{locale}.json`. Your app overrides any of it by putting the same key in `lang/{locale}.json`; nothing needs publishing.
+
+Those calls go through `fpb_trans()`, not `__()`. Laravel resolves a dotless key as a translation *group* the moment the JSON catalogue misses it, so an app that ships `lang/en/User.php` — or, on Windows and macOS, `lang/en/user.php` — makes `__('User')` return that whole file **as an array**, and every page carrying the string 500s. `fpb_trans()` is `__()` with the key as the fallback for anything that does not come back as a string, so an app is free to name its own language files whatever it likes.
+
+Use it for the package's own strings if you extend `BasePanelProvider`; your app's own copy is yours to key however you prefer.
+
 #### Declaring locales
 
 ```php

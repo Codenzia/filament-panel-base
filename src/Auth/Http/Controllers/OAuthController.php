@@ -223,7 +223,7 @@ class OAuthController
      */
     private function redirectWithError(string $messageKey, ?string $returnTo, array $params = []): RedirectResponse
     {
-        session()->flash('error', __($messageKey, $params));
+        session()->flash('error', fpb_trans($messageKey, $params));
 
         return $returnTo !== null
             ? redirect()->to($returnTo)

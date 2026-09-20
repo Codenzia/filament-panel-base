@@ -29,7 +29,7 @@
                         @else
                             <span class="fpb-switcher__check-placeholder w-3 shrink-0"></span>
                         @endif
-                        <span class="fpb-switcher__item-hint text-xs text-gray-400">{{ __('Auto') }}</span>
+                        <span class="fpb-switcher__item-hint text-xs text-gray-400">{{ fpb_trans('Auto') }}</span>
                         <span class="fpb-switcher__item-label truncate">{{ $currency->title }}</span>
                     </a>
                 @else

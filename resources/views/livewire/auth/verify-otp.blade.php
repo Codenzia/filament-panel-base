@@ -14,7 +14,7 @@
 
     <form wire:submit="verify" class="space-y-4">
         <div>
-            <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('Verification code') }}</label>
+            <label for="code" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ fpb_trans('Verification code') }}</label>
             <input wire:model="code" id="code" type="text" inputmode="numeric" pattern="\d*" maxlength="{{ $length }}" autocomplete="one-time-code" required
                 class="mt-1 block w-full rounded-md border border-surface-border bg-surface-input text-center text-lg tracking-[0.5em] shadow-sm focus:border-primary-500 focus:ring-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-surface-border-dark dark:bg-surface-input-dark dark:text-gray-100" />
             @error('code') <p class="mt-1 text-sm text-red-600">{{ $message }}</p> @enderror

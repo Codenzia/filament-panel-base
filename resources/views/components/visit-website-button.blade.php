@@ -6,7 +6,7 @@
      utilities stay for themed apps that already style it. --}}
 
 @props([
-    'label' => __('Visit Website'),
+    'label' => fpb_trans('Visit Website'),
 ])
 
 <a href="/"

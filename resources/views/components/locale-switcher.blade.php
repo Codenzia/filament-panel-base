@@ -116,7 +116,7 @@
                 @click="open = !open"
                 x-bind:aria-expanded="open.toString()"
                 aria-haspopup="true"
-                aria-label="{{ __('Change language') }}">
+                aria-label="{{ fpb_trans('Change language') }}">
             @if ($flags)
                 <span class="flag flag-{{ $fpbFlag[$currentLocale] ?? $currentLocale }}"></span>
             @else

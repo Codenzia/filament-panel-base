@@ -1,7 +1,7 @@
 <x-filament-widgets::widget>
     <x-filament::section>
         <x-slot name="heading">
-            {{ __('Top countries') }}
+            {{ fpb_trans('Top countries') }}
         </x-slot>
 
         <x-slot name="description">
@@ -10,11 +10,11 @@
 
         @if (! $ready)
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ __('Run php artisan migrate to create the analytics tables.') }}
+                {{ fpb_trans('Run php artisan migrate to create the analytics tables.') }}
             </p>
         @elseif ($rows->isEmpty())
             <p class="text-sm text-gray-500 dark:text-gray-400">
-                {{ __('No country-tagged visits in the last 7 days. Configure a Country model so SetCountry middleware can resolve visitor origin.') }}
+                {{ fpb_trans('No country-tagged visits in the last 7 days. Configure a Country model so SetCountry middleware can resolve visitor origin.') }}
             </p>
         @else
             @php

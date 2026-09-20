@@ -122,7 +122,7 @@ class SetCurrency
             'id' => 'auto',
             'code' => 'AUTO',
             'symbol' => $countryCurrency?->symbol ?? '$',
-            'title' => __('Default for :country', ['country' => $country?->name ?? __('Country')]),
+            'title' => fpb_trans('Default for :country', ['country' => $country?->name ?? fpb_trans('Country')]),
             'is_auto' => true,
         ];
 

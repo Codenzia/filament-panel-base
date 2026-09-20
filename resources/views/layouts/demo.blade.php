@@ -8,7 +8,7 @@
     {{-- The demo page is a fixed internal sales/QA tool — don't let Chrome offer to
          auto-translate it (brand names like "DARI" trip its content language detector). --}}
     <meta name="google" content="notranslate">
-    <title>{{ config('app.name') }} — {{ __('Demo') }}</title>
+    <title>{{ config('app.name') }} — {{ fpb_trans('Demo') }}</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <script>
         tailwind.config = {

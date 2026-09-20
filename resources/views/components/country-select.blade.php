@@ -25,7 +25,7 @@
         <template x-if="selectedCountry">
             <span class="flag shrink-0" :class="'flag-' + selectedCountry.code"></span>
         </template>
-        <span x-text="selectedCountry ? selectedCountry.name : '{{ $placeholder ?? __('Select Country') }}'" class="truncate" :class="{ 'text-gray-400': !selectedCountry }"></span>
+        <span x-text="selectedCountry ? selectedCountry.name : '{{ $placeholder ?? fpb_trans('Select Country') }}'" class="truncate" :class="{ 'text-gray-400': !selectedCountry }"></span>
         <svg class="w-4 h-4 ms-auto shrink-0 text-gray-400" width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
         </svg>
@@ -41,7 +41,7 @@
         <button type="button" x-on:click="clear()"
             class="flex items-center gap-2 w-full px-3 py-2 text-sm text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-600"
             :class="{ 'bg-primary-50 dark:bg-primary-900/20': !selected }">
-            {{ $placeholder ?? __('Select Country') }}
+            {{ $placeholder ?? fpb_trans('Select Country') }}
         </button>
         <template x-for="country in countries" :key="country.id">
             <button type="button" x-on:click="select(country)"

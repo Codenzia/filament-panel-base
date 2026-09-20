@@ -72,7 +72,7 @@ class ResetPassword extends Component
 
         if ($status !== Password::PASSWORD_RESET) {
             $this->hitRateLimiter('reset', $this->email);
-            $this->addError('email', __($status));
+            $this->addError('email', fpb_trans($status));
 
             return;
         }

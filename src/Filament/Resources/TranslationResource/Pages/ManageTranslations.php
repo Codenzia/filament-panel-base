@@ -27,35 +27,35 @@ class ManageTranslations extends ManageRecords
     public function getHeading(): string|Htmlable
     {
         if ($this->locale) {
-            return __('UI Translations').' — '.strtoupper($this->locale);
+            return fpb_trans('UI Translations').' — '.strtoupper($this->locale);
         }
 
-        return __('UI Translations');
+        return fpb_trans('UI Translations');
     }
 
     protected function getHeaderActions(): array
     {
         return [
             Actions\Action::make('back')
-                ->label(__('Back'))
+                ->label(fpb_trans('Back'))
                 ->icon('heroicon-o-arrow-left')
                 ->color('gray')
                 ->alpineClickHandler('window.history.back()'),
 
             Actions\Action::make('scan')
-                ->label(__('Scan'))
+                ->label(fpb_trans('Scan'))
                 ->icon('heroicon-o-magnifying-glass')
                 ->color('primary')
                 ->requiresConfirmation()
-                ->modalHeading(__('Scan for Translation Keys'))
-                ->modalDescription(__('This will scan your codebase for all translation keys and sync them to the database. Existing translations will be preserved.'))
+                ->modalHeading(fpb_trans('Scan for Translation Keys'))
+                ->modalDescription(fpb_trans('This will scan your codebase for all translation keys and sync them to the database. Existing translations will be preserved.'))
                 ->action(function (): void {
                     $scanner = app(TranslationScanner::class);
                     $result = $scanner->scan();
 
                     Notification::make()
-                        ->title(__('Scan Complete'))
-                        ->body(__(':created new, :restored restored, :total total keys', $result))
+                        ->title(fpb_trans('Scan Complete'))
+                        ->body(fpb_trans(':created new, :restored restored, :total total keys', $result))
                         ->success()
                         ->send();
                 }),
@@ -68,7 +68,7 @@ class ManageTranslations extends ManageRecords
     private function getExportAction(): Actions\Action
     {
         return Actions\Action::make('export')
-            ->label(__('Export'))
+            ->label(fpb_trans('Export'))
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
             ->action(function (): StreamedResponse {
@@ -110,20 +110,20 @@ class ManageTranslations extends ManageRecords
     private function getImportAction(): Actions\Action
     {
         return Actions\Action::make('import')
-            ->label(__('Import'))
+            ->label(fpb_trans('Import'))
             ->icon('heroicon-o-arrow-up-tray')
             ->color('info')
             ->schema([
                 Forms\Components\FileUpload::make('file')
-                    ->label(__('CSV File'))
+                    ->label(fpb_trans('CSV File'))
                     ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
                     ->required()
                     ->disk('local')
                     ->directory('tmp/translation-imports')
-                    ->helperText(__('Upload a CSV file with "key" column and locale columns (e.g. en, ar).')),
+                    ->helperText(fpb_trans('Upload a CSV file with "key" column and locale columns (e.g. en, ar).')),
             ])
-            ->modalHeading(__('Import UI Translations'))
-            ->modalDescription(__('Upload a CSV file exported from this page. Only existing keys will be updated — new keys are not created.'))
+            ->modalHeading(fpb_trans('Import UI Translations'))
+            ->modalDescription(fpb_trans('Upload a CSV file exported from this page. Only existing keys will be updated — new keys are not created.'))
             ->action(function (array $data): void {
                 $path = storage_path('app/private/'.$data['file']);
 
@@ -139,8 +139,8 @@ class ManageTranslations extends ManageRecords
 
                 if ($keyIndex === false) {
                     Notification::make()
-                        ->title(__('Import Failed'))
-                        ->body(__('CSV file must have a "key" column.'))
+                        ->title(fpb_trans('Import Failed'))
+                        ->body(fpb_trans('CSV file must have a "key" column.'))
                         ->danger()
                         ->send();
 
@@ -153,8 +153,8 @@ class ManageTranslations extends ManageRecords
 
                 if (empty($csvLocales)) {
                     Notification::make()
-                        ->title(__('Import Failed'))
-                        ->body(__('CSV file must have at least one locale column (e.g. en, ar).'))
+                        ->title(fpb_trans('Import Failed'))
+                        ->body(fpb_trans('CSV file must have at least one locale column (e.g. en, ar).'))
                         ->danger()
                         ->send();
 
@@ -206,8 +206,8 @@ class ManageTranslations extends ManageRecords
                 @unlink($path);
 
                 Notification::make()
-                    ->title(__('Import Complete'))
-                    ->body(__(':updated translations updated, :skipped rows skipped.', [
+                    ->title(fpb_trans('Import Complete'))
+                    ->body(fpb_trans(':updated translations updated, :skipped rows skipped.', [
                         'updated' => $updated,
                         'skipped' => $skipped,
                     ]))

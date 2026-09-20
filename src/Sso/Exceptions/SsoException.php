@@ -56,6 +56,6 @@ class SsoException extends RuntimeException
 
     public function userMessage(): string
     {
-        return (string) __($this->translationKey, $this->params);
+        return (string) fpb_trans($this->translationKey, $this->params);
     }
 }

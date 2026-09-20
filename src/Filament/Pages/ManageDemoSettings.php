@@ -59,22 +59,22 @@ class ManageDemoSettings extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Demo Settings');
+        return fpb_trans('Demo Settings');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Demo Settings');
+        return fpb_trans('Demo Settings');
     }
 
     public function getHeading(): string|Htmlable
     {
-        return __('Demo Settings');
+        return fpb_trans('Demo Settings');
     }
 
     public function getSubheading(): ?string
     {
-        return __('Manage the password that gates the public /demo page.');
+        return fpb_trans('Manage the password that gates the public /demo page.');
     }
 
     /**
@@ -84,12 +84,12 @@ class ManageDemoSettings extends Page
     {
         return [
             Action::make('regenerate')
-                ->label(__('Regenerate Password'))
+                ->label(fpb_trans('Regenerate Password'))
                 ->icon('heroicon-o-arrow-path')
                 ->color('primary')
                 ->requiresConfirmation()
-                ->modalHeading(__('Regenerate demo password?'))
-                ->modalDescription(__('Anyone currently using the old password will need the new one. The previous value is unrecoverable.'))
+                ->modalHeading(fpb_trans('Regenerate demo password?'))
+                ->modalDescription(fpb_trans('Anyone currently using the old password will need the new one. The previous value is unrecoverable.'))
                 ->action(function (): void {
                     $row = DemoSetting::current();
                     $row->password = Str::random(16);
@@ -99,13 +99,13 @@ class ManageDemoSettings extends Page
                     $this->reveal = true;
 
                     Notification::make()
-                        ->title(__('New demo password generated.'))
+                        ->title(fpb_trans('New demo password generated.'))
                         ->success()
                         ->send();
                 }),
 
             Action::make('reveal')
-                ->label(fn (): string => $this->reveal ? __('Hide password') : __('Reveal password'))
+                ->label(fn (): string => $this->reveal ? fpb_trans('Hide password') : fpb_trans('Reveal password'))
                 ->icon(fn (): string => $this->reveal ? 'heroicon-o-eye-slash' : 'heroicon-o-eye')
                 ->color('gray')
                 ->action(function (): void {
@@ -113,14 +113,14 @@ class ManageDemoSettings extends Page
                 }),
 
             Action::make('copy_link')
-                ->label(__('Copy share link'))
+                ->label(fpb_trans('Copy share link'))
                 ->icon('heroicon-o-clipboard-document')
                 ->color('gray')
                 ->action(function (): void {
                     $link = $this->shareLink();
                     if ($link === null) {
                         Notification::make()
-                            ->title(__('No password is set — generate one first.'))
+                            ->title(fpb_trans('No password is set — generate one first.'))
                             ->warning()
                             ->send();
 
@@ -132,7 +132,7 @@ class ManageDemoSettings extends Page
                     JS);
 
                     Notification::make()
-                        ->title(__('Share link copied to clipboard.'))
+                        ->title(fpb_trans('Share link copied to clipboard.'))
                         ->body($link)
                         ->success()
                         ->send();
@@ -180,7 +180,7 @@ class ManageDemoSettings extends Page
             return null;
         }
 
-        return $this->demoUrl().' — '.__('password').': '.$pwd;
+        return $this->demoUrl().' — '.fpb_trans('password').': '.$pwd;
     }
 
     public function metadata(): array

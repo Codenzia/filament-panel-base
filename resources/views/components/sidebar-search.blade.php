@@ -55,7 +55,7 @@
             x-model="search"
             x-on:input.debounce.150ms="filter()"
             type="text"
-            placeholder="{{ __('Search menu...') }}"
+            placeholder="{{ fpb_trans('Search menu...') }}"
             class="fpb-search__field w-full rounded-lg border-0 bg-gray-100 py-1.5 ps-8 pe-8 text-sm text-gray-700 placeholder-gray-400 ring-1 ring-gray-200 transition focus:bg-white focus:ring-primary-500 dark:bg-white/5 dark:text-gray-200 dark:placeholder-gray-500 dark:ring-white/10 dark:focus:bg-white/10 dark:focus:ring-primary-500"
         />
 

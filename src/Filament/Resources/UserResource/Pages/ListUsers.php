@@ -16,7 +16,7 @@ class ListUsers extends ListRecords
     {
         return [
             CreateAction::make()
-                ->label(__('New user'))
+                ->label(fpb_trans('New user'))
                 ->icon('heroicon-o-plus')
                 ->slideOver()
                 ->createAnother(false),

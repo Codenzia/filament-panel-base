@@ -63,7 +63,7 @@ class ManageNotificationPreferences extends Page
 
     public static function getNavigationGroup(): ?string
     {
-        return __(config('filament-panel-base.notification-matrix.navigation_group', 'Settings'));
+        return fpb_trans(config('filament-panel-base.notification-matrix.navigation_group', 'Settings'));
     }
 
     public static function getNavigationSort(): ?int
@@ -78,17 +78,17 @@ class ManageNotificationPreferences extends Page
 
     public static function getNavigationLabel(): string
     {
-        return __('Notification Preferences');
+        return fpb_trans('Notification Preferences');
     }
 
     public function getTitle(): string|Htmlable
     {
-        return __('Notification Preferences');
+        return fpb_trans('Notification Preferences');
     }
 
     public function getSubheading(): ?string
     {
-        return __('Choose which notifications reach you, and how.');
+        return fpb_trans('Choose which notifications reach you, and how.');
     }
 
     /**
@@ -98,12 +98,12 @@ class ManageNotificationPreferences extends Page
     {
         return [
             Action::make('reset_to_defaults')
-                ->label(__('Reset to defaults'))
+                ->label(fpb_trans('Reset to defaults'))
                 ->icon('heroicon-o-arrow-uturn-left')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalHeading(__('Reset notification preferences?'))
-                ->modalDescription(__('Every toggle you have changed reverts to its default. This cannot be undone.'))
+                ->modalHeading(fpb_trans('Reset notification preferences?'))
+                ->modalDescription(fpb_trans('Every toggle you have changed reverts to its default. This cannot be undone.'))
                 ->action('resetToDefaults'),
         ];
     }
@@ -145,8 +145,8 @@ class ManageNotificationPreferences extends Page
     public function channelLabel(string $channel): string
     {
         return match ($channel) {
-            'database' => __('In-app'),
-            'mail' => __('Email'),
+            'database' => fpb_trans('In-app'),
+            'mail' => fpb_trans('Email'),
             default => ucfirst($channel),
         };
     }
@@ -202,7 +202,7 @@ class ManageNotificationPreferences extends Page
             ->delete();
 
         Notification::make()
-            ->title(__('Notification preferences reset to defaults.'))
+            ->title(fpb_trans('Notification preferences reset to defaults.'))
             ->success()
             ->send();
     }
