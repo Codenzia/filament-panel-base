@@ -54,8 +54,11 @@ use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Translation\FileLoader;
+use Illuminate\Translation\TranslationServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Livewire\Livewire;
+use ReflectionClass;
 use Spatie\LaravelPackageTools\Commands\InstallCommand;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
@@ -136,6 +139,57 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
         // NotificationTriggers::register() once at boot, and every later
         // resolution during the request must see the same set.
         $this->app->singleton(NotificationTriggers::class);
+
+        $this->restoreFrameworkTranslationPath();
+    }
+
+    /**
+     * Put Laravel's own lang directory back on the translation loader.
+     *
+     * Laravel binds `translation.loader` with two paths — the framework's
+     * lang directory first, the application's second, so an app file
+     * overrides the framework text. spatie/laravel-translation-loader, which
+     * every consumer of this package receives transitively, rebinds the same
+     * key with the application path ONLY. In an app that never published
+     * `lang/`, `validation.*`, `pagination.*`, `auth.*` and `passwords.*`
+     * then resolve to their raw keys and are printed at the user that way.
+     *
+     * `extend()` applies at resolve time, so this holds whether spatie's
+     * provider registers before or after ours, and the replacement is built
+     * from the resolved loader's own class — spatie's manager keeps its
+     * database overrides.
+     */
+    protected function restoreFrameworkTranslationPath(): void
+    {
+        $this->app->extend('translation.loader', function ($loader, $app) {
+            if (! $loader instanceof FileLoader) {
+                return $loader;
+            }
+
+            $frameworkLang = dirname(
+                (new ReflectionClass(TranslationServiceProvider::class))->getFileName()
+            ).'/lang';
+
+            if (in_array($frameworkLang, $loader->paths(), true)) {
+                return $loader;
+            }
+
+            // Framework first so the application's own files still win, the
+            // same order Laravel uses. addPath() would append instead and
+            // invert that precedence.
+            $class = $loader::class;
+            $restored = new $class($app['files'], [$frameworkLang, $app['path.lang']]);
+
+            foreach ($loader->jsonPaths() as $path) {
+                $restored->addJsonPath($path);
+            }
+
+            foreach ($loader->namespaces() as $namespace => $hint) {
+                $restored->addNamespace($namespace, $hint);
+            }
+
+            return $restored;
+        });
     }
 
     public function packageBooted(): void
@@ -325,12 +379,18 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
      * Boot the Analytics module: subscribe the AuthEventSubscriber so package
      * + Laravel auth events get persisted as auth_events rows, publish the
      * table migrations under a feature-scoped tag, and schedule the nightly
-     * retention prune. Everything stays a cheap no-op when the host hasn't
-     * opted in via FilamentPanelBasePlugin::withAnalytics().
+     * retention prune.
      *
-     * The subscriber itself reads AnalyticsSettings on every call, so the
-     * runtime kill-switch (settings.analytics.enabled=false) takes effect
-     * without redeploying.
+     * Recording is on for every host, exactly like the TrackVisit middleware
+     * in BasePanelProvider: the gate is AnalyticsSettings, whose defaults are
+     * enabled=true / track_auth_events=true. The subscriber reads those
+     * settings on every call, so the kill-switch (analytics.enabled=false,
+     * analytics.track_auth_events=false) takes effect without redeploying.
+     *
+     * FilamentPanelBasePlugin::withAnalytics() does not switch the module on —
+     * it overrides those settings for the request lifecycle. The panel-side
+     * opt-in is withFilamentAnalyticsPage(), which mounts the UI that reads
+     * the rows.
      */
     protected function bootAnalyticsModule(): void
     {
@@ -705,7 +765,7 @@ class FilamentPanelBaseServiceProvider extends PackageServiceProvider
             PanelsRenderHook::FOOTER,
             fn (): string => Blade::render(<<<'BLADE'
                 <div class="py-3 text-center text-xs text-gray-400 dark:text-gray-600">
-                    Powered by
+                    {{ __('Powered by') }}
                     <a href="https://www.codenzia.com" target="_blank" rel="noopener"
                        class="font-medium hover:text-primary-500 transition">Codenzia</a>
                 </div>

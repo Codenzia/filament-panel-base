@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Analytics\Filament\Widgets;
 
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\HandlesChartEmptyState;
 use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\OnlyOnAnalyticsPage;
 use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\ReadsAnalyticsFilters;
 use Codenzia\FilamentPanelBase\Analytics\Models\AuthEvent;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Rolling bar chart of failed logins per day for the selected range. Reads
@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class FailedLoginsChartWidget extends ChartWidget
 {
+    use HandlesChartEmptyState;
     use OnlyOnAnalyticsPage;
     use ReadsAnalyticsFilters;
 
@@ -25,14 +26,44 @@ class FailedLoginsChartWidget extends ChartWidget
 
     public function getHeading(): ?string
     {
-        return 'Failed logins — '.$this->getRangeLabel();
+        return __('filament-panel-base::analytics.failed_logins_heading', ['range' => $this->getRangeLabel()]);
     }
 
     public function getDescription(): ?string
     {
-        return Schema::hasTable('auth_events')
-            ? 'A sustained spike usually indicates a credential-stuffing run.'
-            : 'Run php artisan migrate to create the analytics tables.';
+        return $this->hasAnalyticsTable()
+            ? __('filament-panel-base::analytics.failed_logins_description')
+            : __('filament-panel-base::analytics.not_migrated_description');
+    }
+
+    /**
+     * Filament renders this heading/description/icon trio in place of the
+     * chart canvas whenever getData() returns an empty array. Supported from
+     * v4.13 / v5.x only — see HandlesChartEmptyState for what older versions
+     * get instead.
+     */
+    public function getEmptyStateHeading(): string
+    {
+        return $this->hasAnalyticsTable()
+            ? __('filament-panel-base::analytics.failed_logins_empty_heading')
+            : __('filament-panel-base::analytics.not_migrated_heading');
+    }
+
+    public function getEmptyStateDescription(): ?string
+    {
+        return $this->hasAnalyticsTable()
+            ? __('filament-panel-base::analytics.failed_logins_empty_description')
+            : __('filament-panel-base::analytics.not_migrated_description');
+    }
+
+    public function getEmptyStateIcon(): string
+    {
+        return $this->hasAnalyticsTable() ? 'heroicon-o-shield-check' : 'heroicon-o-circle-stack';
+    }
+
+    protected function analyticsTable(): string
+    {
+        return 'auth_events';
     }
 
     protected function getData(): array
@@ -45,16 +76,18 @@ class FailedLoginsChartWidget extends ChartWidget
             $labels[] = $start->copy()->addDays($i)->format('M j');
         }
 
-        if (! Schema::hasTable('auth_events')) {
-            return [
-                'datasets' => [
-                    [
-                        'label' => 'Failed logins',
-                        'data' => array_fill(0, $days, 0),
+        if (! $this->hasAnalyticsTable()) {
+            return $this->supportsEmptyState()
+                ? []
+                : [
+                    'datasets' => [
+                        [
+                            'label' => __('filament-panel-base::analytics.failed_logins_dataset'),
+                            'data' => array_fill(0, $days, 0),
+                        ],
                     ],
-                ],
-                'labels' => $labels,
-            ];
+                    'labels' => $labels,
+                ];
         }
 
         $rows = $this->scopeAnalyticsTenant(
@@ -71,10 +104,14 @@ class FailedLoginsChartWidget extends ChartWidget
             $values[] = (int) ($rows[$key] ?? 0);
         }
 
+        if (array_sum($values) === 0 && $this->supportsEmptyState()) {
+            return [];
+        }
+
         return [
             'datasets' => [
                 [
-                    'label' => 'Failed logins',
+                    'label' => __('filament-panel-base::analytics.failed_logins_dataset'),
                     'data' => $values,
                     'backgroundColor' => 'rgba(239, 68, 68, 0.55)',
                     'borderColor' => 'rgb(239, 68, 68)',

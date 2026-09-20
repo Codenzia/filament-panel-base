@@ -57,10 +57,10 @@ trait ReadsAnalyticsFilters
     protected function getRangeLabel(): string
     {
         return match ($this->getRangeKey()) {
-            '24h' => 'last 24 hours',
-            '30d' => 'last 30 days',
-            '90d' => 'last 90 days',
-            default => 'last 7 days',
+            '24h' => __('filament-panel-base::analytics.range_24h'),
+            '30d' => __('filament-panel-base::analytics.range_30d'),
+            '90d' => __('filament-panel-base::analytics.range_90d'),
+            default => __('filament-panel-base::analytics.range_7d'),
         };
     }
 

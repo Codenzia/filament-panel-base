@@ -14,7 +14,7 @@
 --}}
 @if (config('filament-panel-base.branding.powered_by_enabled', true))
     <div class="fpb-powered-by py-3 text-center text-xs text-gray-400 dark:text-gray-600">
-        Powered by
+        {{ __('Powered by') }}
         <a href="https://www.codenzia.com" target="_blank" rel="noopener"
            class="font-medium hover:text-primary-500 transition">Codenzia</a>
     </div>

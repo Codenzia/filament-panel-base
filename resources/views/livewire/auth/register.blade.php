@@ -73,6 +73,6 @@
 
     <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
         {{ __('filament-panel-base::auth.already_have_account') }}
-        <a href="{{ route('login') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.sign_in') }}</a>
+        <a href="{{ route('login') }}" class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">{{ __('filament-panel-base::auth.sign_in') }}</a>
     </p>
 </div>

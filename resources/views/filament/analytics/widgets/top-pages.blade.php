@@ -5,7 +5,7 @@
         </x-slot>
 
         <x-slot name="description">
-            {{ __('Most-visited routes in the :range.', ['range' => $rangeLabel]) }}
+            {{ __('filament-panel-base::analytics.top_pages_description', ['range' => $rangeLabel]) }}
         </x-slot>
 
         @if (! $ready)

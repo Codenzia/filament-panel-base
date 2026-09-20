@@ -17,9 +17,11 @@ class SetLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = session('locale', $request->cookie('locale', config('app.locale')));
-
         $activeLanguages = $this->getActiveLocales();
+
+        $this->seedSessionFromUser($request, $activeLanguages);
+
+        $locale = session('locale', $request->cookie('locale', config('app.locale')));
 
         if (array_key_exists($locale, $activeLanguages)) {
             App::setLocale($locale);
@@ -45,6 +47,54 @@ class SetLocale
         }
 
         return $next($request);
+    }
+
+    /**
+     * Seed the session from the signed-in user's stored locale.
+     *
+     * Session → cookie → app default leaves an account preference unread, so a
+     * user whose row says Arabic still lands on an English panel the first time
+     * they sign in on a new device — which is why hosts kept writing their own
+     * middleware to copy the column into the session.
+     *
+     * Deliberately narrow: it only fires when the host names a column via
+     * `locale.user_attribute` (null, the default, is the old behaviour exactly),
+     * only for an authenticated user, only when the session carries no locale of
+     * its own, and only for a value in the active list. An explicit in-session
+     * choice therefore always wins — including the user switching language and
+     * staying switched — and guests are untouched.
+     *
+     * @param  array<string, mixed>  $activeLanguages
+     */
+    protected function seedSessionFromUser(Request $request, array $activeLanguages): void
+    {
+        $attribute = config('filament-panel-base.locale.user_attribute');
+
+        if (! is_string($attribute) || $attribute === '') {
+            return;
+        }
+
+        if (! $request->hasSession() || $request->session()->has('locale')) {
+            return;
+        }
+
+        $user = $request->user();
+
+        if ($user === null) {
+            return;
+        }
+
+        $preferred = $user->{$attribute} ?? null;
+
+        if (! is_string($preferred) || $preferred === '') {
+            return;
+        }
+
+        if (! array_key_exists($preferred, $activeLanguages)) {
+            return;
+        }
+
+        $request->session()->put('locale', $preferred);
     }
 
     /**

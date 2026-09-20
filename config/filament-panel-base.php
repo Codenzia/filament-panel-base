@@ -160,6 +160,19 @@ return [
         'detection_order' => ['session', 'cookie', 'config'],
 
         /*
+        | Column on the authenticated user that stores their preferred locale,
+        | e.g. 'primary_locale'. Left null (the default) SetLocale behaves
+        | exactly as before: session, then cookie, then the app default.
+        |
+        | Named, it seeds the session once per session from the user's stored
+        | value, so someone whose account says Arabic does not land on an
+        | English panel the first time they sign in on a new device. Only a
+        | non-empty value present in `available` is used, an explicit in-session
+        | choice always wins, and guests are unaffected.
+        */
+        'user_attribute' => null,
+
+        /*
         | Locale-switcher route registration. When enabled (default), the
         | package ships a `locale.switch` named route that sessions the
         | chosen locale and bounces back to the previous page. Disable if

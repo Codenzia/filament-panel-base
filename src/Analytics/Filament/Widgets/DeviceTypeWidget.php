@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Analytics\Filament\Widgets;
 
+use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\HandlesChartEmptyState;
 use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\OnlyOnAnalyticsPage;
 use Codenzia\FilamentPanelBase\Analytics\Filament\Widgets\Concerns\ReadsAnalyticsFilters;
 use Codenzia\FilamentPanelBase\Analytics\Models\Visit;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Lang;
 
 /**
  * Doughnut chart of device types (desktop / mobile / tablet / unknown) for
@@ -16,6 +17,7 @@ use Illuminate\Support\Facades\Schema;
  */
 class DeviceTypeWidget extends ChartWidget
 {
+    use HandlesChartEmptyState;
     use OnlyOnAnalyticsPage;
     use ReadsAnalyticsFilters;
 
@@ -23,23 +25,55 @@ class DeviceTypeWidget extends ChartWidget
 
     public function getHeading(): ?string
     {
-        return 'Device types — '.$this->getRangeLabel();
+        return __('filament-panel-base::analytics.devices_heading', ['range' => $this->getRangeLabel()]);
     }
 
     public function getDescription(): ?string
     {
-        return Schema::hasTable('visits')
+        return $this->hasAnalyticsTable()
             ? null
-            : 'Run php artisan migrate to create the analytics tables.';
+            : __('filament-panel-base::analytics.not_migrated_description');
+    }
+
+    /**
+     * Filament renders this heading/description/icon trio in place of the
+     * chart canvas whenever getData() returns an empty array. Supported from
+     * v4.13 / v5.x only — see HandlesChartEmptyState for what older versions
+     * get instead.
+     */
+    public function getEmptyStateHeading(): string
+    {
+        return $this->hasAnalyticsTable()
+            ? __('filament-panel-base::analytics.devices_empty_heading')
+            : __('filament-panel-base::analytics.not_migrated_heading');
+    }
+
+    public function getEmptyStateDescription(): ?string
+    {
+        return $this->hasAnalyticsTable()
+            ? __('filament-panel-base::analytics.devices_empty_description')
+            : __('filament-panel-base::analytics.not_migrated_description');
+    }
+
+    public function getEmptyStateIcon(): string
+    {
+        return $this->hasAnalyticsTable() ? 'heroicon-o-device-phone-mobile' : 'heroicon-o-circle-stack';
+    }
+
+    protected function analyticsTable(): string
+    {
+        return 'visits';
     }
 
     protected function getData(): array
     {
-        if (! Schema::hasTable('visits')) {
-            return [
-                'datasets' => [['data' => [], 'backgroundColor' => []]],
-                'labels' => [],
-            ];
+        if (! $this->hasAnalyticsTable()) {
+            return $this->supportsEmptyState()
+                ? []
+                : [
+                    'datasets' => [['data' => [], 'backgroundColor' => []]],
+                    'labels' => [],
+                ];
         }
 
         $rows = $this->scopeAnalyticsTenant(Visit::query()->humans())
@@ -48,6 +82,10 @@ class DeviceTypeWidget extends ChartWidget
             ->groupBy('device')
             ->orderByDesc('total')
             ->pluck('total', 'device');
+
+        if ($rows->isEmpty() && $this->supportsEmptyState()) {
+            return [];
+        }
 
         // Stable colour mapping so the same device keeps the same slice
         // colour across refreshes.
@@ -63,19 +101,30 @@ class DeviceTypeWidget extends ChartWidget
         $colors = [];
 
         foreach ($rows as $device => $total) {
-            $labels[] = ucfirst((string) $device);
+            $labels[] = $this->deviceLabel((string) $device);
             $values[] = (int) $total;
             $colors[] = $palette[$device] ?? 'rgba(107, 114, 128, 0.85)';
         }
 
         return [
             'datasets' => [[
-                'label' => 'Page views',
+                'label' => __('filament-panel-base::analytics.devices_dataset'),
                 'data' => $values,
                 'backgroundColor' => $colors,
             ]],
             'labels' => $labels,
         ];
+    }
+
+    /**
+     * Translated slice label for a known device type, falling back to the raw
+     * column value for anything a host's own parser writes.
+     */
+    protected function deviceLabel(string $device): string
+    {
+        $key = 'filament-panel-base::analytics.device_'.$device;
+
+        return Lang::has($key) ? __($key) : ucfirst($device);
     }
 
     protected function getType(): string

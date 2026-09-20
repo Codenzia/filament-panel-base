@@ -24,5 +24,25 @@
     "Password": "كلمة المرور",
     "Show password": "إظهار كلمة المرور",
     "Hide password": "إخفاء كلمة المرور",
-    "Built": "تاريخ الإصدار"
+    "Built": "تاريخ الإصدار",
+
+    "Visit Website": "زيارة الموقع",
+    "Search menu...": "ابحث في القائمة...",
+    "Change language": "تغيير اللغة",
+    "Light Mode": "الوضع الفاتح",
+    "Dark Mode": "الوضع الداكن",
+    "Select Country": "اختر الدولة",
+    "Auto": "تلقائي",
+    "Sign in": "تسجيل الدخول",
+    "Sign up free": "إنشاء حساب مجاني",
+    "Powered by": "مدعوم بواسطة",
+
+    "Edit Profile": "تعديل الملف الشخصي",
+    "No phone": "لا يوجد هاتف",
+    "No Email": "لا يوجد بريد إلكتروني",
+    "Admin Panel": "لوحة الإدارة",
+    "My Dashboard": "لوحتي",
+    "Personal Information": "المعلومات الشخصية",
+    "Change Password": "تغيير كلمة المرور",
+    "Profile is read-only": "الملف الشخصي للقراءة فقط"
 }

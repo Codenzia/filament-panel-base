@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Codenzia\FilamentPanelBase\Providers;
 
+use Closure;
 use Codenzia\FilamentPanelBase\Analytics\Http\Middleware\TrackVisit;
 use Codenzia\FilamentPanelBase\Analytics\Settings\AnalyticsSettings;
 use Codenzia\FilamentPanelBase\Concerns\HasProfileSlideOver;
@@ -12,6 +13,7 @@ use Codenzia\FilamentPanelBase\Contracts\ProvidesThemeColors;
 use Codenzia\FilamentPanelBase\FilamentPanelBasePlugin;
 use Codenzia\FilamentPanelBase\Middleware\SetLocale;
 use Filament\Actions\Action;
+use Filament\Enums\UserMenuPosition;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
@@ -30,6 +32,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
+use InvalidArgumentException;
 use LaraZeus\SpatieTranslatable\SpatieTranslatablePlugin;
 
 abstract class BasePanelProvider extends PanelProvider
@@ -38,12 +41,12 @@ abstract class BasePanelProvider extends PanelProvider
 
     protected bool $languageDropdownEnabled = true;
 
-    /** @var array{label: string, icon: ?string, color: string}|null */
+    /** @var array{label: Closure|string, icon: ?string, color: string}|null */
     protected ?array $titleBadgeConfig = null;
 
     protected bool $visitWebsiteEnabled = true;
 
-    protected ?string $visitWebsiteLabel = null;
+    protected Closure|string|null $visitWebsiteLabel = null;
 
     protected string $sidebarCollapseButtonPosition = 'left';
 
@@ -62,6 +65,8 @@ abstract class BasePanelProvider extends PanelProvider
     protected ?string $authLinksRegisterPanel = null;
 
     protected bool $sidebarCollapsibleEnabled = true;
+
+    protected ?UserMenuPosition $userMenuPosition = null;
 
     /**
      * Per-panel color overrides set via primaryColor() / brandColors().
@@ -165,8 +170,13 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Add a title badge next to the logo in the topbar.
+     *
+     * A panel provider is configured while the container registers, long before
+     * any locale middleware has run, so a label built with `__()` here would be
+     * frozen in the application's default language. Pass a closure instead and
+     * it is called while the badge renders, in the reader's active locale.
      */
-    public function addTitleBadge(string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true): static
+    public function addTitleBadge(Closure|string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true): static
     {
         $this->titleBadgeConfig = [
             'label' => $label,
@@ -180,8 +190,11 @@ abstract class BasePanelProvider extends PanelProvider
 
     /**
      * Enable or disable the "Visit Website" button in the topbar.
+     *
+     * As with {@see addTitleBadge()}, pass a closure for a label that has to
+     * follow the reader's locale rather than the one in force at register time.
      */
-    public function showVisitWebsite(bool $show = true, ?string $label = null): static
+    public function showVisitWebsite(bool $show = true, Closure|string|null $label = null): static
     {
         $this->visitWebsiteEnabled = $show;
         $this->visitWebsiteLabel = $label;
@@ -255,6 +268,31 @@ abstract class BasePanelProvider extends PanelProvider
     }
 
     /**
+     * Choose where Filament renders the user menu: `'topbar'` or `'sidebar'`
+     * (accepts either the raw string or `\Filament\Enums\UserMenuPosition`
+     * directly). Left unset, Filament decides for itself — topbar when the
+     * panel has one, sidebar otherwise.
+     *
+     * Useful when the topbar is stripped down (e.g. `->topbar(false)` on a
+     * kiosk-style panel) and the user menu needs to live in the sidebar
+     * instead of disappearing along with it.
+     */
+    public function userMenuPosition(UserMenuPosition|string $position): static
+    {
+        $this->userMenuPosition = $position instanceof UserMenuPosition
+            ? $position
+            : match (strtolower($position)) {
+                'sidebar' => UserMenuPosition::Sidebar,
+                'topbar' => UserMenuPosition::Topbar,
+                default => throw new InvalidArgumentException(
+                    "Invalid user menu position [{$position}]. Expected 'topbar' or 'sidebar'."
+                ),
+            };
+
+        return $this;
+    }
+
+    /**
      * Apply shared configuration (branding, colors, user menu, render hooks) to a panel.
      */
     protected function configureSharedSettings(Panel $panel): Panel
@@ -269,6 +307,10 @@ abstract class BasePanelProvider extends PanelProvider
 
         if ($this->sidebarCollapsibleEnabled) {
             $panel->sidebarCollapsibleOnDesktop();
+        }
+
+        if ($this->userMenuPosition !== null) {
+            $panel->userMenu(position: $this->userMenuPosition);
         }
 
         if ($this->titleBadgeConfig) {
@@ -598,9 +640,7 @@ abstract class BasePanelProvider extends PanelProvider
             Action::make('um_role')
                 ->disabled()
                 ->icon('heroicon-c-book-open')
-                ->label(fn () => method_exists(filament()->auth()->user(), 'roles')
-                    ? filament()->auth()->user()?->roles->pluck('name')->join(', ') ?? __('User')
-                    : __('User')),
+                ->label(fn (): string => $this->getUserRoleLabel()),
             Action::make('um_phone')
                 ->disabled()
                 ->icon('heroicon-o-phone')
@@ -647,12 +687,66 @@ abstract class BasePanelProvider extends PanelProvider
     }
 
     /**
+     * The role chip in the user menu. Spatie stores role names as machine
+     * slugs ('vendor', 'super_admin'), so printing them raw left the chip in
+     * English on an otherwise translated panel.
+     */
+    protected function getUserRoleLabel(): string
+    {
+        $user = filament()->auth()->user();
+
+        if (! $user || ! method_exists($user, 'roles')) {
+            return __('User');
+        }
+
+        $labels = collect($user->roles ?? [])
+            ->map(fn ($role): string => $this->resolveRoleLabel($role))
+            ->filter()
+            ->all();
+
+        return $labels === [] ? __('User') : implode(', ', $labels);
+    }
+
+    /**
+     * Resolve one role's display name. The host wins: a role model with its own
+     * `getLabel()` (an enum-backed or translated role) is used as-is, then an
+     * app-level `roles.<name>` catalogue entry, and only then the package's own
+     * translations for the role names the fleet shares. A name the package does
+     * not know is printed as stored, never machine-prettified.
+     */
+    protected function resolveRoleLabel(mixed $role): string
+    {
+        if (is_object($role) && method_exists($role, 'getLabel')) {
+            return (string) $role->getLabel();
+        }
+
+        $name = is_object($role) ? (string) ($role->name ?? '') : (string) $role;
+
+        if ($name === '') {
+            return '';
+        }
+
+        foreach (['roles.'.$name, 'filament-panel-base::roles.'.$name] as $key) {
+            if (trans()->has($key)) {
+                return (string) __($key);
+            }
+        }
+
+        return $name;
+    }
+
+    /**
      * Get a small badge identifying the current panel.
      */
     protected function getPanelBadge(bool $centered = false): View
     {
+        $label = $this->titleBadgeConfig['label'];
+
         return view('filament-panel-base::components.panel-badge', [
-            'label' => __($this->titleBadgeConfig['label']),
+            // A string keeps the long-standing catalogue lookup; a closure has
+            // already produced its final text, so translating it again would
+            // only risk a second, unintended lookup.
+            'label' => $label instanceof Closure ? $this->resolveLabel($label) : __($label),
             'color' => $this->titleBadgeConfig['color'] ?? 'primary',
             'icon' => $this->titleBadgeConfig['icon'] ?? null,
             'centered' => $centered,
@@ -662,8 +756,22 @@ abstract class BasePanelProvider extends PanelProvider
     protected function getVisitWebsiteButton(): View
     {
         return view('filament-panel-base::components.visit-website-button', [
-            'label' => $this->visitWebsiteLabel ?? __('Visit Website'),
+            'label' => $this->resolveLabel($this->visitWebsiteLabel) ?? __('Visit Website'),
         ]);
+    }
+
+    /**
+     * Resolve a label that may have been supplied as a closure, so it is
+     * evaluated per request — in the active locale — rather than at the moment
+     * the panel provider was registered.
+     */
+    protected function resolveLabel(Closure|string|null $label): ?string
+    {
+        if ($label instanceof Closure) {
+            $label = $label();
+        }
+
+        return $label === null ? null : (string) $label;
     }
 
     /**

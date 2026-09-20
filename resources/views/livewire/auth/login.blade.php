@@ -29,7 +29,7 @@
         <div>
             <div class="flex items-center justify-between">
                 <label for="password" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ __('filament-panel-base::auth.password') }}</label>
-                <a href="{{ route('password.request') }}" class="text-sm text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.forgot_password') }}</a>
+                <a href="{{ route('password.request') }}" class="text-sm text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">{{ __('filament-panel-base::auth.forgot_password') }}</a>
             </div>
             <input wire:model="password" id="password" type="password" autocomplete="current-password" required
                 class="mt-1 block w-full rounded-md border border-surface-border bg-surface-input shadow-sm focus:border-primary-500 focus:ring-primary-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 dark:border-surface-border-dark dark:bg-surface-input-dark dark:text-gray-100" />
@@ -66,6 +66,6 @@
 
     <p class="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
         {{ __('filament-panel-base::auth.no_account_yet') }}
-        <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700">{{ __('filament-panel-base::auth.create_account') }}</a>
+        <a href="{{ route('register') }}" class="font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">{{ __('filament-panel-base::auth.create_account') }}</a>
     </p>
 </div>

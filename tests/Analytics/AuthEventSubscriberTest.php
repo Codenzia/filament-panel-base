@@ -7,7 +7,10 @@ use Codenzia\FilamentPanelBase\Analytics\Services\IpAnonymizer;
 use Codenzia\FilamentPanelBase\Analytics\Settings\AnalyticsSettings;
 use Codenzia\FilamentPanelBase\Analytics\Subscribers\AuthEventSubscriber;
 use Codenzia\FilamentPanelBase\Auth\Events\OtpRequested;
+use Codenzia\FilamentPanelBase\Tests\Support\TestUser;
+use Illuminate\Auth\Events\Login;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
 
 /**
@@ -110,4 +113,26 @@ it('never lets an analytics insert failure break the auth flow', function (): vo
     expect(fn () => $subscriber->onOtpRequested(
         new OtpRequested('user@example.test', 'email')
     ))->not->toThrow(Throwable::class);
+});
+
+it('records auth events on a host that never called withAnalytics()', function (): void {
+    // Auth-event recording is a settings-driven product feature: the package
+    // subscribes the recorder for every host and gates the write on
+    // AnalyticsSettings. withAnalytics() only overrides those settings.
+    test()->createUsersTable();
+    test()->createSettingsTable();
+    (require __DIR__.'/../../database/settings/create_analytics_settings.php')->up();
+
+    $user = TestUser::query()->create([
+        'name' => 'Ada',
+        'email' => 'ada@example.test',
+    ]);
+
+    Event::dispatch(new Login('web', $user, false));
+
+    $row = AuthEvent::query()->sole();
+
+    expect($row->type)->toBe(AuthEvent::TYPE_LOGIN_SUCCESS)
+        ->and($row->user_id)->toBe($user->getKey())
+        ->and($row->meta['guard'])->toBe('web');
 });

@@ -205,9 +205,17 @@ The package includes a built-in theme system with 19 color presets and runtime C
 ```css
 @import "../../vendor/codenzia/filament-panel-base/resources/css/theme.css";
 @import "tailwindcss";
+
+@source "../../vendor/codenzia/filament-panel-base/resources/views/**/*.blade.php";
+
+@custom-variant dark (&:where(.dark, .dark *));
 ```
 
 This maps `--color-brand-*` to the runtime CSS variables via Tailwind v4's `@theme` directive, giving you utility classes like `bg-brand-500`, `text-brand-600`, etc.
+
+The `@source` line is not optional if you use the package's front-of-site auth pages. The import only **defines** the colour tokens; Tailwind v4 emits a utility class only when it has seen that class in a scanned file, so without the `@source` the auth views' `bg-primary-600`, `text-primary-600` and the rest never compile and the pages render unstyled — a white submit button on a white card.
+
+Declare the `dark` variant against the `.dark` class rather than leaving it on the OS preference: the package's auth views carry `dark:` utilities, and on a site painted light they would otherwise darken the auth card alone on a visitor whose system is set to dark. `<x-filament-panel-base::dark-mode-script />` is what puts (or leaves off) that class.
 
 Or publish the theme CSS for customization:
 
@@ -272,13 +280,14 @@ class AdminPanelProvider extends BasePanelProvider
     {
         $this
             ->primaryColor(Color::Indigo)          // or ->primaryColor('#38b6d9'), or ->brandColors([...])
-            ->addTitleBadge('Administration', 'heroicon-o-shield-check', 'primary', showOnAuthForm: true)
-            ->showVisitWebsite(label: 'Back to site')
+            ->addTitleBadge(fn (): string => __('panel.administration'), 'heroicon-o-shield-check', 'primary', showOnAuthForm: true)
+            ->showVisitWebsite(label: fn (): string => __('panel.back_to_site'))
             ->showLanguageDropdown()
             ->sidebarCollapseButtonPosition('right')
             ->sidebarIcon('heroicon-o-bars-3')
             ->sidebarSlideover()
-            ->sidebarSearchable();
+            ->sidebarSearchable()
+            ->userMenuPosition('sidebar');
 
         $this->configureSharedSettings(
             $panel->default()->id('admin')->path('admin')->login()
@@ -294,8 +303,15 @@ class AdminPanelProvider extends BasePanelProvider
 | Method | Default | Description |
 |---|---|---|
 | `showLanguageDropdown(bool $show = true)` | `true` | Show or hide the locale switcher dropdown in the topbar. |
-| `showVisitWebsite(bool $show = true, ?string $label = null)` | `true` | Show or hide the "Visit Website" link button. Pass `$label` to override the translated default. |
-| `addTitleBadge(string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true)` | — | Render a small colour-coded badge next to the logo. Accepts `'primary'`, `'success'`, `'warning'`, `'danger'`, `'info'`, or `'gray'`. When `$showOnAuthForm` is `true` (default), the badge is also shown centred above the login and register forms. |
+| `showVisitWebsite(bool $show = true, Closure\|string\|null $label = null)` | `true` | Show or hide the "Visit Website" link button. Pass `$label` to override the translated default. |
+| `addTitleBadge(Closure\|string $label, ?string $icon = null, string $color = 'primary', bool $showOnAuthForm = true)` | — | Render a small colour-coded badge next to the logo. Accepts `'primary'`, `'success'`, `'warning'`, `'danger'`, `'info'`, or `'gray'`. When `$showOnAuthForm` is `true` (default), the badge is also shown centred above the login and register forms. |
+
+> **Translated topbar labels need a closure.** `panel()` runs while the container registers, before
+> any locale middleware, so `->addTitleBadge(__('panel.admin'))` resolves once in the application's
+> default language and every reader sees that. Pass a closure — `->addTitleBadge(fn () => __('panel.admin'))`,
+> `->showVisitWebsite(label: fn () => __('panel.home'))` — and the label is evaluated as the topbar
+> renders, in the active locale. A plain string still works and the badge still runs it through
+> `__()`, which is enough when the text lives in the app's JSON catalogue.
 
 **Sidebar**
 
@@ -308,6 +324,12 @@ class AdminPanelProvider extends BasePanelProvider
 | `sidebarSearchable(bool $enabled = true)` | `true` | Show a search input at the top of the sidebar navigation. Typing filters items client-side by matching labels; groups with no visible items are hidden automatically. The input is hidden when the sidebar is collapsed to icon-only mode. |
 
 > **Note:** Slideover mode is **on by default**. When it is active and no custom icon is set, the left-position button automatically uses `heroicon-o-bars-3` (the mobile drawer icon) to signal drawer behaviour. The right-position pill button always uses the chevron SVG by default.
+
+**User menu**
+
+| Method | Default | Description |
+|---|---|---|
+| `userMenuPosition(UserMenuPosition\|string $position)` | Filament's own default (topbar when the panel has one, sidebar otherwise) | Pin the user menu to `'topbar'` or `'sidebar'` — accepts either string, case-insensitively, or `\Filament\Enums\UserMenuPosition` directly. Useful when the topbar is stripped down (e.g. `->topbar(false)`) and the user menu needs to live in the sidebar instead of disappearing along with it. |
 
 ### Theme System
 
@@ -706,6 +728,7 @@ The package treats locale handling as a layered concern — middleware, routing,
 'locale' => [
     'available' => ['en', 'ar', 'fr'],         // codes the user can switch to
     'detection_order' => ['session', 'cookie', 'config'],
+    'user_attribute' => null,                   // e.g. 'primary_locale' — see below
     'routes' => [
         'enabled' => true,                      // ships `locale.switch` named route
         'prefix' => '',
@@ -717,6 +740,24 @@ The package treats locale handling as a layered concern — middleware, routing,
 `available` doubles as the allowlist for both `SetLocale` middleware and the shipped `locale.switch` controller — only codes listed here can become the active locale, so a malformed URL like `/locale/zz` is silently ignored instead of crashing.
 
 For dynamic locales pulled from the database, register a class implementing `Codenzia\FilamentPanelBase\Contracts\ProvidesLocales` and reference it via `locale.provider`. The contract returns `['ar' => ['native' => 'العربية', 'dir' => 'rtl', 'flag' => 'sa'], ...]`.
+
+#### Seeding the session from the user's stored locale
+
+Session → cookie → app default never looks at the account, so a user whose row says Arabic still
+lands on an English panel the first time they sign in on a new device. Name the column and
+`SetLocale` seeds the session from it:
+
+```php
+'locale' => [
+    'user_attribute' => 'primary_locale',
+],
+```
+
+It fires only for an authenticated user, only when the session carries no locale of its own, and
+only for a non-empty value that appears in `available`. An explicit in-session choice therefore
+always wins — switching language and staying switched works as before — and guests are untouched.
+Left `null` (the default) the middleware behaves exactly as it always has, so this changes nothing
+for an app that does not opt in.
 
 #### `locale.switch` route
 
@@ -1717,14 +1758,14 @@ Requires the `demo_settings` migration to have run (`php artisan vendor:publish 
 
 ## Analytics
 
-Visitor + auth-event tracking with a ready-to-mount AnalyticsPage. Off by default — call `->withAnalytics()` on the plugin to turn it on.
+Visitor + auth-event tracking with a ready-to-mount AnalyticsPage. Tracking is **on by default** once the migrations have run — `analytics.enabled`, `analytics.track_visits` and `analytics.track_auth_events` all default to true, and the settings are the kill-switch. `->withAnalytics()` does not switch the module on; it overrides those settings for the request lifecycle. Call `->withFilamentAnalyticsPage()` to mount the UI that reads the data.
 
 ### Quick start
 
 ```php
 // AppServiceProvider::boot — global config
 FilamentPanelBasePlugin::make()
-    ->withAnalytics()           // sensible defaults
+    ->withAnalytics()           // optional — overrides the stored settings
     ->withFilamentAnalyticsPage(); // mounts /admin/analytics
 
 // then:

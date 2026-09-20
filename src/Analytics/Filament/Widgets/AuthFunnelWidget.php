@@ -37,7 +37,7 @@ class AuthFunnelWidget extends StatsOverviewWidget
 
     public function getHeading(): ?string
     {
-        return 'Signup funnel — '.$this->getRangeLabel();
+        return __('filament-panel-base::analytics.auth_funnel_heading', ['range' => $this->getRangeLabel()]);
     }
 
     protected function getStats(): array

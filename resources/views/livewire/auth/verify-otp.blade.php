@@ -25,7 +25,7 @@
         </button>
     </form>
 
-    <button type="button" wire:click="resend" class="mt-4 block w-full text-center text-sm font-medium text-primary-600 hover:text-primary-700">
+    <button type="button" wire:click="resend" class="mt-4 block w-full text-center text-sm font-medium text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300">
         {{ __('filament-panel-base::auth.verify_otp_resend') }}
     </button>
 </div>

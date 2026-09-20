@@ -25,7 +25,7 @@ class ErrorRateSparklineWidget extends StatsOverviewWidget
 
     public function getHeading(): ?string
     {
-        return 'Errors — '.$this->getRangeLabel();
+        return __('filament-panel-base::analytics.errors_heading', ['range' => $this->getRangeLabel()]);
     }
 
     public function getPollingInterval(): ?string

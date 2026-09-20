@@ -5,7 +5,7 @@
         </x-slot>
 
         <x-slot name="description">
-            {{ __('Visitor origin by country in the :range.', ['range' => $rangeLabel]) }}
+            {{ __('filament-panel-base::analytics.geo_description', ['range' => $rangeLabel]) }}
         </x-slot>
 
         @if (! $ready)
